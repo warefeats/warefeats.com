@@ -35,6 +35,12 @@
       "title": "Martin vs Tegola vs BBOX vs pg_tileserv vs TiPg vs ldproxy",
       "question": "Single-tile latency, throughput at 10 and 100 clients, cold start, memory",
       "status": "Published"
+    },
+    {
+      "category": "Tile servers",
+      "title": "Martin vs go-pmtiles vs tileserver-gl vs mbtileserver vs BBOX",
+      "question": "Serving one pre-built archive as MBTiles and PMTiles: single-tile latency, throughput, random walk, cold start, memory",
+      "status": "Published"
     }
   ]
 }
