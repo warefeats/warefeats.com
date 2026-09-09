@@ -1,0 +1,3223 @@
+{
+  "id": "archive-tile-servers-2026-09",
+  "slug": "pmtiles-mbtiles-tile-servers",
+  "category": "Tile servers",
+  "title": "Martin vs go-pmtiles vs tileserver-gl vs mbtileserver vs BBOX",
+  "deck": "Five open-source tile servers serving one pre-built vector tile archive of Berlin, as MBTiles and as PMTiles, with identical tiles in both: single-tile latency at four zoom levels, throughput at 10 and 100 clients, a random tile walk over 256 tiles, four-tile viewport bursts, cold start and memory.",
+  "publishedAt": "2026-09-08",
+  "unit": "ms",
+  "lowerIsBetter": true,
+  "verdict": {
+    "winnerId": "martin-pmtiles",
+    "headline": "Martin served 12,600 tiles a second at 100 clients from the PMTiles archive, more than any other server from either format; mbtileserver was fastest on a single tile by a tenth of a millisecond, go-pmtiles reached a third of Martin's throughput, and tileserver-gl paid 12 ms per tile for re-compressing every one",
+    "summary": "The servers differ far more than the two archive formats do. On one connection the four Rust and Go servers returned the 242 KB street-level tile in 1.2 to 2.8 ms with the format worth a tenth of a millisecond either way; tileserver-gl took 14 ms because it gunzips and re-gzips every stored tile before sending it. Under load the order was Martin, mbtileserver, go-pmtiles, BBOX, tileserver-gl, and there the format started to matter: Martin and BBOX both moved more tiles from PMTiles than from MBTiles at 100 clients and on the random walk, with the one caveat that Martin's PMTiles source showed a flat 200 ms p99 at 100 clients that its MBTiles source did not. Every server started in under 300 ms and idled under 50 MB; nothing failed a request. The scorecard below has the numbers per section; the limitations say what they do not mean."
+  },
+  "environment": {
+    "machine": "MacBook Pro",
+    "chip": "Apple M2 Max",
+    "cores": "12 CPU cores (8 performance, 4 efficiency)",
+    "memory": "96 GB",
+    "os": "macOS 26.6.2",
+    "arch": "arm64",
+    "runtime": "Docker 29.4.0 (OrbStack); one tile server container at a time (4 CPUs, 4 GB) with both archives bind-mounted read-only; oha 1.16.0 on the host"
+  },
+  "protocol": {
+    "warmups": 3,
+    "runs": 20,
+    "processModel": "One server container at a time reading one of two archives with identical tiles (berlin.mbtiles from Planetiler 0.10.2, berlin.pmtiles converted from it by go-pmtiles); 4 workers where the concept exists; 5 cold starts, 20 single-tile passes of 20 requests per tile, 20 four-tile viewport bursts, 8 passes of 12 s at 10 and at 100 connections on one tile, 8 passes of 12 s at 10 connections over 256 random tiles",
+    "cacheState": "No server-side tile cache configured anywhere (go-pmtiles keeps its default 64 MB directory cache); archives in the page cache after warmups; every request accepts gzip, as map clients do, except the identity variant",
+    "output": "oha 1.16.0 JSON (latency percentiles, request counts, status codes); Bun fetch for cold start, parity and viewport bursts; docker stats for RSS"
+  },
+  "candidates": [],
+  "sections": [
+    {
+      "id": "single-tile-latency",
+      "title": "Single-tile latency",
+      "deck": "One client, one tile at a time: mean response time for a dense street-level tile, a district tile, a regional tile and an overview tile, each read from the archive on every request.",
+      "unit": "ms",
+      "lowerIsBetter": true,
+      "verdict": {
+        "winnerId": "mbtileserver",
+        "headline": "mbtileserver returned the street level z14 tile in 1.1 ms on average; tileserver-gl-light took 14.3 ms (12.4x)",
+        "summary": "Sequential requests over a single keep-alive connection with Accept-Encoding: gzip, full protocol; per-pass means are the samples."
+      },
+      "candidates": [
+        {
+          "id": "martin-pmtiles",
+          "name": "Martin (PMTiles)",
+          "version": "1.16.0",
+          "color": "#2563EB",
+          "homepage": "https://martin.maplibre.org",
+          "statistics": {
+            "medianMs": 1.26,
+            "meanMs": 1.231,
+            "minMs": 0.532,
+            "maxMs": 1.677
+          },
+          "samplesMs": [
+            1.301,
+            1.334,
+            1.247,
+            1.224,
+            1.217,
+            1.247,
+            1.33,
+            1.282,
+            1.51,
+            1.126,
+            1.301,
+            0.705,
+            1.351,
+            1.273,
+            1.338,
+            0.532,
+            1.677,
+            1.21,
+            1.206,
+            1.207
+          ],
+          "metrics": {
+            "city-z14-mean": {
+              "value": 1.231,
+              "unit": "ms",
+              "label": "Street level z14 mean latency"
+            },
+            "city-z14-p99": {
+              "value": 11.172,
+              "unit": "ms",
+              "label": "Street level z14 p99 latency"
+            },
+            "city-z14-bytes": {
+              "value": 242407,
+              "unit": "B",
+              "label": "Street level z14 tile size"
+            },
+            "city-z14-features": {
+              "value": 8031,
+              "unit": "features",
+              "label": "Street level z14 features in tile"
+            },
+            "district-z12-mean": {
+              "value": 1.089,
+              "unit": "ms",
+              "label": "District z12 mean latency"
+            },
+            "district-z12-p99": {
+              "value": 3.978,
+              "unit": "ms",
+              "label": "District z12 p99 latency"
+            },
+            "district-z12-bytes": {
+              "value": 76490,
+              "unit": "B",
+              "label": "District z12 tile size"
+            },
+            "district-z12-features": {
+              "value": 2541,
+              "unit": "features",
+              "label": "District z12 features in tile"
+            },
+            "region-z9-mean": {
+              "value": 0.983,
+              "unit": "ms",
+              "label": "Region z9 mean latency"
+            },
+            "region-z9-p99": {
+              "value": 5.366,
+              "unit": "ms",
+              "label": "Region z9 p99 latency"
+            },
+            "region-z9-bytes": {
+              "value": 38506,
+              "unit": "B",
+              "label": "Region z9 tile size"
+            },
+            "region-z9-features": {
+              "value": 292,
+              "unit": "features",
+              "label": "Region z9 features in tile"
+            },
+            "country-z5-mean": {
+              "value": 0.958,
+              "unit": "ms",
+              "label": "Overview z5 mean latency"
+            },
+            "country-z5-p99": {
+              "value": 4.171,
+              "unit": "ms",
+              "label": "Overview z5 p99 latency"
+            },
+            "country-z5-bytes": {
+              "value": 3972,
+              "unit": "B",
+              "label": "Overview z5 tile size"
+            },
+            "country-z5-features": {
+              "value": 8,
+              "unit": "features",
+              "label": "Overview z5 features in tile"
+            },
+            "city-z14-identity-mean": {
+              "value": 2.89,
+              "unit": "ms",
+              "label": "Street level z14 mean latency for a client without Accept-Encoding (recorded, not ranked: a server may honour the missing header and decompress, or send gzip regardless)"
+            },
+            "city-z14-identity-bytes": {
+              "value": 415808,
+              "unit": "B",
+              "label": "Street level z14 transferred bytes, client without Accept-Encoding"
+            }
+          }
+        },
+        {
+          "id": "martin-mbtiles",
+          "name": "Martin (MBTiles)",
+          "version": "1.16.0",
+          "color": "#60A5FA",
+          "homepage": "https://martin.maplibre.org",
+          "statistics": {
+            "medianMs": 1.223,
+            "meanMs": 1.165,
+            "minMs": 0.468,
+            "maxMs": 1.409
+          },
+          "samplesMs": [
+            1.265,
+            1.278,
+            1.285,
+            1.186,
+            1.263,
+            1.171,
+            0.699,
+            0.468,
+            0.886,
+            1.173,
+            1.212,
+            1.14,
+            1.167,
+            1.286,
+            1.233,
+            1.409,
+            1.32,
+            1.394,
+            1.153,
+            1.322
+          ],
+          "metrics": {
+            "city-z14-mean": {
+              "value": 1.165,
+              "unit": "ms",
+              "label": "Street level z14 mean latency"
+            },
+            "city-z14-p99": {
+              "value": 9.427,
+              "unit": "ms",
+              "label": "Street level z14 p99 latency"
+            },
+            "city-z14-bytes": {
+              "value": 242407,
+              "unit": "B",
+              "label": "Street level z14 tile size"
+            },
+            "city-z14-features": {
+              "value": 8031,
+              "unit": "features",
+              "label": "Street level z14 features in tile"
+            },
+            "district-z12-mean": {
+              "value": 0.816,
+              "unit": "ms",
+              "label": "District z12 mean latency"
+            },
+            "district-z12-p99": {
+              "value": 3.44,
+              "unit": "ms",
+              "label": "District z12 p99 latency"
+            },
+            "district-z12-bytes": {
+              "value": 76490,
+              "unit": "B",
+              "label": "District z12 tile size"
+            },
+            "district-z12-features": {
+              "value": 2541,
+              "unit": "features",
+              "label": "District z12 features in tile"
+            },
+            "region-z9-mean": {
+              "value": 0.836,
+              "unit": "ms",
+              "label": "Region z9 mean latency"
+            },
+            "region-z9-p99": {
+              "value": 3.753,
+              "unit": "ms",
+              "label": "Region z9 p99 latency"
+            },
+            "region-z9-bytes": {
+              "value": 38506,
+              "unit": "B",
+              "label": "Region z9 tile size"
+            },
+            "region-z9-features": {
+              "value": 292,
+              "unit": "features",
+              "label": "Region z9 features in tile"
+            },
+            "country-z5-mean": {
+              "value": 0.882,
+              "unit": "ms",
+              "label": "Overview z5 mean latency"
+            },
+            "country-z5-p99": {
+              "value": 3.845,
+              "unit": "ms",
+              "label": "Overview z5 p99 latency"
+            },
+            "country-z5-bytes": {
+              "value": 3972,
+              "unit": "B",
+              "label": "Overview z5 tile size"
+            },
+            "country-z5-features": {
+              "value": 8,
+              "unit": "features",
+              "label": "Overview z5 features in tile"
+            },
+            "city-z14-identity-mean": {
+              "value": 2.852,
+              "unit": "ms",
+              "label": "Street level z14 mean latency for a client without Accept-Encoding (recorded, not ranked: a server may honour the missing header and decompress, or send gzip regardless)"
+            },
+            "city-z14-identity-bytes": {
+              "value": 415808,
+              "unit": "B",
+              "label": "Street level z14 transferred bytes, client without Accept-Encoding"
+            }
+          }
+        },
+        {
+          "id": "go-pmtiles",
+          "name": "go-pmtiles",
+          "version": "1.31.2",
+          "color": "#16A34A",
+          "homepage": "https://docs.protomaps.com/deploy/server",
+          "statistics": {
+            "medianMs": 1.935,
+            "meanMs": 1.98,
+            "minMs": 0.901,
+            "maxMs": 3.361
+          },
+          "samplesMs": [
+            3.361,
+            2.136,
+            2.184,
+            2.023,
+            1.967,
+            1.762,
+            1.861,
+            2.023,
+            1.759,
+            1.889,
+            1.903,
+            1.985,
+            1.754,
+            2.076,
+            1.602,
+            2.199,
+            1.451,
+            1.644,
+            3.114,
+            0.901
+          ],
+          "metrics": {
+            "city-z14-mean": {
+              "value": 1.98,
+              "unit": "ms",
+              "label": "Street level z14 mean latency"
+            },
+            "city-z14-p99": {
+              "value": 35.033,
+              "unit": "ms",
+              "label": "Street level z14 p99 latency"
+            },
+            "city-z14-bytes": {
+              "value": 242407,
+              "unit": "B",
+              "label": "Street level z14 tile size"
+            },
+            "city-z14-features": {
+              "value": 8031,
+              "unit": "features",
+              "label": "Street level z14 features in tile"
+            },
+            "district-z12-mean": {
+              "value": 1.397,
+              "unit": "ms",
+              "label": "District z12 mean latency"
+            },
+            "district-z12-p99": {
+              "value": 8.795,
+              "unit": "ms",
+              "label": "District z12 p99 latency"
+            },
+            "district-z12-bytes": {
+              "value": 76490,
+              "unit": "B",
+              "label": "District z12 tile size"
+            },
+            "district-z12-features": {
+              "value": 2541,
+              "unit": "features",
+              "label": "District z12 features in tile"
+            },
+            "region-z9-mean": {
+              "value": 1.048,
+              "unit": "ms",
+              "label": "Region z9 mean latency"
+            },
+            "region-z9-p99": {
+              "value": 6.641,
+              "unit": "ms",
+              "label": "Region z9 p99 latency"
+            },
+            "region-z9-bytes": {
+              "value": 38506,
+              "unit": "B",
+              "label": "Region z9 tile size"
+            },
+            "region-z9-features": {
+              "value": 292,
+              "unit": "features",
+              "label": "Region z9 features in tile"
+            },
+            "country-z5-mean": {
+              "value": 0.789,
+              "unit": "ms",
+              "label": "Overview z5 mean latency"
+            },
+            "country-z5-p99": {
+              "value": 6.582,
+              "unit": "ms",
+              "label": "Overview z5 p99 latency"
+            },
+            "country-z5-bytes": {
+              "value": 3972,
+              "unit": "B",
+              "label": "Overview z5 tile size"
+            },
+            "country-z5-features": {
+              "value": 8,
+              "unit": "features",
+              "label": "Overview z5 features in tile"
+            },
+            "city-z14-identity-mean": {
+              "value": 1.965,
+              "unit": "ms",
+              "label": "Street level z14 mean latency for a client without Accept-Encoding (recorded, not ranked: a server may honour the missing header and decompress, or send gzip regardless)"
+            },
+            "city-z14-identity-bytes": {
+              "value": 242407,
+              "unit": "B",
+              "label": "Street level z14 transferred bytes, client without Accept-Encoding (server sent gzip anyway)"
+            }
+          }
+        },
+        {
+          "id": "tileserver-gl",
+          "name": "tileserver-gl-light",
+          "version": "5.6.0",
+          "color": "#EA580C",
+          "homepage": "https://tileserver.readthedocs.io",
+          "statistics": {
+            "medianMs": 14.202,
+            "meanMs": 14.305,
+            "minMs": 13.301,
+            "maxMs": 17.365
+          },
+          "samplesMs": [
+            14.405,
+            14.623,
+            15.289,
+            14.296,
+            17.365,
+            13.845,
+            15.208,
+            14.402,
+            14.191,
+            14.261,
+            13.569,
+            14.244,
+            13.357,
+            14.212,
+            14.125,
+            13.976,
+            13.745,
+            14.055,
+            13.629,
+            13.301
+          ],
+          "metrics": {
+            "city-z14-mean": {
+              "value": 14.305,
+              "unit": "ms",
+              "label": "Street level z14 mean latency"
+            },
+            "city-z14-p99": {
+              "value": 37.393,
+              "unit": "ms",
+              "label": "Street level z14 p99 latency"
+            },
+            "city-z14-bytes": {
+              "value": 243510,
+              "unit": "B",
+              "label": "Street level z14 tile size"
+            },
+            "city-z14-features": {
+              "value": 8031,
+              "unit": "features",
+              "label": "Street level z14 features in tile"
+            },
+            "district-z12-mean": {
+              "value": 3.588,
+              "unit": "ms",
+              "label": "District z12 mean latency"
+            },
+            "district-z12-p99": {
+              "value": 10.226,
+              "unit": "ms",
+              "label": "District z12 p99 latency"
+            },
+            "district-z12-bytes": {
+              "value": 76765,
+              "unit": "B",
+              "label": "District z12 tile size"
+            },
+            "district-z12-features": {
+              "value": 2541,
+              "unit": "features",
+              "label": "District z12 features in tile"
+            },
+            "region-z9-mean": {
+              "value": 2.746,
+              "unit": "ms",
+              "label": "Region z9 mean latency"
+            },
+            "region-z9-p99": {
+              "value": 31.52,
+              "unit": "ms",
+              "label": "Region z9 p99 latency"
+            },
+            "region-z9-bytes": {
+              "value": 38076,
+              "unit": "B",
+              "label": "Region z9 tile size"
+            },
+            "region-z9-features": {
+              "value": 292,
+              "unit": "features",
+              "label": "Region z9 features in tile"
+            },
+            "country-z5-mean": {
+              "value": 1.626,
+              "unit": "ms",
+              "label": "Overview z5 mean latency"
+            },
+            "country-z5-p99": {
+              "value": 6.39,
+              "unit": "ms",
+              "label": "Overview z5 p99 latency"
+            },
+            "country-z5-bytes": {
+              "value": 3957,
+              "unit": "B",
+              "label": "Overview z5 tile size"
+            },
+            "country-z5-features": {
+              "value": 8,
+              "unit": "features",
+              "label": "Overview z5 features in tile"
+            },
+            "city-z14-identity-mean": {
+              "value": 13.971,
+              "unit": "ms",
+              "label": "Street level z14 mean latency for a client without Accept-Encoding (recorded, not ranked: a server may honour the missing header and decompress, or send gzip regardless)"
+            },
+            "city-z14-identity-bytes": {
+              "value": 243510,
+              "unit": "B",
+              "label": "Street level z14 transferred bytes, client without Accept-Encoding (server sent gzip anyway)"
+            }
+          }
+        },
+        {
+          "id": "mbtileserver",
+          "name": "mbtileserver",
+          "version": "0.11.0",
+          "color": "#0891B2",
+          "homepage": "https://github.com/consbio/mbtileserver",
+          "statistics": {
+            "medianMs": 1.154,
+            "meanMs": 1.15,
+            "minMs": 0.75,
+            "maxMs": 1.489
+          },
+          "samplesMs": [
+            1.147,
+            0.977,
+            1.155,
+            1.489,
+            1.26,
+            1.152,
+            0.974,
+            1.196,
+            1.194,
+            1.291,
+            1.295,
+            1.203,
+            1.05,
+            1.187,
+            0.75,
+            1.092,
+            1.006,
+            1.322,
+            1.129,
+            1.127
+          ],
+          "metrics": {
+            "city-z14-mean": {
+              "value": 1.15,
+              "unit": "ms",
+              "label": "Street level z14 mean latency"
+            },
+            "city-z14-p99": {
+              "value": 5.255,
+              "unit": "ms",
+              "label": "Street level z14 p99 latency"
+            },
+            "city-z14-bytes": {
+              "value": 242407,
+              "unit": "B",
+              "label": "Street level z14 tile size"
+            },
+            "city-z14-features": {
+              "value": 8031,
+              "unit": "features",
+              "label": "Street level z14 features in tile"
+            },
+            "district-z12-mean": {
+              "value": 0.915,
+              "unit": "ms",
+              "label": "District z12 mean latency"
+            },
+            "district-z12-p99": {
+              "value": 6.117,
+              "unit": "ms",
+              "label": "District z12 p99 latency"
+            },
+            "district-z12-bytes": {
+              "value": 76490,
+              "unit": "B",
+              "label": "District z12 tile size"
+            },
+            "district-z12-features": {
+              "value": 2541,
+              "unit": "features",
+              "label": "District z12 features in tile"
+            },
+            "region-z9-mean": {
+              "value": 0.844,
+              "unit": "ms",
+              "label": "Region z9 mean latency"
+            },
+            "region-z9-p99": {
+              "value": 4.526,
+              "unit": "ms",
+              "label": "Region z9 p99 latency"
+            },
+            "region-z9-bytes": {
+              "value": 38506,
+              "unit": "B",
+              "label": "Region z9 tile size"
+            },
+            "region-z9-features": {
+              "value": 292,
+              "unit": "features",
+              "label": "Region z9 features in tile"
+            },
+            "country-z5-mean": {
+              "value": 0.719,
+              "unit": "ms",
+              "label": "Overview z5 mean latency"
+            },
+            "country-z5-p99": {
+              "value": 4.033,
+              "unit": "ms",
+              "label": "Overview z5 p99 latency"
+            },
+            "country-z5-bytes": {
+              "value": 3972,
+              "unit": "B",
+              "label": "Overview z5 tile size"
+            },
+            "country-z5-features": {
+              "value": 8,
+              "unit": "features",
+              "label": "Overview z5 features in tile"
+            },
+            "city-z14-identity-mean": {
+              "value": 1.16,
+              "unit": "ms",
+              "label": "Street level z14 mean latency for a client without Accept-Encoding (recorded, not ranked: a server may honour the missing header and decompress, or send gzip regardless)"
+            },
+            "city-z14-identity-bytes": {
+              "value": 242407,
+              "unit": "B",
+              "label": "Street level z14 transferred bytes, client without Accept-Encoding (server sent gzip anyway)"
+            }
+          }
+        },
+        {
+          "id": "bbox-pmtiles",
+          "name": "BBOX (PMTiles)",
+          "version": "0.6.2",
+          "color": "#9333EA",
+          "homepage": "https://www.bbox.earth",
+          "statistics": {
+            "medianMs": 2.229,
+            "meanMs": 2.332,
+            "minMs": 1.38,
+            "maxMs": 5.171
+          },
+          "samplesMs": [
+            2.166,
+            2.226,
+            2.321,
+            5.171,
+            2.115,
+            2.345,
+            2.336,
+            2.137,
+            1.978,
+            2.111,
+            2.116,
+            2.195,
+            2.231,
+            2.378,
+            1.38,
+            2.3,
+            2.353,
+            2.293,
+            2.299,
+            2.19
+          ],
+          "metrics": {
+            "city-z14-mean": {
+              "value": 2.332,
+              "unit": "ms",
+              "label": "Street level z14 mean latency"
+            },
+            "city-z14-p99": {
+              "value": 48.046,
+              "unit": "ms",
+              "label": "Street level z14 p99 latency"
+            },
+            "city-z14-bytes": {
+              "value": 242407,
+              "unit": "B",
+              "label": "Street level z14 tile size"
+            },
+            "city-z14-features": {
+              "value": 8031,
+              "unit": "features",
+              "label": "Street level z14 features in tile"
+            },
+            "district-z12-mean": {
+              "value": 1.376,
+              "unit": "ms",
+              "label": "District z12 mean latency"
+            },
+            "district-z12-p99": {
+              "value": 4.781,
+              "unit": "ms",
+              "label": "District z12 p99 latency"
+            },
+            "district-z12-bytes": {
+              "value": 76490,
+              "unit": "B",
+              "label": "District z12 tile size"
+            },
+            "district-z12-features": {
+              "value": 2541,
+              "unit": "features",
+              "label": "District z12 features in tile"
+            },
+            "region-z9-mean": {
+              "value": 1.048,
+              "unit": "ms",
+              "label": "Region z9 mean latency"
+            },
+            "region-z9-p99": {
+              "value": 3.371,
+              "unit": "ms",
+              "label": "Region z9 p99 latency"
+            },
+            "region-z9-bytes": {
+              "value": 38506,
+              "unit": "B",
+              "label": "Region z9 tile size"
+            },
+            "region-z9-features": {
+              "value": 292,
+              "unit": "features",
+              "label": "Region z9 features in tile"
+            },
+            "country-z5-mean": {
+              "value": 0.581,
+              "unit": "ms",
+              "label": "Overview z5 mean latency"
+            },
+            "country-z5-p99": {
+              "value": 3.108,
+              "unit": "ms",
+              "label": "Overview z5 p99 latency"
+            },
+            "country-z5-bytes": {
+              "value": 3972,
+              "unit": "B",
+              "label": "Overview z5 tile size"
+            },
+            "country-z5-features": {
+              "value": 8,
+              "unit": "features",
+              "label": "Overview z5 features in tile"
+            },
+            "city-z14-identity-mean": {
+              "value": 9.143,
+              "unit": "ms",
+              "label": "Street level z14 mean latency for a client without Accept-Encoding (recorded, not ranked: a server may honour the missing header and decompress, or send gzip regardless)"
+            },
+            "city-z14-identity-bytes": {
+              "value": 415808,
+              "unit": "B",
+              "label": "Street level z14 transferred bytes, client without Accept-Encoding"
+            }
+          }
+        },
+        {
+          "id": "bbox-mbtiles",
+          "name": "BBOX (MBTiles)",
+          "version": "0.6.2",
+          "color": "#C084FC",
+          "homepage": "https://www.bbox.earth",
+          "statistics": {
+            "medianMs": 2.366,
+            "meanMs": 2.749,
+            "minMs": 1.866,
+            "maxMs": 5.415
+          },
+          "samplesMs": [
+            5.261,
+            2.376,
+            2.413,
+            2.491,
+            2.55,
+            2.219,
+            2.456,
+            2.298,
+            5.397,
+            1.897,
+            2.356,
+            2.311,
+            1.866,
+            2.332,
+            2.29,
+            1.912,
+            2.251,
+            2.463,
+            2.435,
+            5.415
+          ],
+          "metrics": {
+            "city-z14-mean": {
+              "value": 2.749,
+              "unit": "ms",
+              "label": "Street level z14 mean latency"
+            },
+            "city-z14-p99": {
+              "value": 46.792,
+              "unit": "ms",
+              "label": "Street level z14 p99 latency"
+            },
+            "city-z14-bytes": {
+              "value": 242407,
+              "unit": "B",
+              "label": "Street level z14 tile size"
+            },
+            "city-z14-features": {
+              "value": 8031,
+              "unit": "features",
+              "label": "Street level z14 features in tile"
+            },
+            "district-z12-mean": {
+              "value": 1.41,
+              "unit": "ms",
+              "label": "District z12 mean latency"
+            },
+            "district-z12-p99": {
+              "value": 4.991,
+              "unit": "ms",
+              "label": "District z12 p99 latency"
+            },
+            "district-z12-bytes": {
+              "value": 76490,
+              "unit": "B",
+              "label": "District z12 tile size"
+            },
+            "district-z12-features": {
+              "value": 2541,
+              "unit": "features",
+              "label": "District z12 features in tile"
+            },
+            "region-z9-mean": {
+              "value": 1.012,
+              "unit": "ms",
+              "label": "Region z9 mean latency"
+            },
+            "region-z9-p99": {
+              "value": 3.714,
+              "unit": "ms",
+              "label": "Region z9 p99 latency"
+            },
+            "region-z9-bytes": {
+              "value": 38506,
+              "unit": "B",
+              "label": "Region z9 tile size"
+            },
+            "region-z9-features": {
+              "value": 292,
+              "unit": "features",
+              "label": "Region z9 features in tile"
+            },
+            "country-z5-mean": {
+              "value": 0.572,
+              "unit": "ms",
+              "label": "Overview z5 mean latency"
+            },
+            "country-z5-p99": {
+              "value": 1.771,
+              "unit": "ms",
+              "label": "Overview z5 p99 latency"
+            },
+            "country-z5-bytes": {
+              "value": 3972,
+              "unit": "B",
+              "label": "Overview z5 tile size"
+            },
+            "country-z5-features": {
+              "value": 8,
+              "unit": "features",
+              "label": "Overview z5 features in tile"
+            },
+            "city-z14-identity-mean": {
+              "value": 10.077,
+              "unit": "ms",
+              "label": "Street level z14 mean latency for a client without Accept-Encoding (recorded, not ranked: a server may honour the missing header and decompress, or send gzip regardless)"
+            },
+            "city-z14-identity-bytes": {
+              "value": 415808,
+              "unit": "B",
+              "label": "Street level z14 transferred bytes, client without Accept-Encoding"
+            }
+          }
+        }
+      ],
+      "tests": [
+        {
+          "id": "mean-city-z14",
+          "title": "Street level z14",
+          "description": "Mean latency over one connection. The densest kind of tile: a 1.5 km Prenzlauer Berg tile with every building, road, POI and landuse polygon of the OpenMapTiles schema.",
+          "unit": "ms",
+          "lowerIsBetter": true,
+          "results": [
+            {
+              "candidateId": "martin-pmtiles",
+              "value": 1.231
+            },
+            {
+              "candidateId": "martin-mbtiles",
+              "value": 1.165
+            },
+            {
+              "candidateId": "go-pmtiles",
+              "value": 1.98
+            },
+            {
+              "candidateId": "tileserver-gl",
+              "value": 14.305
+            },
+            {
+              "candidateId": "mbtileserver",
+              "value": 1.15
+            },
+            {
+              "candidateId": "bbox-pmtiles",
+              "value": 2.332
+            },
+            {
+              "candidateId": "bbox-mbtiles",
+              "value": 2.749
+            }
+          ]
+        },
+        {
+          "id": "mean-district-z12",
+          "title": "District z12",
+          "description": "Mean latency over one connection. Inner-city tile covering Prenzlauer Berg and Mitte: roads, landuse, water and place labels, buildings dropped.",
+          "unit": "ms",
+          "lowerIsBetter": true,
+          "results": [
+            {
+              "candidateId": "martin-pmtiles",
+              "value": 1.089
+            },
+            {
+              "candidateId": "martin-mbtiles",
+              "value": 0.816
+            },
+            {
+              "candidateId": "go-pmtiles",
+              "value": 1.397
+            },
+            {
+              "candidateId": "tileserver-gl",
+              "value": 3.588
+            },
+            {
+              "candidateId": "mbtileserver",
+              "value": 0.915
+            },
+            {
+              "candidateId": "bbox-pmtiles",
+              "value": 1.376
+            },
+            {
+              "candidateId": "bbox-mbtiles",
+              "value": 1.41
+            }
+          ]
+        },
+        {
+          "id": "mean-region-z9",
+          "title": "Region z9",
+          "description": "Mean latency over one connection. Low-zoom tile covering most of Berlin: boundaries, major roads, water, place names.",
+          "unit": "ms",
+          "lowerIsBetter": true,
+          "results": [
+            {
+              "candidateId": "martin-pmtiles",
+              "value": 0.983
+            },
+            {
+              "candidateId": "martin-mbtiles",
+              "value": 0.836
+            },
+            {
+              "candidateId": "go-pmtiles",
+              "value": 1.048
+            },
+            {
+              "candidateId": "tileserver-gl",
+              "value": 2.746
+            },
+            {
+              "candidateId": "mbtileserver",
+              "value": 0.844
+            },
+            {
+              "candidateId": "bbox-pmtiles",
+              "value": 1.048
+            },
+            {
+              "candidateId": "bbox-mbtiles",
+              "value": 1.012
+            }
+          ]
+        },
+        {
+          "id": "mean-country-z5",
+          "title": "Overview z5",
+          "description": "Mean latency over one connection. Small tile at the top of the pyramid: the extract's footprint in one tile, mostly boundaries and a few labels.",
+          "unit": "ms",
+          "lowerIsBetter": true,
+          "results": [
+            {
+              "candidateId": "martin-pmtiles",
+              "value": 0.958
+            },
+            {
+              "candidateId": "martin-mbtiles",
+              "value": 0.882
+            },
+            {
+              "candidateId": "go-pmtiles",
+              "value": 0.789
+            },
+            {
+              "candidateId": "tileserver-gl",
+              "value": 1.626
+            },
+            {
+              "candidateId": "mbtileserver",
+              "value": 0.719
+            },
+            {
+              "candidateId": "bbox-pmtiles",
+              "value": 0.581
+            },
+            {
+              "candidateId": "bbox-mbtiles",
+              "value": 0.572
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "concurrency",
+      "title": "Throughput under concurrency",
+      "deck": "Closed-loop load on the street level z14 tile at 10 and 100 concurrent connections; every request reads the same tile out of the archive.",
+      "unit": "req/s",
+      "lowerIsBetter": false,
+      "verdict": {
+        "winnerId": "martin-pmtiles",
+        "headline": "Martin (PMTiles) sustained 12634 tiles/s at 100 connections; tileserver-gl-light managed 281",
+        "summary": "Per-pass successful requests per second at 100 connections are the samples."
+      },
+      "candidates": [
+        {
+          "id": "martin-pmtiles",
+          "name": "Martin (PMTiles)",
+          "version": "1.16.0",
+          "color": "#2563EB",
+          "homepage": "https://martin.maplibre.org",
+          "statistics": {
+            "medianMs": 12654.205,
+            "meanMs": 12634.229,
+            "minMs": 12389.83,
+            "maxMs": 12749.67
+          },
+          "samplesMs": [
+            12749.67,
+            12725.33,
+            12681.08,
+            12715.42,
+            12623.67,
+            12627.33,
+            12561.5,
+            12389.83
+          ],
+          "metrics": {
+            "c10-rps": {
+              "value": 11289.15,
+              "unit": "req/s",
+              "label": "Throughput at 10 connections"
+            },
+            "c10-p50": {
+              "value": 0.833,
+              "unit": "ms",
+              "label": "p50 latency at 10 connections"
+            },
+            "c10-p99": {
+              "value": 1.68,
+              "unit": "ms",
+              "label": "p99 latency at 10 connections"
+            },
+            "c10-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed requests at 10 connections"
+            },
+            "c10-min-completed": {
+              "value": 133046,
+              "unit": "requests",
+              "label": "Fewest requests completed in one pass at 10 connections"
+            },
+            "c100-rps": {
+              "value": 12634.23,
+              "unit": "req/s",
+              "label": "Throughput at 100 connections"
+            },
+            "c100-p50": {
+              "value": 3.85,
+              "unit": "ms",
+              "label": "p50 latency at 100 connections"
+            },
+            "c100-p99": {
+              "value": 203.119,
+              "unit": "ms",
+              "label": "p99 latency at 100 connections"
+            },
+            "c100-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed requests at 100 connections"
+            },
+            "c100-min-completed": {
+              "value": 148678,
+              "unit": "requests",
+              "label": "Fewest requests completed in one pass at 100 connections"
+            },
+            "rss-after-load": {
+              "value": 167.7,
+              "unit": "MB",
+              "label": "RSS after the load passes"
+            }
+          }
+        },
+        {
+          "id": "martin-mbtiles",
+          "name": "Martin (MBTiles)",
+          "version": "1.16.0",
+          "color": "#60A5FA",
+          "homepage": "https://martin.maplibre.org",
+          "statistics": {
+            "medianMs": 9191.79,
+            "meanMs": 9185.478,
+            "minMs": 8997,
+            "maxMs": 9333.08
+          },
+          "samplesMs": [
+            9120,
+            8997,
+            9229.58,
+            9281.08,
+            9047,
+            9333.08,
+            9322.08,
+            9154
+          ],
+          "metrics": {
+            "c10-rps": {
+              "value": 11145.48,
+              "unit": "req/s",
+              "label": "Throughput at 10 connections"
+            },
+            "c10-p50": {
+              "value": 0.864,
+              "unit": "ms",
+              "label": "p50 latency at 10 connections"
+            },
+            "c10-p99": {
+              "value": 1.615,
+              "unit": "ms",
+              "label": "p99 latency at 10 connections"
+            },
+            "c10-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed requests at 10 connections"
+            },
+            "c10-min-completed": {
+              "value": 132178,
+              "unit": "requests",
+              "label": "Fewest requests completed in one pass at 10 connections"
+            },
+            "c100-rps": {
+              "value": 9185.48,
+              "unit": "req/s",
+              "label": "Throughput at 100 connections"
+            },
+            "c100-p50": {
+              "value": 10.75,
+              "unit": "ms",
+              "label": "p50 latency at 100 connections"
+            },
+            "c100-p99": {
+              "value": 13.849,
+              "unit": "ms",
+              "label": "p99 latency at 100 connections"
+            },
+            "c100-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed requests at 100 connections"
+            },
+            "c100-min-completed": {
+              "value": 107964,
+              "unit": "requests",
+              "label": "Fewest requests completed in one pass at 100 connections"
+            },
+            "rss-after-load": {
+              "value": 63.2,
+              "unit": "MB",
+              "label": "RSS after the load passes"
+            }
+          }
+        },
+        {
+          "id": "go-pmtiles",
+          "name": "go-pmtiles",
+          "version": "1.31.2",
+          "color": "#16A34A",
+          "homepage": "https://docs.protomaps.com/deploy/server",
+          "statistics": {
+            "medianMs": 4516.67,
+            "meanMs": 4513.51,
+            "minMs": 4462.58,
+            "maxMs": 4565.83
+          },
+          "samplesMs": [
+            4462.58,
+            4562,
+            4473.25,
+            4523.17,
+            4523.75,
+            4487.33,
+            4510.17,
+            4565.83
+          ],
+          "metrics": {
+            "c10-rps": {
+              "value": 2471.59,
+              "unit": "req/s",
+              "label": "Throughput at 10 connections"
+            },
+            "c10-p50": {
+              "value": 3.139,
+              "unit": "ms",
+              "label": "p50 latency at 10 connections"
+            },
+            "c10-p99": {
+              "value": 14.772,
+              "unit": "ms",
+              "label": "p99 latency at 10 connections"
+            },
+            "c10-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed requests at 10 connections"
+            },
+            "c10-min-completed": {
+              "value": 28204,
+              "unit": "requests",
+              "label": "Fewest requests completed in one pass at 10 connections"
+            },
+            "c100-rps": {
+              "value": 4513.51,
+              "unit": "req/s",
+              "label": "Throughput at 100 connections"
+            },
+            "c100-p50": {
+              "value": 15.718,
+              "unit": "ms",
+              "label": "p50 latency at 100 connections"
+            },
+            "c100-p99": {
+              "value": 108.825,
+              "unit": "ms",
+              "label": "p99 latency at 100 connections"
+            },
+            "c100-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed requests at 100 connections"
+            },
+            "c100-min-completed": {
+              "value": 53551,
+              "unit": "requests",
+              "label": "Fewest requests completed in one pass at 100 connections"
+            },
+            "rss-after-load": {
+              "value": 44,
+              "unit": "MB",
+              "label": "RSS after the load passes"
+            }
+          }
+        },
+        {
+          "id": "tileserver-gl",
+          "name": "tileserver-gl-light",
+          "version": "5.6.0",
+          "color": "#EA580C",
+          "homepage": "https://tileserver.readthedocs.io",
+          "statistics": {
+            "medianMs": 281.58,
+            "meanMs": 281.229,
+            "minMs": 279,
+            "maxMs": 282.67
+          },
+          "samplesMs": [
+            281.58,
+            280.42,
+            281.67,
+            281.58,
+            281.08,
+            282.67,
+            279,
+            281.83
+          ],
+          "metrics": {
+            "c10-rps": {
+              "value": 300.74,
+              "unit": "req/s",
+              "label": "Throughput at 10 connections"
+            },
+            "c10-p50": {
+              "value": 32.218,
+              "unit": "ms",
+              "label": "p50 latency at 10 connections"
+            },
+            "c10-p99": {
+              "value": 48.867,
+              "unit": "ms",
+              "label": "p99 latency at 10 connections"
+            },
+            "c10-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed requests at 10 connections"
+            },
+            "c10-min-completed": {
+              "value": 3546,
+              "unit": "requests",
+              "label": "Fewest requests completed in one pass at 10 connections"
+            },
+            "c100-rps": {
+              "value": 281.23,
+              "unit": "req/s",
+              "label": "Throughput at 100 connections"
+            },
+            "c100-p50": {
+              "value": 344.65,
+              "unit": "ms",
+              "label": "p50 latency at 100 connections"
+            },
+            "c100-p99": {
+              "value": 449.383,
+              "unit": "ms",
+              "label": "p99 latency at 100 connections"
+            },
+            "c100-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed requests at 100 connections"
+            },
+            "c100-min-completed": {
+              "value": 3348,
+              "unit": "requests",
+              "label": "Fewest requests completed in one pass at 100 connections"
+            },
+            "rss-after-load": {
+              "value": 308.7,
+              "unit": "MB",
+              "label": "RSS after the load passes"
+            }
+          }
+        },
+        {
+          "id": "mbtileserver",
+          "name": "mbtileserver",
+          "version": "0.11.0",
+          "color": "#0891B2",
+          "homepage": "https://github.com/consbio/mbtileserver",
+          "statistics": {
+            "medianMs": 7880.75,
+            "meanMs": 7856.615,
+            "minMs": 7552.17,
+            "maxMs": 8018.33
+          },
+          "samplesMs": [
+            7810.92,
+            7815.25,
+            8000.42,
+            8018.33,
+            7552.17,
+            7744.5,
+            7946.25,
+            7965.08
+          ],
+          "metrics": {
+            "c10-rps": {
+              "value": 5908.04,
+              "unit": "req/s",
+              "label": "Throughput at 10 connections"
+            },
+            "c10-p50": {
+              "value": 0.874,
+              "unit": "ms",
+              "label": "p50 latency at 10 connections"
+            },
+            "c10-p99": {
+              "value": 7.051,
+              "unit": "ms",
+              "label": "p99 latency at 10 connections"
+            },
+            "c10-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed requests at 10 connections"
+            },
+            "c10-min-completed": {
+              "value": 66497,
+              "unit": "requests",
+              "label": "Fewest requests completed in one pass at 10 connections"
+            },
+            "c100-rps": {
+              "value": 7856.62,
+              "unit": "req/s",
+              "label": "Throughput at 100 connections"
+            },
+            "c100-p50": {
+              "value": 9.733,
+              "unit": "ms",
+              "label": "p50 latency at 100 connections"
+            },
+            "c100-p99": {
+              "value": 34.293,
+              "unit": "ms",
+              "label": "p99 latency at 100 connections"
+            },
+            "c100-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed requests at 100 connections"
+            },
+            "c100-min-completed": {
+              "value": 90626,
+              "unit": "requests",
+              "label": "Fewest requests completed in one pass at 100 connections"
+            },
+            "rss-after-load": {
+              "value": 66.2,
+              "unit": "MB",
+              "label": "RSS after the load passes"
+            }
+          }
+        },
+        {
+          "id": "bbox-pmtiles",
+          "name": "BBOX (PMTiles)",
+          "version": "0.6.2",
+          "color": "#9333EA",
+          "homepage": "https://www.bbox.earth",
+          "statistics": {
+            "medianMs": 3964.04,
+            "meanMs": 3961.467,
+            "minMs": 3909.25,
+            "maxMs": 4020.92
+          },
+          "samplesMs": [
+            3981.58,
+            3961.25,
+            3919.08,
+            3930.25,
+            4002.58,
+            4020.92,
+            3909.25,
+            3966.83
+          ],
+          "metrics": {
+            "c10-rps": {
+              "value": 3884.6,
+              "unit": "req/s",
+              "label": "Throughput at 10 connections"
+            },
+            "c10-p50": {
+              "value": 2.619,
+              "unit": "ms",
+              "label": "p50 latency at 10 connections"
+            },
+            "c10-p99": {
+              "value": 4.085,
+              "unit": "ms",
+              "label": "p99 latency at 10 connections"
+            },
+            "c10-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed requests at 10 connections"
+            },
+            "c10-min-completed": {
+              "value": 46154,
+              "unit": "requests",
+              "label": "Fewest requests completed in one pass at 10 connections"
+            },
+            "c100-rps": {
+              "value": 3961.47,
+              "unit": "req/s",
+              "label": "Throughput at 100 connections"
+            },
+            "c100-p50": {
+              "value": 24.914,
+              "unit": "ms",
+              "label": "p50 latency at 100 connections"
+            },
+            "c100-p99": {
+              "value": 31.285,
+              "unit": "ms",
+              "label": "p99 latency at 100 connections"
+            },
+            "c100-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed requests at 100 connections"
+            },
+            "c100-min-completed": {
+              "value": 46911,
+              "unit": "requests",
+              "label": "Fewest requests completed in one pass at 100 connections"
+            },
+            "rss-after-load": {
+              "value": 34.9,
+              "unit": "MB",
+              "label": "RSS after the load passes"
+            }
+          }
+        },
+        {
+          "id": "bbox-mbtiles",
+          "name": "BBOX (MBTiles)",
+          "version": "0.6.2",
+          "color": "#C084FC",
+          "homepage": "https://www.bbox.earth",
+          "statistics": {
+            "medianMs": 2181.5,
+            "meanMs": 2202.155,
+            "minMs": 2054.08,
+            "maxMs": 2433.58
+          },
+          "samplesMs": [
+            2433.58,
+            2295.5,
+            2235.17,
+            2054.08,
+            2069.92,
+            2127.83,
+            2093.33,
+            2307.83
+          ],
+          "metrics": {
+            "c10-rps": {
+              "value": 3509.33,
+              "unit": "req/s",
+              "label": "Throughput at 10 connections"
+            },
+            "c10-p50": {
+              "value": 2.474,
+              "unit": "ms",
+              "label": "p50 latency at 10 connections"
+            },
+            "c10-p99": {
+              "value": 5.485,
+              "unit": "ms",
+              "label": "p99 latency at 10 connections"
+            },
+            "c10-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed requests at 10 connections"
+            },
+            "c10-min-completed": {
+              "value": 41957,
+              "unit": "requests",
+              "label": "Fewest requests completed in one pass at 10 connections"
+            },
+            "c100-rps": {
+              "value": 2202.15,
+              "unit": "req/s",
+              "label": "Throughput at 100 connections"
+            },
+            "c100-p50": {
+              "value": 45.305,
+              "unit": "ms",
+              "label": "p50 latency at 100 connections"
+            },
+            "c100-p99": {
+              "value": 64.957,
+              "unit": "ms",
+              "label": "p99 latency at 100 connections"
+            },
+            "c100-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed requests at 100 connections"
+            },
+            "c100-min-completed": {
+              "value": 24649,
+              "unit": "requests",
+              "label": "Fewest requests completed in one pass at 100 connections"
+            },
+            "rss-after-load": {
+              "value": 68.9,
+              "unit": "MB",
+              "label": "RSS after the load passes"
+            }
+          }
+        }
+      ],
+      "tests": [
+        {
+          "id": "rps-c10",
+          "title": "Throughput, 10 connections",
+          "description": "Successful street level z14 tiles per second with 10 closed-loop clients.",
+          "unit": "req/s",
+          "lowerIsBetter": false,
+          "results": [
+            {
+              "candidateId": "martin-pmtiles",
+              "value": 11289.15
+            },
+            {
+              "candidateId": "martin-mbtiles",
+              "value": 11145.48
+            },
+            {
+              "candidateId": "go-pmtiles",
+              "value": 2471.59
+            },
+            {
+              "candidateId": "tileserver-gl",
+              "value": 300.74
+            },
+            {
+              "candidateId": "mbtileserver",
+              "value": 5908.04
+            },
+            {
+              "candidateId": "bbox-pmtiles",
+              "value": 3884.6
+            },
+            {
+              "candidateId": "bbox-mbtiles",
+              "value": 3509.33
+            }
+          ]
+        },
+        {
+          "id": "rps-c100",
+          "title": "Throughput, 100 connections",
+          "description": "Successful street level z14 tiles per second with 100 closed-loop clients.",
+          "unit": "req/s",
+          "lowerIsBetter": false,
+          "results": [
+            {
+              "candidateId": "martin-pmtiles",
+              "value": 12634.23
+            },
+            {
+              "candidateId": "martin-mbtiles",
+              "value": 9185.48
+            },
+            {
+              "candidateId": "go-pmtiles",
+              "value": 4513.51
+            },
+            {
+              "candidateId": "tileserver-gl",
+              "value": 281.23
+            },
+            {
+              "candidateId": "mbtileserver",
+              "value": 7856.62
+            },
+            {
+              "candidateId": "bbox-pmtiles",
+              "value": 3961.47
+            },
+            {
+              "candidateId": "bbox-mbtiles",
+              "value": 2202.15
+            }
+          ]
+        },
+        {
+          "id": "p99-c10",
+          "title": "p99 latency, 10 connections",
+          "description": "Median across passes of each pass's p99 response time at 10 connections. A server that completed no request in a pass is charged the whole 12 s pass.",
+          "unit": "ms",
+          "lowerIsBetter": true,
+          "results": [
+            {
+              "candidateId": "martin-pmtiles",
+              "value": 1.68
+            },
+            {
+              "candidateId": "martin-mbtiles",
+              "value": 1.615
+            },
+            {
+              "candidateId": "go-pmtiles",
+              "value": 14.772
+            },
+            {
+              "candidateId": "tileserver-gl",
+              "value": 48.867
+            },
+            {
+              "candidateId": "mbtileserver",
+              "value": 7.051
+            },
+            {
+              "candidateId": "bbox-pmtiles",
+              "value": 4.085
+            },
+            {
+              "candidateId": "bbox-mbtiles",
+              "value": 5.485
+            }
+          ]
+        },
+        {
+          "id": "p99-c100",
+          "title": "p99 latency, 100 connections",
+          "description": "Median across passes of each pass's p99 response time at 100 connections. A server that completed no request in a pass is charged the whole 12 s pass.",
+          "unit": "ms",
+          "lowerIsBetter": true,
+          "results": [
+            {
+              "candidateId": "martin-pmtiles",
+              "value": 203.119
+            },
+            {
+              "candidateId": "martin-mbtiles",
+              "value": 13.849
+            },
+            {
+              "candidateId": "go-pmtiles",
+              "value": 108.825
+            },
+            {
+              "candidateId": "tileserver-gl",
+              "value": 449.383
+            },
+            {
+              "candidateId": "mbtileserver",
+              "value": 34.293
+            },
+            {
+              "candidateId": "bbox-pmtiles",
+              "value": 31.285
+            },
+            {
+              "candidateId": "bbox-mbtiles",
+              "value": 64.957
+            }
+          ]
+        },
+        {
+          "id": "errors-c100",
+          "title": "Failed requests, 100 connections",
+          "description": "Non-2xx responses plus connection errors and 60 s timeouts as a share of all requests at 100 connections.",
+          "unit": "%",
+          "lowerIsBetter": true,
+          "results": [
+            {
+              "candidateId": "martin-pmtiles",
+              "value": 0
+            },
+            {
+              "candidateId": "martin-mbtiles",
+              "value": 0
+            },
+            {
+              "candidateId": "go-pmtiles",
+              "value": 0
+            },
+            {
+              "candidateId": "tileserver-gl",
+              "value": 0
+            },
+            {
+              "candidateId": "mbtileserver",
+              "value": 0
+            },
+            {
+              "candidateId": "bbox-pmtiles",
+              "value": 0
+            },
+            {
+              "candidateId": "bbox-mbtiles",
+              "value": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "random-walk",
+      "title": "Random tile walk",
+      "deck": "10 clients each requesting a random z14 tile from a 256-tile block of central Berlin, so no server can win on one hot tile and every request goes through the archive's index.",
+      "unit": "req/s",
+      "lowerIsBetter": false,
+      "verdict": {
+        "winnerId": "martin-mbtiles",
+        "headline": "Martin (MBTiles) served 13724 random tiles/s at 10 connections; tileserver-gl-light served 793",
+        "summary": "Per-pass successful requests per second at 10 connections are the samples."
+      },
+      "candidates": [
+        {
+          "id": "martin-pmtiles",
+          "name": "Martin (PMTiles)",
+          "version": "1.16.0",
+          "color": "#2563EB",
+          "homepage": "https://martin.maplibre.org",
+          "statistics": {
+            "medianMs": 13022.625,
+            "meanMs": 12992.76,
+            "minMs": 12842.5,
+            "maxMs": 13113.58
+          },
+          "samplesMs": [
+            12872.67,
+            13094.67,
+            12888.08,
+            13054,
+            12842.5,
+            13113.58,
+            12991.25,
+            13085.33
+          ],
+          "metrics": {
+            "walk-rps": {
+              "value": 12992.76,
+              "unit": "req/s",
+              "label": "Throughput at 10 connections over 256 tiles"
+            },
+            "walk-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed requests"
+            },
+            "walk-p50": {
+              "value": 0.72,
+              "unit": "ms",
+              "label": "p50 latency"
+            },
+            "walk-p99": {
+              "value": 1.543,
+              "unit": "ms",
+              "label": "p99 latency"
+            },
+            "walk-bytes": {
+              "value": 98665,
+              "unit": "B",
+              "label": "Mean bytes per response"
+            }
+          }
+        },
+        {
+          "id": "martin-mbtiles",
+          "name": "Martin (MBTiles)",
+          "version": "1.16.0",
+          "color": "#60A5FA",
+          "homepage": "https://martin.maplibre.org",
+          "statistics": {
+            "medianMs": 13789.71,
+            "meanMs": 13723.98,
+            "minMs": 13334.42,
+            "maxMs": 14000.25
+          },
+          "samplesMs": [
+            13729.33,
+            13405.92,
+            13334.42,
+            14000.25,
+            13804.5,
+            13881.67,
+            13860.83,
+            13774.92
+          ],
+          "metrics": {
+            "walk-rps": {
+              "value": 13723.98,
+              "unit": "req/s",
+              "label": "Throughput at 10 connections over 256 tiles"
+            },
+            "walk-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed requests"
+            },
+            "walk-p50": {
+              "value": 0.686,
+              "unit": "ms",
+              "label": "p50 latency"
+            },
+            "walk-p99": {
+              "value": 1.411,
+              "unit": "ms",
+              "label": "p99 latency"
+            },
+            "walk-bytes": {
+              "value": 98758,
+              "unit": "B",
+              "label": "Mean bytes per response"
+            }
+          }
+        },
+        {
+          "id": "go-pmtiles",
+          "name": "go-pmtiles",
+          "version": "1.31.2",
+          "color": "#16A34A",
+          "homepage": "https://docs.protomaps.com/deploy/server",
+          "statistics": {
+            "medianMs": 4533.165,
+            "meanMs": 4533.073,
+            "minMs": 4477.42,
+            "maxMs": 4602.67
+          },
+          "samplesMs": [
+            4477.42,
+            4531.75,
+            4540,
+            4511.33,
+            4516.25,
+            4534.58,
+            4602.67,
+            4550.58
+          ],
+          "metrics": {
+            "walk-rps": {
+              "value": 4533.07,
+              "unit": "req/s",
+              "label": "Throughput at 10 connections over 256 tiles"
+            },
+            "walk-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed requests"
+            },
+            "walk-p50": {
+              "value": 1.62,
+              "unit": "ms",
+              "label": "p50 latency"
+            },
+            "walk-p99": {
+              "value": 8.493,
+              "unit": "ms",
+              "label": "p99 latency"
+            },
+            "walk-bytes": {
+              "value": 98915,
+              "unit": "B",
+              "label": "Mean bytes per response"
+            }
+          }
+        },
+        {
+          "id": "tileserver-gl",
+          "name": "tileserver-gl-light",
+          "version": "5.6.0",
+          "color": "#EA580C",
+          "homepage": "https://tileserver.readthedocs.io",
+          "statistics": {
+            "medianMs": 794.17,
+            "meanMs": 793.21,
+            "minMs": 785.42,
+            "maxMs": 799.67
+          },
+          "samplesMs": [
+            792.42,
+            799.58,
+            795.92,
+            786.42,
+            785.42,
+            789.08,
+            797.17,
+            799.67
+          ],
+          "metrics": {
+            "walk-rps": {
+              "value": 793.21,
+              "unit": "req/s",
+              "label": "Throughput at 10 connections over 256 tiles"
+            },
+            "walk-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed requests"
+            },
+            "walk-p50": {
+              "value": 11.347,
+              "unit": "ms",
+              "label": "p50 latency"
+            },
+            "walk-p99": {
+              "value": 33.811,
+              "unit": "ms",
+              "label": "p99 latency"
+            },
+            "walk-bytes": {
+              "value": 98940,
+              "unit": "B",
+              "label": "Mean bytes per response"
+            }
+          }
+        },
+        {
+          "id": "mbtileserver",
+          "name": "mbtileserver",
+          "version": "0.11.0",
+          "color": "#0891B2",
+          "homepage": "https://github.com/consbio/mbtileserver",
+          "statistics": {
+            "medianMs": 7155.96,
+            "meanMs": 7110.447,
+            "minMs": 6884.25,
+            "maxMs": 7222.67
+          },
+          "samplesMs": [
+            6884.25,
+            7066.83,
+            7037.08,
+            7191.33,
+            7169.5,
+            7154.67,
+            7157.25,
+            7222.67
+          ],
+          "metrics": {
+            "walk-rps": {
+              "value": 7110.45,
+              "unit": "req/s",
+              "label": "Throughput at 10 connections over 256 tiles"
+            },
+            "walk-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed requests"
+            },
+            "walk-p50": {
+              "value": 0.728,
+              "unit": "ms",
+              "label": "p50 latency"
+            },
+            "walk-p99": {
+              "value": 5.815,
+              "unit": "ms",
+              "label": "p99 latency"
+            },
+            "walk-bytes": {
+              "value": 98835,
+              "unit": "B",
+              "label": "Mean bytes per response"
+            }
+          }
+        },
+        {
+          "id": "bbox-pmtiles",
+          "name": "BBOX (PMTiles)",
+          "version": "0.6.2",
+          "color": "#9333EA",
+          "homepage": "https://www.bbox.earth",
+          "statistics": {
+            "medianMs": 8288.165,
+            "meanMs": 8292.178,
+            "minMs": 8251.42,
+            "maxMs": 8328.17
+          },
+          "samplesMs": [
+            8276.5,
+            8299.75,
+            8276.08,
+            8276.58,
+            8324,
+            8328.17,
+            8304.92,
+            8251.42
+          ],
+          "metrics": {
+            "walk-rps": {
+              "value": 8292.18,
+              "unit": "req/s",
+              "label": "Throughput at 10 connections over 256 tiles"
+            },
+            "walk-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed requests"
+            },
+            "walk-p50": {
+              "value": 1.098,
+              "unit": "ms",
+              "label": "p50 latency"
+            },
+            "walk-p99": {
+              "value": 2.805,
+              "unit": "ms",
+              "label": "p99 latency"
+            },
+            "walk-bytes": {
+              "value": 98704,
+              "unit": "B",
+              "label": "Mean bytes per response"
+            }
+          }
+        },
+        {
+          "id": "bbox-mbtiles",
+          "name": "BBOX (MBTiles)",
+          "version": "0.6.2",
+          "color": "#C084FC",
+          "homepage": "https://www.bbox.earth",
+          "statistics": {
+            "medianMs": 6501.54,
+            "meanMs": 6503.435,
+            "minMs": 6461.58,
+            "maxMs": 6561.83
+          },
+          "samplesMs": [
+            6531.08,
+            6495.5,
+            6561.83,
+            6463.5,
+            6528.33,
+            6461.58,
+            6478.08,
+            6507.58
+          ],
+          "metrics": {
+            "walk-rps": {
+              "value": 6503.44,
+              "unit": "req/s",
+              "label": "Throughput at 10 connections over 256 tiles"
+            },
+            "walk-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed requests"
+            },
+            "walk-p50": {
+              "value": 1.394,
+              "unit": "ms",
+              "label": "p50 latency"
+            },
+            "walk-p99": {
+              "value": 3.522,
+              "unit": "ms",
+              "label": "p99 latency"
+            },
+            "walk-bytes": {
+              "value": 99128,
+              "unit": "B",
+              "label": "Mean bytes per response"
+            }
+          }
+        }
+      ],
+      "tests": [
+        {
+          "id": "walk-rps",
+          "title": "Throughput, 10 connections",
+          "description": "Successful tiles per second when 10 closed-loop clients each request a random z14 tile from a 256-tile block of central Berlin.",
+          "unit": "req/s",
+          "lowerIsBetter": false,
+          "results": [
+            {
+              "candidateId": "martin-pmtiles",
+              "value": 12992.76
+            },
+            {
+              "candidateId": "martin-mbtiles",
+              "value": 13723.98
+            },
+            {
+              "candidateId": "go-pmtiles",
+              "value": 4533.07
+            },
+            {
+              "candidateId": "tileserver-gl",
+              "value": 793.21
+            },
+            {
+              "candidateId": "mbtileserver",
+              "value": 7110.45
+            },
+            {
+              "candidateId": "bbox-pmtiles",
+              "value": 8292.18
+            },
+            {
+              "candidateId": "bbox-mbtiles",
+              "value": 6503.44
+            }
+          ]
+        },
+        {
+          "id": "walk-p99",
+          "title": "p99 latency, 10 connections",
+          "description": "Median across passes of each pass's p99 response time on the random walk. A server that completed no request in a pass is charged the whole 12 s pass.",
+          "unit": "ms",
+          "lowerIsBetter": true,
+          "results": [
+            {
+              "candidateId": "martin-pmtiles",
+              "value": 1.543
+            },
+            {
+              "candidateId": "martin-mbtiles",
+              "value": 1.411
+            },
+            {
+              "candidateId": "go-pmtiles",
+              "value": 8.493
+            },
+            {
+              "candidateId": "tileserver-gl",
+              "value": 33.811
+            },
+            {
+              "candidateId": "mbtileserver",
+              "value": 5.815
+            },
+            {
+              "candidateId": "bbox-pmtiles",
+              "value": 2.805
+            },
+            {
+              "candidateId": "bbox-mbtiles",
+              "value": 3.522
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "viewport-burst",
+      "title": "Viewport burst",
+      "deck": "Four adjacent z14 tiles requested at once, the way a map view loads; wall time until the last one lands.",
+      "unit": "ms",
+      "lowerIsBetter": true,
+      "verdict": {
+        "winnerId": "martin-pmtiles",
+        "headline": "Martin (PMTiles) filled the four-tile viewport in 1.2 ms; tileserver-gl-light needed 18.7 ms",
+        "summary": "Wall time per viewport load is the sample."
+      },
+      "candidates": [
+        {
+          "id": "martin-pmtiles",
+          "name": "Martin (PMTiles)",
+          "version": "1.16.0",
+          "color": "#2563EB",
+          "homepage": "https://martin.maplibre.org",
+          "statistics": {
+            "medianMs": 1.085,
+            "meanMs": 1.166,
+            "minMs": 0.906,
+            "maxMs": 1.722
+          },
+          "samplesMs": [
+            1.499,
+            1.48,
+            1.6,
+            1.334,
+            1.208,
+            1.053,
+            1.263,
+            1.036,
+            1.129,
+            1.722,
+            1.117,
+            1.142,
+            0.975,
+            1.002,
+            0.955,
+            1,
+            0.906,
+            0.996,
+            0.991,
+            0.906
+          ],
+          "metrics": {
+            "burst-mean": {
+              "value": 1.166,
+              "unit": "ms",
+              "label": "Mean time to all four tiles"
+            },
+            "burst-max": {
+              "value": 1.722,
+              "unit": "ms",
+              "label": "Slowest viewport"
+            },
+            "slowest-tile-mean": {
+              "value": 1.124,
+              "unit": "ms",
+              "label": "Mean of the slowest tile per viewport"
+            },
+            "burst-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed tile requests"
+            }
+          }
+        },
+        {
+          "id": "martin-mbtiles",
+          "name": "Martin (MBTiles)",
+          "version": "1.16.0",
+          "color": "#60A5FA",
+          "homepage": "https://martin.maplibre.org",
+          "statistics": {
+            "medianMs": 1.211,
+            "meanMs": 1.229,
+            "minMs": 0.986,
+            "maxMs": 1.938
+          },
+          "samplesMs": [
+            1.317,
+            1.395,
+            1.219,
+            1.417,
+            1.303,
+            1.158,
+            1.349,
+            1.358,
+            1.938,
+            1.016,
+            1.253,
+            1.146,
+            0.986,
+            1.203,
+            1.092,
+            1.022,
+            1.244,
+            1.156,
+            0.995,
+            1.02
+          ],
+          "metrics": {
+            "burst-mean": {
+              "value": 1.229,
+              "unit": "ms",
+              "label": "Mean time to all four tiles"
+            },
+            "burst-max": {
+              "value": 1.938,
+              "unit": "ms",
+              "label": "Slowest viewport"
+            },
+            "slowest-tile-mean": {
+              "value": 1.192,
+              "unit": "ms",
+              "label": "Mean of the slowest tile per viewport"
+            },
+            "burst-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed tile requests"
+            }
+          }
+        },
+        {
+          "id": "go-pmtiles",
+          "name": "go-pmtiles",
+          "version": "1.31.2",
+          "color": "#16A34A",
+          "homepage": "https://docs.protomaps.com/deploy/server",
+          "statistics": {
+            "medianMs": 1.682,
+            "meanMs": 1.921,
+            "minMs": 0.88,
+            "maxMs": 4.847
+          },
+          "samplesMs": [
+            2.087,
+            1.16,
+            1.724,
+            1.244,
+            1.402,
+            1.419,
+            4.847,
+            4.089,
+            1.931,
+            1.737,
+            1.64,
+            1.349,
+            1.203,
+            0.88,
+            2.044,
+            0.941,
+            2.491,
+            3.462,
+            1.013,
+            1.759
+          ],
+          "metrics": {
+            "burst-mean": {
+              "value": 1.921,
+              "unit": "ms",
+              "label": "Mean time to all four tiles"
+            },
+            "burst-max": {
+              "value": 4.847,
+              "unit": "ms",
+              "label": "Slowest viewport"
+            },
+            "slowest-tile-mean": {
+              "value": 1.877,
+              "unit": "ms",
+              "label": "Mean of the slowest tile per viewport"
+            },
+            "burst-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed tile requests"
+            }
+          }
+        },
+        {
+          "id": "tileserver-gl",
+          "name": "tileserver-gl-light",
+          "version": "5.6.0",
+          "color": "#EA580C",
+          "homepage": "https://tileserver.readthedocs.io",
+          "statistics": {
+            "medianMs": 18.325,
+            "meanMs": 18.709,
+            "minMs": 16.217,
+            "maxMs": 22.276
+          },
+          "samplesMs": [
+            17.927,
+            21.722,
+            17.116,
+            21.859,
+            19.567,
+            16.417,
+            18.323,
+            22.276,
+            16.628,
+            19.38,
+            20.085,
+            20.389,
+            18.998,
+            18.273,
+            18.328,
+            17.952,
+            16.708,
+            18.436,
+            17.588,
+            16.217
+          ],
+          "metrics": {
+            "burst-mean": {
+              "value": 18.709,
+              "unit": "ms",
+              "label": "Mean time to all four tiles"
+            },
+            "burst-max": {
+              "value": 22.276,
+              "unit": "ms",
+              "label": "Slowest viewport"
+            },
+            "slowest-tile-mean": {
+              "value": 18.578,
+              "unit": "ms",
+              "label": "Mean of the slowest tile per viewport"
+            },
+            "burst-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed tile requests"
+            }
+          }
+        },
+        {
+          "id": "mbtileserver",
+          "name": "mbtileserver",
+          "version": "0.11.0",
+          "color": "#0891B2",
+          "homepage": "https://github.com/consbio/mbtileserver",
+          "statistics": {
+            "medianMs": 1.197,
+            "meanMs": 2.242,
+            "minMs": 0.808,
+            "maxMs": 11.613
+          },
+          "samplesMs": [
+            1.814,
+            0.972,
+            1.285,
+            0.997,
+            1.108,
+            1.351,
+            0.977,
+            1.443,
+            0.973,
+            11.613,
+            0.93,
+            0.898,
+            6.084,
+            0.878,
+            1.021,
+            0.808,
+            3.684,
+            2.379,
+            3.316,
+            2.303
+          ],
+          "metrics": {
+            "burst-mean": {
+              "value": 2.242,
+              "unit": "ms",
+              "label": "Mean time to all four tiles"
+            },
+            "burst-max": {
+              "value": 11.613,
+              "unit": "ms",
+              "label": "Slowest viewport"
+            },
+            "slowest-tile-mean": {
+              "value": 2.213,
+              "unit": "ms",
+              "label": "Mean of the slowest tile per viewport"
+            },
+            "burst-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed tile requests"
+            }
+          }
+        },
+        {
+          "id": "bbox-pmtiles",
+          "name": "BBOX (PMTiles)",
+          "version": "0.6.2",
+          "color": "#9333EA",
+          "homepage": "https://www.bbox.earth",
+          "statistics": {
+            "medianMs": 1.733,
+            "meanMs": 1.874,
+            "minMs": 1.364,
+            "maxMs": 3.229
+          },
+          "samplesMs": [
+            2.206,
+            2.362,
+            1.665,
+            2.379,
+            1.588,
+            1.712,
+            1.581,
+            1.525,
+            1.753,
+            1.476,
+            1.364,
+            2.523,
+            3.229,
+            1.769,
+            1.714,
+            1.627,
+            1.623,
+            1.756,
+            1.797,
+            1.83
+          ],
+          "metrics": {
+            "burst-mean": {
+              "value": 1.874,
+              "unit": "ms",
+              "label": "Mean time to all four tiles"
+            },
+            "burst-max": {
+              "value": 3.229,
+              "unit": "ms",
+              "label": "Slowest viewport"
+            },
+            "slowest-tile-mean": {
+              "value": 1.808,
+              "unit": "ms",
+              "label": "Mean of the slowest tile per viewport"
+            },
+            "burst-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed tile requests"
+            }
+          }
+        },
+        {
+          "id": "bbox-mbtiles",
+          "name": "BBOX (MBTiles)",
+          "version": "0.6.2",
+          "color": "#C084FC",
+          "homepage": "https://www.bbox.earth",
+          "statistics": {
+            "medianMs": 2.369,
+            "meanMs": 2.593,
+            "minMs": 2.042,
+            "maxMs": 5.656
+          },
+          "samplesMs": [
+            2.637,
+            2.354,
+            2.332,
+            2.113,
+            2.495,
+            2.156,
+            2.204,
+            2.119,
+            2.486,
+            2.752,
+            3.345,
+            2.042,
+            2.383,
+            2.252,
+            2.413,
+            2.622,
+            5.656,
+            2.939,
+            2.295,
+            2.273
+          ],
+          "metrics": {
+            "burst-mean": {
+              "value": 2.593,
+              "unit": "ms",
+              "label": "Mean time to all four tiles"
+            },
+            "burst-max": {
+              "value": 5.656,
+              "unit": "ms",
+              "label": "Slowest viewport"
+            },
+            "slowest-tile-mean": {
+              "value": 2.533,
+              "unit": "ms",
+              "label": "Mean of the slowest tile per viewport"
+            },
+            "burst-errors": {
+              "value": 0,
+              "unit": "%",
+              "label": "Failed tile requests"
+            }
+          }
+        }
+      ],
+      "tests": [
+        {
+          "id": "burst-mean",
+          "title": "Viewport, mean",
+          "description": "Mean wall time until all four z14 tiles have arrived, requested in parallel.",
+          "unit": "ms",
+          "lowerIsBetter": true,
+          "results": [
+            {
+              "candidateId": "martin-pmtiles",
+              "value": 1.166
+            },
+            {
+              "candidateId": "martin-mbtiles",
+              "value": 1.229
+            },
+            {
+              "candidateId": "go-pmtiles",
+              "value": 1.921
+            },
+            {
+              "candidateId": "tileserver-gl",
+              "value": 18.709
+            },
+            {
+              "candidateId": "mbtileserver",
+              "value": 2.242
+            },
+            {
+              "candidateId": "bbox-pmtiles",
+              "value": 1.874
+            },
+            {
+              "candidateId": "bbox-mbtiles",
+              "value": 2.593
+            }
+          ]
+        },
+        {
+          "id": "burst-max",
+          "title": "Viewport, slowest",
+          "description": "The slowest of the measured viewport loads.",
+          "unit": "ms",
+          "lowerIsBetter": true,
+          "results": [
+            {
+              "candidateId": "martin-pmtiles",
+              "value": 1.722
+            },
+            {
+              "candidateId": "martin-mbtiles",
+              "value": 1.938
+            },
+            {
+              "candidateId": "go-pmtiles",
+              "value": 4.847
+            },
+            {
+              "candidateId": "tileserver-gl",
+              "value": 22.276
+            },
+            {
+              "candidateId": "mbtileserver",
+              "value": 11.613
+            },
+            {
+              "candidateId": "bbox-pmtiles",
+              "value": 3.229
+            },
+            {
+              "candidateId": "bbox-mbtiles",
+              "value": 5.656
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cold-start",
+      "title": "Cold start and footprint",
+      "deck": "Time from process start to the first served tile, and resident memory idle and after load.",
+      "unit": "ms",
+      "lowerIsBetter": true,
+      "verdict": {
+        "winnerId": "bbox-pmtiles",
+        "headline": "BBOX (PMTiles) served its first tile 118 ms after process start on average; tileserver-gl-light took 276 ms",
+        "summary": "Each sample is one container start measured from Docker's StartedAt to the first 200 response; five starts per server."
+      },
+      "candidates": [
+        {
+          "id": "martin-pmtiles",
+          "name": "Martin (PMTiles)",
+          "version": "1.16.0",
+          "color": "#2563EB",
+          "homepage": "https://martin.maplibre.org",
+          "statistics": {
+            "medianMs": 155,
+            "meanMs": 158.4,
+            "minMs": 148,
+            "maxMs": 181
+          },
+          "samplesMs": [
+            181,
+            156,
+            155,
+            148,
+            152
+          ],
+          "metrics": {
+            "first-tile-mean": {
+              "value": 158,
+              "unit": "ms",
+              "label": "Mean time to first tile"
+            },
+            "first-tile-median": {
+              "value": 155,
+              "unit": "ms",
+              "label": "Median time to first tile"
+            },
+            "idle-rss": {
+              "value": 9.1,
+              "unit": "MB",
+              "label": "Idle RSS after start"
+            },
+            "rss-after-load": {
+              "value": 167.7,
+              "unit": "MB",
+              "label": "RSS after the load passes"
+            }
+          }
+        },
+        {
+          "id": "martin-mbtiles",
+          "name": "Martin (MBTiles)",
+          "version": "1.16.0",
+          "color": "#60A5FA",
+          "homepage": "https://martin.maplibre.org",
+          "statistics": {
+            "medianMs": 153,
+            "meanMs": 153.2,
+            "minMs": 135,
+            "maxMs": 169
+          },
+          "samplesMs": [
+            150,
+            159,
+            135,
+            169,
+            153
+          ],
+          "metrics": {
+            "first-tile-mean": {
+              "value": 153,
+              "unit": "ms",
+              "label": "Mean time to first tile"
+            },
+            "first-tile-median": {
+              "value": 153,
+              "unit": "ms",
+              "label": "Median time to first tile"
+            },
+            "idle-rss": {
+              "value": 9.8,
+              "unit": "MB",
+              "label": "Idle RSS after start"
+            },
+            "rss-after-load": {
+              "value": 63.2,
+              "unit": "MB",
+              "label": "RSS after the load passes"
+            }
+          }
+        },
+        {
+          "id": "go-pmtiles",
+          "name": "go-pmtiles",
+          "version": "1.31.2",
+          "color": "#16A34A",
+          "homepage": "https://docs.protomaps.com/deploy/server",
+          "statistics": {
+            "medianMs": 154,
+            "meanMs": 157.4,
+            "minMs": 149,
+            "maxMs": 168
+          },
+          "samplesMs": [
+            167,
+            149,
+            168,
+            149,
+            154
+          ],
+          "metrics": {
+            "first-tile-mean": {
+              "value": 157,
+              "unit": "ms",
+              "label": "Mean time to first tile"
+            },
+            "first-tile-median": {
+              "value": 154,
+              "unit": "ms",
+              "label": "Median time to first tile"
+            },
+            "idle-rss": {
+              "value": 13.1,
+              "unit": "MB",
+              "label": "Idle RSS after start"
+            },
+            "rss-after-load": {
+              "value": 44,
+              "unit": "MB",
+              "label": "RSS after the load passes"
+            }
+          }
+        },
+        {
+          "id": "tileserver-gl",
+          "name": "tileserver-gl-light",
+          "version": "5.6.0",
+          "color": "#EA580C",
+          "homepage": "https://tileserver.readthedocs.io",
+          "statistics": {
+            "medianMs": 266,
+            "meanMs": 276.4,
+            "minMs": 249,
+            "maxMs": 339
+          },
+          "samplesMs": [
+            339,
+            266,
+            249,
+            259,
+            269
+          ],
+          "metrics": {
+            "first-tile-mean": {
+              "value": 276,
+              "unit": "ms",
+              "label": "Mean time to first tile"
+            },
+            "first-tile-median": {
+              "value": 266,
+              "unit": "ms",
+              "label": "Median time to first tile"
+            },
+            "idle-rss": {
+              "value": 46.2,
+              "unit": "MB",
+              "label": "Idle RSS after start"
+            },
+            "rss-after-load": {
+              "value": 308.7,
+              "unit": "MB",
+              "label": "RSS after the load passes"
+            }
+          }
+        },
+        {
+          "id": "mbtileserver",
+          "name": "mbtileserver",
+          "version": "0.11.0",
+          "color": "#0891B2",
+          "homepage": "https://github.com/consbio/mbtileserver",
+          "statistics": {
+            "medianMs": 146,
+            "meanMs": 137.2,
+            "minMs": 81,
+            "maxMs": 179
+          },
+          "samplesMs": [
+            81,
+            129,
+            151,
+            179,
+            146
+          ],
+          "metrics": {
+            "first-tile-mean": {
+              "value": 137,
+              "unit": "ms",
+              "label": "Mean time to first tile"
+            },
+            "first-tile-median": {
+              "value": 146,
+              "unit": "ms",
+              "label": "Median time to first tile"
+            },
+            "idle-rss": {
+              "value": 5.5,
+              "unit": "MB",
+              "label": "Idle RSS after start"
+            },
+            "rss-after-load": {
+              "value": 66.2,
+              "unit": "MB",
+              "label": "RSS after the load passes"
+            }
+          }
+        },
+        {
+          "id": "bbox-pmtiles",
+          "name": "BBOX (PMTiles)",
+          "version": "0.6.2",
+          "color": "#9333EA",
+          "homepage": "https://www.bbox.earth",
+          "statistics": {
+            "medianMs": 133,
+            "meanMs": 117.6,
+            "minMs": 61,
+            "maxMs": 135
+          },
+          "samplesMs": [
+            61,
+            133,
+            135,
+            135,
+            124
+          ],
+          "metrics": {
+            "first-tile-mean": {
+              "value": 118,
+              "unit": "ms",
+              "label": "Mean time to first tile"
+            },
+            "first-tile-median": {
+              "value": 133,
+              "unit": "ms",
+              "label": "Median time to first tile"
+            },
+            "idle-rss": {
+              "value": 11.4,
+              "unit": "MB",
+              "label": "Idle RSS after start"
+            },
+            "rss-after-load": {
+              "value": 34.9,
+              "unit": "MB",
+              "label": "RSS after the load passes"
+            }
+          }
+        },
+        {
+          "id": "bbox-mbtiles",
+          "name": "BBOX (MBTiles)",
+          "version": "0.6.2",
+          "color": "#C084FC",
+          "homepage": "https://www.bbox.earth",
+          "statistics": {
+            "medianMs": 155,
+            "meanMs": 149.8,
+            "minMs": 128,
+            "maxMs": 162
+          },
+          "samplesMs": [
+            128,
+            162,
+            155,
+            143,
+            161
+          ],
+          "metrics": {
+            "first-tile-mean": {
+              "value": 150,
+              "unit": "ms",
+              "label": "Mean time to first tile"
+            },
+            "first-tile-median": {
+              "value": 155,
+              "unit": "ms",
+              "label": "Median time to first tile"
+            },
+            "idle-rss": {
+              "value": 11.3,
+              "unit": "MB",
+              "label": "Idle RSS after start"
+            },
+            "rss-after-load": {
+              "value": 68.9,
+              "unit": "MB",
+              "label": "RSS after the load passes"
+            }
+          }
+        }
+      ],
+      "tests": [
+        {
+          "id": "first-tile",
+          "title": "Time to first tile",
+          "description": "Mean time from container process start until the street-level tile is served, including opening the archive and reading its metadata, over five starts.",
+          "unit": "ms",
+          "lowerIsBetter": true,
+          "results": [
+            {
+              "candidateId": "martin-pmtiles",
+              "value": 158
+            },
+            {
+              "candidateId": "martin-mbtiles",
+              "value": 153
+            },
+            {
+              "candidateId": "go-pmtiles",
+              "value": 157
+            },
+            {
+              "candidateId": "tileserver-gl",
+              "value": 276
+            },
+            {
+              "candidateId": "mbtileserver",
+              "value": 137
+            },
+            {
+              "candidateId": "bbox-pmtiles",
+              "value": 118
+            },
+            {
+              "candidateId": "bbox-mbtiles",
+              "value": 150
+            }
+          ]
+        },
+        {
+          "id": "idle-rss",
+          "title": "Idle memory",
+          "description": "Container RSS five seconds after the first tile, before any load.",
+          "unit": "MB",
+          "lowerIsBetter": true,
+          "results": [
+            {
+              "candidateId": "martin-pmtiles",
+              "value": 9.1
+            },
+            {
+              "candidateId": "martin-mbtiles",
+              "value": 9.8
+            },
+            {
+              "candidateId": "go-pmtiles",
+              "value": 13.1
+            },
+            {
+              "candidateId": "tileserver-gl",
+              "value": 46.2
+            },
+            {
+              "candidateId": "mbtileserver",
+              "value": 5.5
+            },
+            {
+              "candidateId": "bbox-pmtiles",
+              "value": 11.4
+            },
+            {
+              "candidateId": "bbox-mbtiles",
+              "value": 11.3
+            }
+          ]
+        },
+        {
+          "id": "loaded-rss",
+          "title": "Memory after load",
+          "description": "Container RSS right after the concurrency passes.",
+          "unit": "MB",
+          "lowerIsBetter": true,
+          "results": [
+            {
+              "candidateId": "martin-pmtiles",
+              "value": 167.7
+            },
+            {
+              "candidateId": "martin-mbtiles",
+              "value": 63.2
+            },
+            {
+              "candidateId": "go-pmtiles",
+              "value": 44
+            },
+            {
+              "candidateId": "tileserver-gl",
+              "value": 308.7
+            },
+            {
+              "candidateId": "mbtileserver",
+              "value": 66.2
+            },
+            {
+              "candidateId": "bbox-pmtiles",
+              "value": 34.9
+            },
+            {
+              "candidateId": "bbox-mbtiles",
+              "value": 68.9
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "One laptop: the server under test (4 CPUs, 4 GB) and the load generator shared a 12-core M2 Max under OrbStack. Numbers are relative to each other, not absolute capacity.",
+    "At the top of the table the harness is part of the measurement: 12,600 tiles a second of 242 KB is about 3 GB/s through the Docker port forward into oha on the same host. The gaps between Martin, mbtileserver and go-pmtiles are real in direction; their size at the top may be understated.",
+    "Every request sends Accept-Encoding: gzip, as browsers and MapLibre do, so a server can pass the stored gzip bytes through and nobody is charged for the client's choice. What each server does for a client that sends no Accept-Encoding is recorded but not scored: Martin and BBOX honour the missing header and decompress the tile on every request (2.9 ms and 9 to 10 ms for the street-level tile instead of 1.2 and 2.3 to 2.8 ms), while go-pmtiles, mbtileserver and tileserver-gl send Content-Encoding: gzip regardless. Both are defensible choices for a tile server; ranking them would charge the first group for following the request. A first full run that sent no Accept-Encoding on every request did exactly that and was discarded.",
+    "tileserver-gl is measured as tileserver-gl-light, a single Node.js process without MapLibre Native. It gunzips every stored tile and re-gzips it before sending (243,510 bytes out for a 242,407-byte stored tile), which is where its 12 ms go. Server-side raster rendering, the reason many people run it, is not measured here.",
+    "go-pmtiles ran with its default 64 MB directory cache; it caches PMTiles directory entries, not tiles. go-pmtiles is designed to serve archives from object storage over HTTP range requests; a local file is the simplest case for it, not its common one.",
+    "Martin's PMTiles source showed a p99 of about 203 ms in every one of its eight 100-client passes while its MBTiles source stayed at 14 ms, and its container held 168 MB after load against 63 MB for MBTiles. Both are reported, neither is explained by this run.",
+    "The archive is 41 MB and sat entirely in the page cache after the warmups. This is hot-cache serving: server overhead, archive index lookup and delivery, not disk or object-storage behaviour. A planet-scale archive of 80 GB or more, where PMTiles directory lookups and the MBTiles SQLite index stop fitting in memory, is a different benchmark.",
+    "Planetiler built the MBTiles with --compact_db=false because BBOX 0.6.2 rejects Planetiler's default compact schema (tiles_shallow plus tiles_data). The flat tiles table is the standard MBTiles layout; the compact one would have been smaller and may serve differently.",
+    "Cold start is process start to first tile, so it includes opening the archive and reading its metadata; every server did it in 118 to 276 ms on average, and the spread between a server's five starts (BBOX PMTiles 61 to 135 ms) is of the same order as the gaps between servers below tileserver-gl.",
+    "Memory is Docker's reported usage for the container (cgroup usage minus inactive file cache), sampled once idle and once after the random walk.",
+    "BBOX sends no Content-Type header on tiles from its PMTiles source (it does from MBTiles); tileserver-gl's re-compressed tiles differ in size from the stored bytes. Feature counts and layers were identical for all seven candidates on all four test tiles.",
+    "mbtileserver ran from the project's linux_arm64 v0.11.0 release binary, packaged on debian:bookworm-slim, because its published image is amd64-only. BBOX ran from a source build of v0.6.2 for the same reason.",
+    "Single run on one day. No candidate failed a single request in any pass; every sample is in the run file."
+  ],
+  "trademarks": [
+    "Martin is a project of the MapLibre organization.",
+    "go-pmtiles and the PMTiles format are developed by Protomaps.",
+    "tileserver-gl is developed by MapTiler.",
+    "mbtileserver is developed by the Conservation Biology Institute.",
+    "BBOX is developed by Sourcepole.",
+    "Planetiler is developed by Michael Barry and contributors; the tile schema is OpenMapTiles.",
+    "Map data: OpenStreetMap contributors, ODbL, via the Geofabrik Berlin extract of 2026-01-01; water polygons from OSMData, Natural Earth public domain."
+  ],
+  "runnerUrl": "https://github.com/warefeats/archive-tile-servers"
+}

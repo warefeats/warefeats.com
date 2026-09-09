@@ -30,6 +30,11 @@
       "slug": "maplibre-gl-js-vs-mapbox-gl-js",
       "repo": "warefeats/web-map-renderers",
       "ref": "01af5e595bb75efc0908d7ec80498f6e8f4e8d00"
+    },
+    {
+      "slug": "pmtiles-mbtiles-tile-servers",
+      "repo": "warefeats/archive-tile-servers",
+      "ref": "c706ca276364e83d90bae08ac1c55fc29618652d"
     }
   ]
 }
