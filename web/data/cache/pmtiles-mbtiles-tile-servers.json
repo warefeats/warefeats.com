@@ -160,7 +160,7 @@
             "city-z14-identity-mean": {
               "value": 2.89,
               "unit": "ms",
-              "label": "Street level z14 mean latency, client without Accept-Encoding"
+              "label": "Street level z14 mean latency for a client without Accept-Encoding (recorded, not ranked: a server may honour the missing header and decompress, or send gzip regardless)"
             },
             "city-z14-identity-bytes": {
               "value": 415808,
@@ -287,7 +287,7 @@
             "city-z14-identity-mean": {
               "value": 2.852,
               "unit": "ms",
-              "label": "Street level z14 mean latency, client without Accept-Encoding"
+              "label": "Street level z14 mean latency for a client without Accept-Encoding (recorded, not ranked: a server may honour the missing header and decompress, or send gzip regardless)"
             },
             "city-z14-identity-bytes": {
               "value": 415808,
@@ -414,7 +414,7 @@
             "city-z14-identity-mean": {
               "value": 1.965,
               "unit": "ms",
-              "label": "Street level z14 mean latency, client without Accept-Encoding"
+              "label": "Street level z14 mean latency for a client without Accept-Encoding (recorded, not ranked: a server may honour the missing header and decompress, or send gzip regardless)"
             },
             "city-z14-identity-bytes": {
               "value": 242407,
@@ -541,7 +541,7 @@
             "city-z14-identity-mean": {
               "value": 13.971,
               "unit": "ms",
-              "label": "Street level z14 mean latency, client without Accept-Encoding"
+              "label": "Street level z14 mean latency for a client without Accept-Encoding (recorded, not ranked: a server may honour the missing header and decompress, or send gzip regardless)"
             },
             "city-z14-identity-bytes": {
               "value": 243510,
@@ -668,7 +668,7 @@
             "city-z14-identity-mean": {
               "value": 1.16,
               "unit": "ms",
-              "label": "Street level z14 mean latency, client without Accept-Encoding"
+              "label": "Street level z14 mean latency for a client without Accept-Encoding (recorded, not ranked: a server may honour the missing header and decompress, or send gzip regardless)"
             },
             "city-z14-identity-bytes": {
               "value": 242407,
@@ -795,7 +795,7 @@
             "city-z14-identity-mean": {
               "value": 9.143,
               "unit": "ms",
-              "label": "Street level z14 mean latency, client without Accept-Encoding"
+              "label": "Street level z14 mean latency for a client without Accept-Encoding (recorded, not ranked: a server may honour the missing header and decompress, or send gzip regardless)"
             },
             "city-z14-identity-bytes": {
               "value": 415808,
@@ -922,7 +922,7 @@
             "city-z14-identity-mean": {
               "value": 10.077,
               "unit": "ms",
-              "label": "Street level z14 mean latency, client without Accept-Encoding"
+              "label": "Street level z14 mean latency for a client without Accept-Encoding (recorded, not ranked: a server may honour the missing header and decompress, or send gzip regardless)"
             },
             "city-z14-identity-bytes": {
               "value": 415808,
@@ -1078,43 +1078,6 @@
             {
               "candidateId": "bbox-mbtiles",
               "value": 0.572
-            }
-          ]
-        },
-        {
-          "id": "mean-city-z14-identity",
-          "title": "Street level z14, no Accept-Encoding",
-          "description": "Mean latency over one connection when the client sends no Accept-Encoding header: servers that honour it decompress the stored street level z14 tile on every request, the others send the gzip bytes anyway.",
-          "unit": "ms",
-          "lowerIsBetter": true,
-          "results": [
-            {
-              "candidateId": "martin-pmtiles",
-              "value": 2.89
-            },
-            {
-              "candidateId": "martin-mbtiles",
-              "value": 2.852
-            },
-            {
-              "candidateId": "go-pmtiles",
-              "value": 1.965
-            },
-            {
-              "candidateId": "tileserver-gl",
-              "value": 13.971
-            },
-            {
-              "candidateId": "mbtileserver",
-              "value": 1.16
-            },
-            {
-              "candidateId": "bbox-pmtiles",
-              "value": 9.143
-            },
-            {
-              "candidateId": "bbox-mbtiles",
-              "value": 10.077
             }
           ]
         }
@@ -3235,7 +3198,7 @@
   "limitations": [
     "One laptop: the server under test (4 CPUs, 4 GB) and the load generator shared a 12-core M2 Max under OrbStack. Numbers are relative to each other, not absolute capacity.",
     "At the top of the table the harness is part of the measurement: 12,600 tiles a second of 242 KB is about 3 GB/s through the Docker port forward into oha on the same host. The gaps between Martin, mbtileserver and go-pmtiles are real in direction; their size at the top may be understated.",
-    "Every request sends Accept-Encoding: gzip, as browsers and MapLibre do, so a server can pass the stored gzip bytes through. The one pass without it shows what happens otherwise: Martin and BBOX honour the missing header and decompress the tile on every request (2.9 ms and 9 to 10 ms instead of 1.2 and 2.3 to 2.8 ms), while go-pmtiles, mbtileserver and tileserver-gl send Content-Encoding: gzip regardless. A first full run with no Accept-Encoding on every request ranked Martin and BBOX accordingly lower and was discarded as a fairness bug in the protocol, not in the servers.",
+    "Every request sends Accept-Encoding: gzip, as browsers and MapLibre do, so a server can pass the stored gzip bytes through and nobody is charged for the client's choice. What each server does for a client that sends no Accept-Encoding is recorded but not scored: Martin and BBOX honour the missing header and decompress the tile on every request (2.9 ms and 9 to 10 ms for the street-level tile instead of 1.2 and 2.3 to 2.8 ms), while go-pmtiles, mbtileserver and tileserver-gl send Content-Encoding: gzip regardless. Both are defensible choices for a tile server; ranking them would charge the first group for following the request. A first full run that sent no Accept-Encoding on every request did exactly that and was discarded.",
     "tileserver-gl is measured as tileserver-gl-light, a single Node.js process without MapLibre Native. It gunzips every stored tile and re-gzips it before sending (243,510 bytes out for a 242,407-byte stored tile), which is where its 12 ms go. Server-side raster rendering, the reason many people run it, is not measured here.",
     "go-pmtiles ran with its default 64 MB directory cache; it caches PMTiles directory entries, not tiles. go-pmtiles is designed to serve archives from object storage over HTTP range requests; a local file is the simplest case for it, not its common one.",
     "Martin's PMTiles source showed a p99 of about 203 ms in every one of its eight 100-client passes while its MBTiles source stayed at 14 ms, and its container held 168 MB after load against 63 MB for MBTiles. Both are reported, neither is explained by this run.",
