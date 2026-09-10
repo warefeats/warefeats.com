@@ -21,8 +21,8 @@
     {
       "category": "Desktop",
       "title": "Tauri vs Electron",
-      "question": "Startup, idle memory, artifact size",
-      "status": "Planned"
+      "question": "IPC across the boundary, webview parity, startup and soak memory, size",
+      "status": "Running"
     },
     {
       "category": "Web maps",
