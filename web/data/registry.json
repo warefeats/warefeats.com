@@ -35,6 +35,11 @@
       "slug": "pmtiles-mbtiles-tile-servers",
       "repo": "warefeats/archive-tile-servers",
       "ref": "c706ca276364e83d90bae08ac1c55fc29618652d"
+    },
+    {
+      "slug": "desktop-shells",
+      "repo": "warefeats/desktop-shells",
+      "ref": "a475099da19f1ea08e983e33ff6cf844e0d3ec19"
     }
   ]
 }

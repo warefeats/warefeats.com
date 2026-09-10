@@ -22,7 +22,7 @@
       "category": "Desktop",
       "title": "Tauri vs Electron",
       "question": "IPC across the boundary, webview parity, startup and soak memory, size",
-      "status": "Running"
+      "status": "Published"
     },
     {
       "category": "Web maps",
