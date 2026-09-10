@@ -3,14 +3,14 @@
   "slug": "desktop-shells",
   "category": "Desktop",
   "title": "Tauri vs Electron",
-  "deck": "One byte-identical web frontend embedded in a Tauri host and an Electron host, measured where teams actually argue: moving data across the webview boundary at four payload sizes on each shell's idiomatic path and its raw path, the same frontend in three webviews, cold and warm starts on one clock, memory after ten minutes of work attributed to every helper process, and the installers as built. Two rigs, one per operating system. The runner's public; check my numbers.",
+  "deck": "One web frontend, byte for byte the same, dropped into a Tauri host and an Electron host. Then the questions teams actually fight about: what does it cost to move data across the webview boundary, does the same frontend behave the same in three webviews, what happens to memory after ten minutes of real work, and how big is the thing you ship. Two machines, one per OS. I ship Tauri apps. The runner's public; check my numbers.",
   "publishedAt": "2026-09-10",
   "unit": "ms",
   "lowerIsBetter": true,
   "verdict": {
     "winnerId": "tauri",
-    "headline": "Tauri moved JSON across the boundary 1.44 times faster than Electron over 1 KB, 64 KB, 1 MB, 16 MB (geometric mean of medians) on the M2 Max; on the Windows rig the same sweep went to Electron by 1.81",
-    "summary": "The IPC headline is the geometric mean over the four idiomatic JSON payload sizes, a rule fixed before any data existed. On macOS Tauri wins every size from 64 KB up and Electron wins the 1 KB cell, where a Tauri round trip costs about 0.2 ms to Electron's 0.09; on Windows Electron wins every idiomatic cell but 16 MB, and Tauri's raw bytes path through WebView2 is about five times slower than Electron's, the reverse of macOS. The same frontend spends less main-thread time per frame in WKWebView and WebView2 than in Electron's Chromium, most of it in the Canvas 2D particles test, while the WebGL2 raster and the virtualized table are within a frame of each other everywhere. Cold starts with the file cache purged are a tie on the Mac at about 1.1 s; warm starts are a tie there and Electron's by 190 to 356 ms on Windows, where no purge was available so its cold row is not cold. Memory flips by platform: over ten minutes of work Electron averaged 349 MB to Tauri's 561 MB on macOS, where WKWebView's content process climbed past 2 GB at the end of table segments, while on Windows Tauri averaged 232 MB to Electron's 241. Installers are 2.5 and 1.8 MB for Tauri against 121 and 106 MB for Electron. The scorecards below carry the section means; the limitations say what these numbers do not mean."
+    "headline": "Tauri moved JSON across the boundary 1.44 times faster than Electron on the M2 Max and 1.81 times slower on the Windows box: 'Tauri' is two different shells, and the webview decides which one you get",
+    "summary": "The headline is a rule I fixed before a single number existed: the geometric mean over four JSON payload sizes on the path each shell's own docs recommend. On macOS Tauri wins every size from 64 KB up, and Electron wins the 1 KB cell (0.09 ms to Tauri's 0.2, and if your app makes ten thousand tiny calls, that's the cell you care about). On Windows it flips: Electron takes every idiomatic size but 16 MB, and Tauri's raw bytes path through WebView2 runs about five times slower than Electron's, the exact reverse of the Mac. Same Rust, same frontend, different webview. The parity section says the same thing from the other side: the system webviews spend less main-thread time per frame than Electron's Chromium, almost all of it in the Canvas 2D particles, while the WebGL2 raster and the virtualized table are within a frame everywhere. Startup is a tie on the Mac with the file cache purged (about 1.1 s either way) and Electron's on Windows, where I had no purge, so read that row as warm. Memory flips too: over ten minutes Electron averaged 349 MB to Tauri's 561 on macOS, where WKWebView's content process climbed past 2 GB at the end of the table segments, and on Windows Tauri averaged 232 to Electron's 241. Installers are 2.5 and 1.8 MB against 121 and 106. The scorecards below carry the section means. The limitations say what none of this means."
   },
   "environment": {
     "machine": "Mac14,6",
@@ -40,8 +40,8 @@
       "lowerIsBetter": true,
       "verdict": {
         "winnerId": "tauri",
-        "headline": "Tauri moved JSON across the boundary 1.44 times faster than Electron over 1 KB, 64 KB, 1 MB, 16 MB (geometric mean of medians)",
-        "summary": "Per size, Tauri over Electron: 1 KB 2.41x, 64 KB 0.53x, 1 MB 0.47x, 16 MB 0.39x. Raw bytes: 1 KB 3.52x, 64 KB 1.85x, 1 MB 0.82x, 16 MB 0.59x."
+        "headline": "Tauri moved JSON across the boundary 1.44 times faster than Electron over 1 KB, 64 KB, 1 MB and 16 MB (geometric mean of medians)",
+        "summary": "Size by size, Tauri over Electron: 1 KB 2.4x slower, 64 KB 1.9x faster, 1 MB 2.1x faster, 16 MB 2.6x faster. The crossover is somewhere under 64 KB: Electron's context bridge is cheaper per call, Tauri's serde is cheaper per byte. Raw bytes tell the same story with smaller gaps (16 MB in 9.4 ms to 15.8). Push at 1,000 events a second: neither shell dropped one, and the p99 gap is a millisecond and a half on both. WKWebView's clock only ticks every millisecond, so the small cells are batched round trips divided out; the batch size is in the run file."
       },
       "candidates": [
         {
@@ -783,8 +783,8 @@
       "lowerIsBetter": true,
       "verdict": {
         "winnerId": "tauri",
-        "headline": "Tauri's webview spent 3.43 ms of main-thread time per frame to 5.8 ms, pooled over table, particles and raster",
-        "summary": "table: frame p99 Tauri 18 / Electron 17.7 ms, step p50 0.52 / 0.36 ms, jank 0% / 0.1%. particles: frame p99 Tauri 22.4 / Electron 34.2 ms, step p50 9.74 / 17.01 ms, jank 0.1% / 25.3%. raster: frame p99 Tauri 18 / Electron 17.7 ms, step p50 0.02 / 0.03 ms, jank 0% / 0%."
+        "headline": "WKWebView spent 3.4 ms of main-thread time per frame to Chromium's 5.8, pooled over table, particles and raster",
+        "summary": "Nearly all of that is the particles: 100,000 fillRects a frame cost WKWebView 9.7 ms and Chromium 17.0, and Chromium's frame p99 shows it at 34 ms (two vsyncs) to WKWebView's 22. The table and the raster are a wash: within a frame on p99, and the raster step is basically zero in both because the GPU does the work after the call returns. Frame time is vsync-capped at 60 Hz here, so the tail and the step time are the signal, not the mean."
       },
       "candidates": [
         {
@@ -1065,8 +1065,8 @@
       "lowerIsBetter": true,
       "verdict": {
         "winnerId": "electron",
-        "headline": "Electron reached its first frame in 1099 ms cold (mean) to Tauri's 1133; over ten minutes of work Electron averaged 349.1 MB to 560.5 MB",
-        "summary": "Warm start medians: Tauri 306 ms, Electron 310 ms. Footprint at soak start / mean / peak, averaged over soaks: Tauri 1272 / 560.5 / 1479.1 MB; Electron 446 / 349.1 / 544.8 MB. Footprint swings with the segment, around a third as much during the table as during the particles, so the mean is the figure to quote. macOS: physical footprint (phys_footprint, as Activity Monitor's Memory column) summed over every process whose responsible process is the app, which includes WKWebView's WebContent, Networking and GPU helpers for the Tauri candidate and every Electron helper for the Electron candidate; read with /usr/bin/footprint."
+        "headline": "Cold start is a tie at about 1.1 s with the file cache purged; over ten minutes of work Electron averaged 349 MB to Tauri's 561",
+        "summary": "Warm starts tie too, at about 305 ms. Memory is where the Mac surprised me: the number is physical footprint over every process the app is responsible for, which is the only way to count WKWebView's helpers at all (a plain process-tree sum misses them entirely). Counted that way, Tauri's content process climbed past 1 GB in two of three soaks and hit 2.4 GB once, each time at the end of a table segment, and came back down. Electron's renderer never passed 365 MB. Footprint swings with the segment in both shells, roughly a third as much during the table as during the particles, so the mean over the soak is the figure to quote, not the last sample."
       },
       "candidates": [
         {
@@ -1273,8 +1273,8 @@
       "lowerIsBetter": true,
       "verdict": {
         "winnerId": "tauri",
-        "headline": "Tauri's installer is 2.5 MB to Electron's 121.4 MB",
-        "summary": "Installed: Tauri 10.4 MB, Electron 286.1 MB. The Tauri candidate draws on the operating system's webview, which is not counted; the Electron candidate carries its own Chromium, which is."
+        "headline": "Tauri's installer is 2.5 MB to Electron's 121",
+        "summary": "Installed: 10 MB against 286. Tauri borrows the OS's webview and Electron carries its own Chromium. That's the whole difference, and it's not a fair fight so much as a design choice you're buying either way."
       },
       "candidates": [
         {
@@ -1422,8 +1422,8 @@
           "lowerIsBetter": true,
           "verdict": {
             "winnerId": "electron",
-            "headline": "Electron moved JSON across the boundary 1.81 times faster than Tauri over 1 KB, 64 KB, 1 MB, 16 MB (geometric mean of medians)",
-            "summary": "Per size, Tauri over Electron: 1 KB 6x, 64 KB 1.65x, 1 MB 1.25x, 16 MB 0.87x. Raw bytes: 1 KB 8.15x, 64 KB 4.8x, 1 MB 5.67x, 16 MB 5.52x."
+            "headline": "Electron moved JSON across the boundary 1.81 times faster than Tauri over 1 KB, 64 KB, 1 MB and 16 MB (geometric mean of medians)",
+            "summary": "Size by size, Tauri over Electron: 1 KB 5.9x slower, 64 KB 1.6x slower, 1 MB 1.2x slower, 16 MB 1.1x faster. The raw bytes path is the finding on this machine: WebView2 hands 16 MB back in 377 ms where Electron takes 65, about five times slower, and the Mac's WKWebView does the same job in 9. Same Rust host. I didn't chase why; that's a Tauri-on-Windows question, and it's the one to ask before you pick a shell for a data-heavy app. Push held its rate on both."
           },
           "candidates": [
             {
@@ -2165,8 +2165,8 @@
           "lowerIsBetter": true,
           "verdict": {
             "winnerId": "tauri",
-            "headline": "Tauri's webview spent 11.85 ms of main-thread time per frame to 16.98 ms, pooled over table, particles and raster",
-            "summary": "table: frame p99 Tauri 19.5 / Electron 19 ms, step p50 0.58 / 0.52 ms, jank 0.2% / 0.2%. particles: frame p99 Tauri 63.8 / Electron 81.5 ms, step p50 34.97 / 50.41 ms, jank 94% / 97.9%. raster: frame p99 Tauri 18.8 / Electron 18.8 ms, step p50 0.01 / 0.01 ms, jank 0.1% / 0.1%."
+            "headline": "WebView2 spent 11.9 ms of main-thread time per frame to Chromium's 17.0, pooled over table, particles and raster",
+            "summary": "Again the particles: this integrated Radeon box is slower everywhere, and Chromium's frame p99 on the particles is 88 ms to WebView2's 63. The table and the raster are within a frame on both. Vsync is 59 Hz here, so read the tail and the step time, not the mean."
           },
           "candidates": [
             {
@@ -2447,8 +2447,8 @@
           "lowerIsBetter": true,
           "verdict": {
             "winnerId": "electron",
-            "headline": "Electron reached its first frame in 192 ms cold (mean) to Tauri's 356; over ten minutes of work Tauri averaged 231.5 MB to 240.8 MB",
-            "summary": "Warm start medians: Tauri 353 ms, Electron 192 ms. Footprint at soak start / mean / peak, averaged over soaks: Tauri 420.2 / 231.5 / 425.6 MB; Electron 415 / 240.8 / 433.3 MB. Footprint swings with the segment, around a third as much during the table as during the particles, so the mean is the figure to quote. Windows: private working set (Win32_PerfFormattedData_PerfProc_Process.WorkingSetPrivate) summed over the app process and every descendant by parent process id, which includes msedgewebview2.exe for the Tauri candidate and every Electron helper for the Electron candidate."
+            "headline": "Electron reached its first frame in 192 ms to Tauri's 356; over ten minutes of work Tauri averaged 232 MB to Electron's 241",
+            "summary": "Both start rows are warm: I had no way to purge the file cache on this rig, so 'cold' here is a launch after a settle, and the gap is Electron's process already being warm in the way that matters. Memory is a near tie by private working set over the process tree, which on Windows does include WebView2's processes as children. No 2 GB excursions here; WebView2's content process behaved."
           },
           "candidates": [
             {
@@ -2655,8 +2655,8 @@
           "lowerIsBetter": true,
           "verdict": {
             "winnerId": "tauri",
-            "headline": "Tauri's installer is 1.8 MB to Electron's 106.1 MB",
-            "summary": "Installed: Tauri 1302 MB, Electron 367.5 MB. The Tauri candidate draws on the operating system's webview, which is not counted; the Electron candidate carries its own Chromium, which is."
+            "headline": "Tauri's installer is 1.8 MB to Electron's 106",
+            "summary": "Installed: 8 MB against 367. WebView2 ships with Windows 11 and isn't counted; Chromium ships with Electron and is."
           },
           "candidates": [
             {
@@ -2681,7 +2681,7 @@
                   "label": "Installer as built"
                 },
                 "installed": {
-                  "value": 1302,
+                  "value": 8.3,
                   "unit": "MB",
                   "label": "Installed on disk"
                 }
@@ -2743,7 +2743,7 @@
               "results": [
                 {
                   "candidateId": "tauri",
-                  "value": 1302
+                  "value": 8.3
                 },
                 {
                   "candidateId": "electron",
