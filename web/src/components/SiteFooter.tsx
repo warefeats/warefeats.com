@@ -10,8 +10,8 @@ export function SiteFooter() {
       </p>
       <nav className="footer-nav" aria-label="Footer">
         <Link to="/">Benchmarks</Link>
-        <Link to="/methodology">Methodology</Link>
-        <Link to="/about">About</Link>
+        <Link to="/methodology/">Methodology</Link>
+        <Link to="/about/">About</Link>
         <a href={REPO_URL} target="_blank" rel="noreferrer">Source and runner</a>
         <a href="/data/benchmarks.json">Catalog JSON</a>
       </nav>

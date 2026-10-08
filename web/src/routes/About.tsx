@@ -35,7 +35,7 @@ export function About() {
       <h2>Corrections</h2>
       <p>Think a result is wrong? Open an issue in the <a href="https://github.com/warefeats/warefeats.com" target="_blank" rel="noreferrer">repository</a> with your rig and your samples. Corrections go up as new runs. The original stays, with a note.</p>
 
-      <p className="prose-foot"><Link to="/methodology">How each run is done</Link></p>
+      <p className="prose-foot"><Link to="/methodology/">How each run is done</Link></p>
     </article>
   );
 }

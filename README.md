@@ -4,7 +4,7 @@ warefeats is a benchmark comparison publication for developer tools and architec
 
 ## Workspace
 
-- `web/` contains the React and Vite publication UI. Routes are `/` (index of every benchmark by category plus the queue), `/benchmarks/<slug>/`, `/methodology/`, and `/about/`; `bun run build` prerenders each route to static HTML with its own metadata, and a new catalog entry becomes a page with no new page code.
+- `web/` contains the React and Vite publication UI. Routes are `/` (index of every benchmark by category plus the queue), `/benchmarks/<slug>/`, `/methodology/`, and `/about/`; `bun run build` prerenders each route to static HTML with its own metadata, writes `sitemap.xml` and `robots.txt` beside them, and a new catalog entry becomes a page with no new page code.
 - `infra/` contains the AWS CDK stack for private S3 and CloudFront hosting.
 - `.github/workflows/deploy.yml` verifies and deploys every push to `main`.
 

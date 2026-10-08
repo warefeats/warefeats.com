@@ -2,6 +2,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseCatalog } from "../src/catalog";
+import { robotsTxt, sitemapXml } from "../src/head";
 import type { BenchmarkCatalog } from "../src/types";
 
 interface ServerEntry {
@@ -38,5 +39,7 @@ for (const path of paths) {
   await writeFile(file, page);
 }
 
+await writeFile(join(dist, "sitemap.xml"), sitemapXml(paths));
+await writeFile(join(dist, "robots.txt"), robotsTxt());
 await rm(join(dist, "server"), { recursive: true, force: true });
-console.log(`Prerendered ${paths.length} pages: ${paths.join(", ")}`);
+console.log(`Prerendered ${paths.length} pages and their sitemap: ${paths.join(", ")}`);

@@ -1,10 +1,13 @@
 import { summarize } from "./metrics";
-import type { BenchmarkCatalog } from "./types";
+import type { Benchmark, BenchmarkCatalog } from "./types";
 
 export const SITE_NAME = "warefeats";
 export const SITE_ORIGIN = "https://warefeats.com";
 const DEFAULT_DESCRIPTION = "Independent, reproducible benchmarks for developer tools and architecture choices. Every result ships with its rig, protocol, and raw samples.";
 const SITE_CARD = `${SITE_ORIGIN}/og/site.png`;
+// Where search results cut off a title and a description.
+const TITLE_LIMIT = 60;
+const DESCRIPTION_LIMIT = 160;
 
 export interface RouteMeta {
   path: string;
@@ -49,16 +52,52 @@ export function routeMeta(path: string, catalog?: BenchmarkCatalog): RouteMeta {
   const benchmark = match ? catalog?.benchmarks.find((entry) => entry.slug === match[1]) : undefined;
 
   if (benchmark) {
-    const summary = summarize(benchmark);
-    const lead = summary.comparisons[0];
-    const description = lead
-      ? `${summary.winner.name} ${summary.winner.version} ran ${lead.ratio.toFixed(2)} ± ${lead.sigma.toFixed(2)} times faster than ${lead.other.name} ${lead.other.version}. ${benchmark.deck}`
-      : benchmark.deck;
-
-    return { path: pathname, title: `${benchmark.title} | ${SITE_NAME}`, description, type: "article", publishedAt: benchmark.publishedAt, status: 200, image: `${SITE_ORIGIN}/og/${benchmark.slug}.png` };
+    return { path: pathname, title: benchmarkTitle(benchmark), description: benchmarkDescription(benchmark), type: "article", publishedAt: benchmark.publishedAt, status: 200, image: `${SITE_ORIGIN}/og/${benchmark.slug}.png` };
   }
 
   return { path: pathname, title: `Not found | ${SITE_NAME}`, description: DEFAULT_DESCRIPTION, type: "website", status: 404, image: SITE_CARD };
+}
+
+/** The benchmark title, followed by the site name when both fit in a search result. */
+function benchmarkTitle(benchmark: Benchmark): string {
+  const title = `${benchmark.title} | ${SITE_NAME}`;
+  return title.length <= TITLE_LIMIT ? title : benchmark.title;
+}
+
+/** The result, then the deck. A section benchmark has no single ratio, so when its deck runs long its verdict stands in. */
+function benchmarkDescription(benchmark: Benchmark): string {
+  const summary = summarize(benchmark);
+  const lead = summary.comparisons[0];
+
+  if (lead) {
+    return clipDescription(`${summary.winner.name} ${summary.winner.version} ran ${lead.ratio.toFixed(2)} ± ${lead.sigma.toFixed(2)} times faster than ${lead.other.name} ${lead.other.version}. ${benchmark.deck}`);
+  }
+
+  return benchmark.deck.length <= DESCRIPTION_LIMIT ? benchmark.deck : clipDescription(benchmark.verdict.headline);
+}
+
+/** Cuts text to the description limit at its last sentence or clause break that fits, so no clause is cut in half; text without one is cut at a word. */
+function clipDescription(text: string): string {
+  if (text.length <= DESCRIPTION_LIMIT) {
+    return text;
+  }
+
+  let clipped = "";
+  for (const match of text.matchAll(/[.!?;:](?=\s)|\s[—–](?=\s)/g)) {
+    const candidate = /[.!?]/.test(match[0]) ? text.slice(0, match.index + 1) : `${text.slice(0, match.index)}.`;
+    if (candidate.length > DESCRIPTION_LIMIT) {
+      break;
+    }
+    clipped = candidate;
+  }
+
+  if (clipped) {
+    return clipped;
+  }
+
+  const words = text.slice(0, DESCRIPTION_LIMIT - 1);
+  const space = words.lastIndexOf(" ");
+  return `${(space > 0 ? words.slice(0, space) : words).replace(/[\s,;:]+$/, "")}…`;
 }
 
 function escapeAttribute(value: string): string {
@@ -96,4 +135,14 @@ export function headTags(meta: RouteMeta): string {
 
 export function prerenderPaths(catalog: BenchmarkCatalog): string[] {
   return ["/", "/methodology/", "/about/", ...catalog.benchmarks.map((benchmark) => benchmarkPath(benchmark.slug))];
+}
+
+/** Every prerendered page by its canonical URL. */
+export function sitemapXml(paths: string[]): string {
+  const urls = paths.map((path) => `  <url><loc>${escapeAttribute(`${SITE_ORIGIN}${path}`)}</loc></url>`);
+  return ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">', ...urls, "</urlset>", ""].join("\n");
+}
+
+export function robotsTxt(): string {
+  return ["User-agent: *", "Disallow:", "", `Sitemap: ${SITE_ORIGIN}/sitemap.xml`, ""].join("\n");
 }

@@ -5,7 +5,7 @@ import { assembleCatalog } from "../scripts/assemble";
 import { validateRef, validateRunPath } from "../scripts/sync";
 import { parseCatalog } from "../src/catalog";
 import { Conditions } from "../src/components/Conditions";
-import { headTags, normalizePath, prerenderPaths, routeMeta } from "../src/head";
+import { headTags, normalizePath, prerenderPaths, robotsTxt, routeMeta, sitemapXml } from "../src/head";
 import { axisTicks, benchmarkTests, fiveNumber, reportText, samplePosition, scorecard, standardDeviation, summarize } from "../src/metrics";
 import type { Benchmark, BenchmarkCatalog } from "../src/types";
 
@@ -511,6 +511,40 @@ describe("routes", () => {
 
     expect(meta.status).toBe(404);
     expect(headTags(meta)).toContain('name="robots" content="noindex"');
+  });
+
+  test("fits every title and description into a search result", async () => {
+    const catalog = await loadCatalog();
+
+    for (const path of prerenderPaths(catalog)) {
+      const meta = routeMeta(path, catalog);
+      expect(meta.description.length).toBeLessThanOrEqual(160);
+      expect(meta.title.length <= 60 || !meta.title.includes(" | ")).toBe(true);
+    }
+  });
+
+  test("drops the site name from a title too long to carry it", async () => {
+    const catalog = await loadCatalog();
+
+    expect(routeMeta("/benchmarks/desktop-shells/", catalog).title).toBe("Tauri vs Electron | warefeats");
+    expect(routeMeta("/benchmarks/pmtiles-mbtiles-tile-servers/", catalog).title).toBe("Martin vs go-pmtiles vs tileserver-gl vs mbtileserver vs BBOX");
+  });
+
+  test("keeps a deck that fits and cuts a long verdict at its last clause break that fits", async () => {
+    const catalog = await loadCatalog();
+
+    expect(routeMeta("/benchmarks/redis-vs-valkey-vs-dragonfly-kv/", catalog).description).toBe(catalog.benchmarks.find((entry) => entry.slug === "redis-vs-valkey-vs-dragonfly-kv")!.deck);
+    expect(routeMeta("/benchmarks/pmtiles-mbtiles-tile-servers/", catalog).description).toBe("Martin served 12,600 tiles a second at 100 clients from the PMTiles archive, more than any other server from either format.");
+  });
+
+  test("lists every prerendered page in the sitemap by its canonical URL", async () => {
+    const catalog = await loadCatalog();
+    const sitemap = sitemapXml(prerenderPaths(catalog));
+
+    expect(sitemap.match(/<loc>/g)).toHaveLength(prerenderPaths(catalog).length);
+    expect(sitemap).toContain("<loc>https://warefeats.com/methodology/</loc>");
+    expect(sitemap).toContain("<loc>https://warefeats.com/benchmarks/desktop-shells/</loc>");
+    expect(robotsTxt()).toContain("Sitemap: https://warefeats.com/sitemap.xml");
   });
 });
 
