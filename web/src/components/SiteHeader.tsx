@@ -13,8 +13,8 @@ export function SiteHeader() {
       </NavLink>
       <nav className="primary-nav" aria-label="Primary">
         <NavLink to="/" end>Benchmarks</NavLink>
-        <NavLink to="/methodology">Methodology</NavLink>
-        <NavLink to="/about">About</NavLink>
+        <NavLink to="/methodology/">Methodology</NavLink>
+        <NavLink to="/about/">About</NavLink>
       </nav>
       <div className="header-actions">
         <a className="github-link" href={REPO_URL} target="_blank" rel="noreferrer">

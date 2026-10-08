@@ -12,4 +12,4 @@ If the AWS account already has a GitHub Actions OIDC provider, pass `ExistingOid
 
 After any repository transfer (e.g. changing the GitHub org), the OIDC role must be re-deployed because the owner ID in the immutable ID-form subject claim changes. Get the new org ID and re-run `just setup-oidc` with the updated `GITHUB_ORG_ID`.
 
-The hosting bucket is private, versioned, encrypted, and retained if the stack is deleted. CloudFront is the only public origin path. A push to `main` runs checks and tests, deploys the stack, uploads the static build, and invalidates the distribution.
+The hosting bucket is private, versioned, encrypted, and retained if the stack is deleted. CloudFront is the only public origin path, and its viewer-request function gives every page one URL: `www.warefeats.com` and page paths without a trailing slash redirect (301) to the canonical URL. A push to `main` runs checks and tests, deploys the stack, uploads the static build, and invalidates the distribution.

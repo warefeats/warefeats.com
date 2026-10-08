@@ -10,6 +10,37 @@ import type { Construct } from "constructs";
 
 const DOMAIN = "warefeats.com";
 
+/**
+ * One URL per page: www and extensionless paths without a trailing slash redirect to the canonical
+ * URL, which the page's canonical tag names. Prerendered pages live at <route>/index.html, and S3
+ * through OAC does not resolve directory indexes.
+ */
+export const VIEWER_REQUEST_CODE = `function handler(event) {
+  var request = event.request;
+  var uri = request.uri;
+  var file = uri.lastIndexOf(".") > uri.lastIndexOf("/");
+  var path = file || uri.endsWith("/") ? uri : uri + "/";
+  var host = request.headers.host ? request.headers.host.value : "";
+  if (host === "www.${DOMAIN}" || path !== uri) {
+    var query = [];
+    for (var name in request.querystring) {
+      var values = request.querystring[name].multiValue || [request.querystring[name]];
+      for (var i = 0; i < values.length; i++) {
+        query.push(name + "=" + values[i].value);
+      }
+    }
+    return {
+      statusCode: 301,
+      statusDescription: "Moved Permanently",
+      headers: { location: { value: "https://${DOMAIN}" + path + (query.length ? "?" + query.join("&") : "") } }
+    };
+  }
+  if (!file) {
+    request.uri = uri + "index.html";
+  }
+  return request;
+}`;
+
 export class WarefeatsStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
@@ -60,21 +91,12 @@ export class WarefeatsStack extends Stack {
       },
     });
 
-    // Prerendered pages live at <route>/index.html; S3 through OAC does not resolve directory indexes.
+    // The construct id and name predate the redirects; renaming would replace the live function.
     const indexRewrite = new cloudfront.Function(this, "IndexRewrite", {
       functionName: "warefeats-index-rewrite",
-      comment: "Maps extensionless routes to their prerendered index.html",
+      comment: "Redirects to the canonical URL and maps routes to their prerendered index.html",
       runtime: cloudfront.FunctionRuntime.JS_2_0,
-      code: cloudfront.FunctionCode.fromInline(`function handler(event) {
-  var request = event.request;
-  var uri = request.uri;
-  if (uri.endsWith("/")) {
-    request.uri = uri + "index.html";
-  } else if (uri.lastIndexOf(".") <= uri.lastIndexOf("/")) {
-    request.uri = uri + "/index.html";
-  }
-  return request;
-}`),
+      code: cloudfront.FunctionCode.fromInline(VIEWER_REQUEST_CODE),
     });
 
     const distribution = new cloudfront.Distribution(this, "Distribution", {
