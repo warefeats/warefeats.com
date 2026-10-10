@@ -1,12 +1,12 @@
 import { formatVersion } from "../metrics";
 import type { Benchmark } from "../types";
 
-interface ProductsProps {
+interface CandidatesProps {
   benchmark: Benchmark;
 }
 
-/** The products under test, logo and pinned version, where barefeats put the product photo. */
-export function Products({ benchmark }: ProductsProps) {
+/** The candidates under test, logo and pinned version, under barefeats' heading where it put the product photo. */
+export function Candidates({ benchmark }: CandidatesProps) {
   return (
     <section className="products" aria-labelledby="products-title">
       <h2 id="products-title">Products compared</h2>

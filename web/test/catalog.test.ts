@@ -6,7 +6,8 @@ import { validateRef, validateRunPath } from "../scripts/sync";
 import { parseBenchmark, parseCatalog, parseCatalogIndex, toCatalogIndex } from "../src/catalog";
 import { BarChart } from "../src/components/BarChart";
 import { Conditions } from "../src/components/Conditions";
-import { headTags, normalizePath, prerenderPaths, robotsTxt, routeMeta, sitemapXml } from "../src/head";
+import { benchmarkSlug, headTags, isMatchupPath, matchupPath, normalizePath, prerenderPaths, robotsTxt, routeMeta, sitemapPaths, sitemapXml } from "../src/head";
+import { applyPick, candidateUniverse, matchupField, matchupHeading, pickerVersion, pickFlat, pickParam, readPick } from "../src/matchup";
 import { axisTicks, benchmarkTests, fiveNumber, formatVersion, reportText, samplePosition, scorecard, standardDeviation, summarize } from "../src/metrics";
 import { runViews } from "../src/runs";
 import type { Benchmark, BenchmarkCatalog } from "../src/types";
@@ -585,14 +586,106 @@ describe("routes", () => {
     expect(routeMeta("/benchmarks/pmtiles-mbtiles-tile-servers/", catalog).description).toBe("Martin served 12,600 tiles a second at 100 clients from the PMTiles archive, more than any other server from either format.");
   });
 
-  test("lists every prerendered page in the sitemap by its canonical URL", async () => {
+  test("lists every page that is its own canonical in the sitemap, and no matchup", async () => {
     const catalog = toCatalogIndex(await loadCatalog());
-    const sitemap = sitemapXml(prerenderPaths(catalog));
+    const sitemap = sitemapXml(sitemapPaths(catalog));
 
-    expect(sitemap.match(/<loc>/g)).toHaveLength(prerenderPaths(catalog).length);
+    expect(sitemap.match(/<loc>/g)).toHaveLength(prerenderPaths(catalog).filter((path) => !isMatchupPath(path)).length);
+    expect(sitemap).not.toContain("/matchup/");
     expect(sitemap).toContain("<loc>https://warefeats.com/methodology/</loc>");
     expect(sitemap).toContain("<loc>https://warefeats.com/benchmarks/desktop-shells/</loc>");
     expect(robotsTxt()).toContain("Sitemap: https://warefeats.com/sitemap.xml");
+  });
+});
+
+describe("matchups", () => {
+  const SLUGS = ["http-caching-proxies-hls", "vite-vs-esbuild-vs-tsup-library-build", "redis-vs-valkey-vs-dragonfly-kv", "postgis-vector-tile-servers", "maplibre-gl-js-vs-mapbox-gl-js", "pmtiles-mbtiles-tile-servers"];
+
+  test("go to benchmarks with three or more candidates in a run", async () => {
+    const catalog = await loadCatalog();
+    const withMatchup = catalog.benchmarks.filter((benchmark) => matchupField(benchmark) !== undefined).map((benchmark) => benchmark.slug);
+
+    expect(withMatchup.sort()).toEqual([...SLUGS].sort());
+    expect(toCatalogIndex(catalog).benchmarks.find((entry) => entry.slug === "postgis-vector-tile-servers")!.matchup).toEqual({ candidates: 7 });
+    expect(toCatalogIndex(catalog).benchmarks.find((entry) => entry.slug === "desktop-shells")!.matchup).toBeUndefined();
+  });
+
+  test("pick from every candidate in the run, once each, in run order", async () => {
+    const catalog = await loadCatalog();
+    const proxies = catalog.benchmarks.find((benchmark) => benchmark.slug === "http-caching-proxies-hls")!;
+    const universe = candidateUniverse(runViews(proxies)[0]!);
+
+    expect(universe.map((candidate) => candidate.id)).toEqual(["varnish-plaintext", "varnish-tls-inprocess", "varnish-proxyv2-haproxy", "vinyl-plaintext", "vinyl-proxyv2-haproxy", "nginx-plaintext", "nginx-tls-inprocess", "nginx-proxyv2-haproxy"]);
+  });
+
+  test("read a pick in run order, and fall back to the whole field when it names fewer than two", async () => {
+    const catalog = await loadCatalog();
+    const universe = candidateUniverse(runViews(catalog.benchmarks.find((benchmark) => benchmark.slug === "postgis-vector-tile-servers")!)[0]!);
+
+    expect(readPick(null, universe)).toEqual({ ids: universe.map((candidate) => candidate.id), full: true, ignored: false });
+    expect(readPick("tegola,martin", universe)).toEqual({ ids: ["martin", "tegola"], full: false, ignored: false });
+    expect(readPick("martin,nope", universe)).toEqual({ ids: universe.map((candidate) => candidate.id), full: true, ignored: true });
+    expect(readPick(universe.map((candidate) => candidate.id).join(","), universe).full).toBe(true);
+    expect(pickParam(["tegola", "martin"], universe)).toBe("martin,tegola");
+    expect(pickParam(universe.map((candidate) => candidate.id), universe)).toBeNull();
+  });
+
+  test("drop the sections fewer than two picked candidates ran, and recompute best marks from what stays", async () => {
+    const catalog = await loadCatalog();
+    const proxies = catalog.benchmarks.find((benchmark) => benchmark.slug === "http-caching-proxies-hls")!;
+    const sections = proxies.sections!;
+
+    const plaintext = applyPick(sections, ["varnish-plaintext", "nginx-plaintext"]);
+    expect(plaintext.sections.map((section) => section.id)).toEqual(["hit-path-rps", "segment-serve", "miss-storm", "origin-flap"]);
+    expect(plaintext.sections.every((section) => section.candidates.length === 2)).toBe(true);
+    expect(plaintext.sections.every((section) => section.tests!.every((test) => test.results.length === 2))).toBe(true);
+
+    const tls = applyPick(sections, ["varnish-tls-inprocess", "nginx-tls-inprocess"]);
+    expect(tls.sections.map((section) => section.id)).toEqual(["hit-path-rps", "segment-serve"]);
+    expect(tls.omitted.map((section) => section.id)).toEqual(["miss-storm", "origin-flap"]);
+
+    const card = scorecard(plaintext.sections);
+    expect(card.rows.map((row) => row.candidateId)).toEqual(["varnish-plaintext", "nginx-plaintext"]);
+    for (const column of card.columns) expect(["varnish-plaintext", "nginx-plaintext"]).toContain(column.bestId!);
+  });
+
+  test("name the fastest picked candidate as the winner of a benchmark without sections", async () => {
+    const catalog = await loadCatalog();
+    const bundlers = catalog.benchmarks.find((benchmark) => benchmark.slug === "vite-vs-esbuild-vs-tsup-library-build")!;
+    const picked = pickFlat(bundlers, runViews(bundlers)[0]!, ["vite", "tsup"]);
+
+    expect(picked.candidates.map((candidate) => candidate.id)).toEqual(["vite", "tsup"]);
+    expect(picked.verdict.winnerId).toBe("vite");
+    expect(reportText(picked, { summary: false })).not.toContain("Summary");
+    expect(reportText(picked)).toContain("Summary");
+  });
+
+  test("head the page with the picked names, or the benchmark title for the whole field", async () => {
+    const catalog = await loadCatalog();
+    const bundlers = catalog.benchmarks.find((benchmark) => benchmark.slug === "vite-vs-esbuild-vs-tsup-library-build")!;
+    const universe = candidateUniverse(runViews(bundlers)[0]!);
+
+    expect(matchupHeading(readPick(null, universe), universe, bundlers.title)).toBe(bundlers.title);
+    expect(matchupHeading(readPick("tsup,vite", universe), universe, bundlers.title)).toBe("Vite vs tsup");
+    expect(pickerVersion({ ...universe[0]!, name: "Varnish 9.0.3 (plaintext)", version: "9.0.3" })).toBeUndefined();
+    expect(pickerVersion({ ...universe[0]!, name: "Martin (PMTiles)", version: "1.16.0" })).toBe("v1.16.0");
+  });
+
+  test("point a matchup's canonical URL at its benchmark and keep it out of the sitemap", async () => {
+    const index = toCatalogIndex(await loadCatalog());
+    const meta = routeMeta("/benchmarks/postgis-vector-tile-servers/matchup/?pick=martin,tegola", index);
+    const tags = headTags(meta);
+
+    expect(meta.status).toBe(200);
+    expect(meta.title.startsWith("Matchup: ")).toBe(true);
+    expect(meta.description.length).toBeLessThanOrEqual(160);
+    expect(tags).toContain('<link rel="canonical" href="https://warefeats.com/benchmarks/postgis-vector-tile-servers/" />');
+    expect(tags).toContain('<meta property="og:url" content="https://warefeats.com/benchmarks/postgis-vector-tile-servers/matchup/" />');
+    expect(tags).toContain('<meta property="og:image" content="https://warefeats.com/og/matchup/postgis-vector-tile-servers.png" />');
+    expect(routeMeta("/benchmarks/eslint-vs-biome-javascript-lint/matchup/", index).status).toBe(404);
+    expect(benchmarkSlug(matchupPath("desktop-shells"))).toBe("desktop-shells");
+    expect(prerenderPaths(index).filter(isMatchupPath).sort()).toEqual(SLUGS.map(matchupPath).sort());
+    expect(sitemapPaths(index).some(isMatchupPath)).toBe(false);
   });
 });
 

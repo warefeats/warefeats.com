@@ -10,6 +10,8 @@ const DESCRIPTION_LIMIT = 160;
 
 export interface RouteMeta {
   path: string;
+  /** The page search engines should index instead, when it isn't this one. */
+  canonical?: string;
   title: string;
   description: string;
   type: "website" | "article";
@@ -23,6 +25,14 @@ export function benchmarkPath(slug: string): string {
   return `/benchmarks/${slug}/`;
 }
 
+export function matchupPath(slug: string): string {
+  return `/benchmarks/${slug}/matchup/`;
+}
+
+export function isMatchupPath(path: string): boolean {
+  return /^\/benchmarks\/[^/]+\/matchup\/$/.test(normalizePath(path));
+}
+
 export function normalizePath(path: string): string {
   const pathname = path.split(/[?#]/)[0] ?? "/";
   if (pathname === "" || pathname === "/") {
@@ -32,9 +42,9 @@ export function normalizePath(path: string): string {
   return pathname.endsWith("/") ? pathname : `${pathname}/`;
 }
 
-/** The slug of the benchmark a path belongs to, if it is a benchmark's page. */
+/** The slug of the benchmark whose data a page draws: its own page or its matchup. */
 export function benchmarkSlug(path: string): string | undefined {
-  return /^\/benchmarks\/([^/]+)\/$/.exec(normalizePath(path))?.[1];
+  return /^\/benchmarks\/([^/]+)\/(?:matchup\/)?$/.exec(normalizePath(path))?.[1];
 }
 
 export function routeMeta(path: string, index?: CatalogIndex): RouteMeta {
@@ -55,11 +65,21 @@ export function routeMeta(path: string, index?: CatalogIndex): RouteMeta {
   const slug = benchmarkSlug(pathname);
   const benchmark = slug ? index?.benchmarks.find((entry) => entry.slug === slug) : undefined;
 
-  if (benchmark) {
+  if (benchmark && isMatchupPath(pathname)) {
+    if (benchmark.matchup) {
+      // A matchup redraws its benchmark's numbers, so search engines index the benchmark page (ADR 0001).
+      return { path: pathname, canonical: benchmarkPath(benchmark.slug), title: matchupTitle(benchmark), description: clipDescription(`Pick any of the ${benchmark.matchup.candidates} candidates in ${benchmark.title} and compare them on one rig. No verdict, just the numbers.`), type: "website", status: 200, image: `${SITE_ORIGIN}/og/matchup/${benchmark.slug}.png` };
+    }
+  } else if (benchmark) {
     return { path: pathname, title: benchmarkTitle(benchmark), description: benchmarkDescription(benchmark), type: "article", publishedAt: benchmark.publishedAt, status: 200, image: `${SITE_ORIGIN}/og/${benchmark.slug}.png` };
   }
 
   return { path: pathname, title: `Not found | ${SITE_NAME}`, description: DEFAULT_DESCRIPTION, type: "website", status: 404, image: SITE_CARD };
+}
+
+function matchupTitle(benchmark: CatalogEntry): string {
+  const title = `Matchup: ${benchmark.title} | ${SITE_NAME}`;
+  return title.length <= TITLE_LIMIT ? title : `Matchup: ${benchmark.title}`;
 }
 
 /** The benchmark title, followed by the site name when both fit in a search result. */
@@ -108,11 +128,11 @@ function escapeAttribute(value: string): string {
 }
 
 export function headTags(meta: RouteMeta): string {
-  const url = `${SITE_ORIGIN}${meta.path === "/" ? "/" : meta.path}`;
+  const url = `${SITE_ORIGIN}${meta.path}`;
   const tags = [
     `<title>${escapeAttribute(meta.title)}</title>`,
     `<meta name="description" content="${escapeAttribute(meta.description)}" />`,
-    `<link rel="canonical" href="${url}" />`,
+    `<link rel="canonical" href="${SITE_ORIGIN}${meta.canonical ?? meta.path}" />`,
     `<meta property="og:site_name" content="${SITE_NAME}" />`,
     `<meta property="og:title" content="${escapeAttribute(meta.title)}" />`,
     `<meta property="og:description" content="${escapeAttribute(meta.description)}" />`,
@@ -136,7 +156,14 @@ export function headTags(meta: RouteMeta): string {
   return tags.join("\n    ");
 }
 
+/** Every page the build writes: the fixed pages, each benchmark, and each benchmark's matchup. */
 export function prerenderPaths(index: CatalogIndex): string[] {
+  const matchups = index.benchmarks.filter((benchmark) => benchmark.matchup).map((benchmark) => matchupPath(benchmark.slug));
+  return [...sitemapPaths(index), ...matchups];
+}
+
+/** The pages search engines should index. Matchups point their canonical URL at their benchmark, so they stay out. */
+export function sitemapPaths(index: CatalogIndex): string[] {
   return ["/", "/methodology/", "/about/", ...index.benchmarks.map((benchmark) => benchmarkPath(benchmark.slug))];
 }
 

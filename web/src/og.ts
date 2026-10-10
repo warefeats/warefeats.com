@@ -1,5 +1,6 @@
 import satori from "satori";
 import type { SatoriOptions } from "satori";
+import { matchupField } from "./matchup";
 import { formatDate, formatRatio, summarize } from "./metrics";
 import type { Benchmark } from "./types";
 
@@ -78,6 +79,20 @@ export async function benchmarkCard(benchmark: Benchmark, fonts: OgFonts): Promi
     : h("div", row({ fontFamily: mono, fontSize: 64, fontWeight: 700, color: RED }), benchmark.verdict.headline);
 
   return satori(frame(foot, title, body) as unknown as React.ReactNode, options(fonts));
+}
+
+/** The matchup card: an invitation to pick, since a matchup carries no verdict to show. */
+export async function matchupCard(benchmark: Benchmark, fonts: OgFonts): Promise<string> {
+  const foot = `${benchmark.environment.machine} · ${benchmark.environment.chip} · ${formatDate(benchmark.publishedAt)}`;
+  return satori(
+    frame(
+      foot,
+      h("div", row({ fontFamily: sans, fontSize: 30, fontWeight: 500, color: MUTED, marginBottom: 18 }), benchmark.title),
+      h("div", row({ fontFamily: mono, fontSize: 104, fontWeight: 700, color: RED, letterSpacing: -4, lineHeight: 1.1, marginLeft: -4 }), "Pick your matchup"),
+      h("div", row({ fontFamily: mono, fontSize: 38, fontWeight: 500, marginTop: 18 }), `${matchupField(benchmark) ?? 0} candidates · one rig · no verdict`),
+    ) as unknown as React.ReactNode,
+    options(fonts),
+  );
 }
 
 /** The site card for the home and prose pages. */

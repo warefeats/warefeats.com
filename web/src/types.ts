@@ -26,6 +26,8 @@ export interface CatalogEntry {
   verdictHeadline: string;
   /** The hyperfine summary of a benchmark without sections: the winner against its closest rival. */
   lead?: CatalogLead;
+  /** Present when the benchmark has a matchup: the number of candidates a reader can pick from. */
+  matchup?: { candidates: number };
 }
 
 export interface CatalogLead {

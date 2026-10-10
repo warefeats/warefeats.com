@@ -2,7 +2,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Resvg } from "@resvg/resvg-js";
 import { parseCatalog } from "../src/catalog";
-import { benchmarkCard, siteCard } from "../src/og";
+import { matchupField } from "../src/matchup";
+import { benchmarkCard, matchupCard, siteCard } from "../src/og";
 import type { OgFonts } from "../src/og";
 
 const root = join(import.meta.dir, "..");
@@ -24,11 +25,17 @@ function toPng(svg: string): Buffer {
 }
 
 const catalog = parseCatalog(JSON.parse(await readFile(join(root, "dist", "data", "benchmarks.json"), "utf8")));
-await mkdir(out, { recursive: true });
+await mkdir(join(out, "matchup"), { recursive: true });
 await writeFile(join(out, "site.png"), toPng(await siteCard(fonts)));
 
+let cards = 1;
 for (const benchmark of catalog.benchmarks) {
   await writeFile(join(out, `${benchmark.slug}.png`), toPng(await benchmarkCard(benchmark, fonts)));
+  cards += 1;
+  if (matchupField(benchmark) !== undefined) {
+    await writeFile(join(out, "matchup", `${benchmark.slug}.png`), toPng(await matchupCard(benchmark, fonts)));
+    cards += 1;
+  }
 }
 
-console.log(`Rendered ${catalog.benchmarks.length + 1} OG cards into dist/og`);
+console.log(`Rendered ${cards} OG cards into dist/og`);

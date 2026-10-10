@@ -1213,6 +1213,132 @@ th.num {
   margin-top: 0.5rem;
 }
 
+/* Matchup: a reader-picked view of one run, with no verdict */
+
+.matchup-link {
+  margin-top: 1.25rem;
+}
+
+.picker,
+.matchup-scorecard,
+.matchup-limits {
+  padding-top: 2rem;
+  border-top: 1px solid var(--fg);
+}
+
+.picker h2,
+.matchup-scorecard h2,
+.matchup-limits h2 {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  font-stretch: 90%;
+  letter-spacing: 0.01em;
+}
+
+.picker-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.picker-reset {
+  font-size: var(--text-sm);
+}
+
+.picker-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+  column-gap: 2rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Status is a mark: the checkbox carries it, and an unpicked row only steps back to muted ink. */
+.picker-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 2.75rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--rule);
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: color 160ms var(--ease);
+}
+
+.picker-item:hover,
+.picker-item.is-picked {
+  color: var(--fg);
+}
+
+.picker-item input {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--fg);
+  cursor: pointer;
+}
+
+.picker-logo {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+  opacity: 0.45;
+  transition: opacity 160ms var(--ease);
+}
+
+.is-picked .picker-logo,
+.picker-item:hover .picker-logo {
+  opacity: 1;
+}
+
+.picker-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.picker-version {
+  flex: none;
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+}
+
+.picker-hint {
+  min-height: 1.5em;
+  max-width: 60ch;
+  margin-top: 0.6rem;
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+
+.matchup-scorecard .scorecard {
+  margin-top: 1rem;
+}
+
+.matchup-omitted {
+  max-width: 60ch;
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+
+.matchup-limits ul {
+  max-width: 60ch;
+  margin-top: 0.75rem;
+  padding-left: 1.1rem;
+  color: var(--fg-muted);
+}
+
+.matchup-limits li + li {
+  margin-top: 0.5rem;
+}
+
 /* Products compared */
 
 .products {
@@ -1713,7 +1839,8 @@ th.num {
 
 /* Product logos are third-party marks shown unmodified; on a dark ground they sit on a light plate. */
 :root[data-theme="dark"] .bar-label img,
-:root[data-theme="dark"] .product-logo {
+:root[data-theme="dark"] .product-logo,
+:root[data-theme="dark"] img.picker-logo {
   background: #fff;
   border-radius: 4px;
   padding: 2px 4px;
@@ -1722,7 +1849,8 @@ th.num {
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .bar-label img,
-  :root:not([data-theme="light"]) .product-logo {
+  :root:not([data-theme="light"]) .product-logo,
+  :root:not([data-theme="light"]) img.picker-logo {
     background: #fff;
     border-radius: 4px;
     padding: 2px 4px;

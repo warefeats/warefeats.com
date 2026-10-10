@@ -7,6 +7,7 @@ import { routeMeta } from "./head";
 import { About } from "./routes/About";
 import { BenchmarkPage } from "./routes/BenchmarkPage";
 import { Home } from "./routes/Home";
+import { MatchupPage } from "./routes/MatchupPage";
 import { Methodology } from "./routes/Methodology";
 import { NotFound } from "./routes/NotFound";
 
@@ -28,7 +29,7 @@ function useDocumentMeta(): void {
     set('meta[property="og:image"]', image);
     set('meta[name="twitter:image"]', image);
     set('meta[property="og:url"]', `https://warefeats.com${meta.path}`);
-    document.querySelector('link[rel="canonical"]')?.setAttribute("href", `https://warefeats.com${meta.path}`);
+    document.querySelector('link[rel="canonical"]')?.setAttribute("href", `https://warefeats.com${meta.canonical ?? meta.path}`);
   }, [location.pathname, state]);
 
   useEffect(() => {
@@ -49,6 +50,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/benchmarks/:slug" element={<BenchmarkPage />} />
+          <Route path="/benchmarks/:slug/matchup" element={<MatchupPage />} />
           <Route path="/methodology" element={<Methodology />} />
           <Route path="/about" element={<About />} />
           <Route path="*" element={<NotFound />} />

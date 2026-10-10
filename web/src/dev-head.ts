@@ -42,21 +42,22 @@ export function devHead(root: string): Plugin {
           return;
         }
 
-        const match = /^\/og\/([a-z0-9-]+)\.png$/i.exec(request.url ?? "");
+        const match = /^\/og\/(matchup\/)?([a-z0-9-]+)\.png$/i.exec(request.url ?? "");
         if (!match) {
           next();
           return;
         }
 
         try {
-          const [{ Resvg }, { benchmarkCard, siteCard }] = await Promise.all([import("@resvg/resvg-js"), import("./og")]);
+          const [{ Resvg }, { benchmarkCard, matchupCard, siteCard }] = await Promise.all([import("@resvg/resvg-js"), import("./og")]);
           const font = async (name: string) => {
             const bytes = await readFile(join(root, "assets", "fonts", name));
             return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
           };
           const fonts = { mono500: await font("MartianMono-500.ttf"), mono700: await font("MartianMono-700.ttf"), sans500: await font("RedHatText-500.ttf") };
-          const benchmark = (await catalog()).benchmarks.find((entry) => entry.slug === match[1]);
-          const svg = match[1] === "site" ? await siteCard(fonts) : benchmark ? await benchmarkCard(benchmark, fonts) : undefined;
+          const benchmark = (await catalog()).benchmarks.find((entry) => entry.slug === match[2]);
+          const card = match[1] ? matchupCard : benchmarkCard;
+          const svg = !match[1] && match[2] === "site" ? await siteCard(fonts) : benchmark ? await card(benchmark, fonts) : undefined;
 
           if (!svg) {
             next();

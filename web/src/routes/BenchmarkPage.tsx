@@ -1,56 +1,36 @@
-import { DownloadSimple } from "@phosphor-icons/react";
+import { DownloadSimple, ListChecks } from "@phosphor-icons/react";
 import { Link, useParams } from "react-router";
 import { useBenchmark } from "../catalog-context";
 import { BarChart } from "../components/BarChart";
+import { Candidates } from "../components/Candidates";
 import { Conditions } from "../components/Conditions";
-import { Products } from "../components/Products";
 import { CopyReport } from "../components/CopyReport";
 import { ReportBlock } from "../components/ReportBlock";
 import { RunToggle } from "../components/RunToggle";
+import { Scorecard } from "../components/Scorecard";
 import { REPO_URL } from "../components/SiteHeader";
 import { BoxPlot } from "../components/BoxPlot";
 import { CatalogSkeleton, ErrorState } from "../components/States";
-import { benchmarkTests, formatDate, formatValue, scorecard } from "../metrics";
+import { matchupPath } from "../head";
+import { matchupField } from "../matchup";
+import { benchmarkTests, formatDate } from "../metrics";
 import { useRunSelection } from "../url-state";
 import type { Benchmark } from "../types";
 import { NotFound } from "./NotFound";
 
-/** The verdict's numbers as a table: one row per candidate, one column per section, means. */
-function Scorecard({ sections }: { sections: Benchmark["sections"] }) {
-  if (!sections?.length) return null;
-  const card = scorecard(sections);
+/** The way into a benchmark's matchup, carrying the run on screen when it isn't the primary. */
+function MatchupLink({ benchmark, run }: { benchmark: Benchmark; run?: string }) {
+  if (matchupField(benchmark) === undefined) {
+    return null;
+  }
+
   return (
-    <div className="table-scroll scorecard">
-      <table>
-        <caption>Mean of each section's samples per candidate. The best value in each column is marked in red.</caption>
-        <thead>
-          <tr>
-            <th scope="col">Candidate</th>
-            {card.columns.map((column) => (
-              <th scope="col" key={column.id}>
-                {column.title} <span className="unit">({column.unit}, {column.lowerIsBetter ? "lower is better" : "higher is better"})</span>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {card.rows.map((row) => (
-            <tr key={row.candidateId}>
-              <th scope="row">{row.name}</th>
-              {row.cells.map((cell, index) => {
-                const column = card.columns[index]!;
-                const winner = column.bestId === row.candidateId;
-                return (
-                  <td className={`num${winner ? " scorecard-winner" : ""}`} key={column.id}>
-                    {cell === null ? <span aria-label="not run">–</span> : formatValue(cell, column.unit)}
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <p className="matchup-link">
+      <Link className="button button-quiet" to={{ pathname: matchupPath(benchmark.slug), search: run ? `?run=${encodeURIComponent(run)}` : "" }}>
+        <ListChecks aria-hidden="true" />
+        Build a matchup
+      </Link>
+    </p>
   );
 }
 
@@ -66,6 +46,7 @@ function BenchmarkContent({ benchmark }: { benchmark: Benchmark }) {
           <h1>{benchmark.title}</h1>
           <p className="deck">{benchmark.deck}</p>
           <p className="byline">Published <time dateTime={benchmark.publishedAt} className="num">{formatDate(benchmark.publishedAt)}</time> on {active.environment.machine}, {active.environment.chip}</p>
+          <MatchupLink benchmark={benchmark} run={active.id === runs[0]!.id ? undefined : active.id} />
         </header>
 
         {runs.length > 1 ? <RunToggle runs={runs} active={active.id} onSelect={select} /> : null}
@@ -117,9 +98,10 @@ function BenchmarkContent({ benchmark }: { benchmark: Benchmark }) {
         <h1>{benchmark.title}</h1>
         <p className="deck">{benchmark.deck}</p>
         <p className="byline">Published <time dateTime={benchmark.publishedAt} className="num">{formatDate(benchmark.publishedAt)}</time> on {benchmark.environment.machine}, {benchmark.environment.chip}</p>
+        <MatchupLink benchmark={benchmark} />
       </header>
 
-      <Products benchmark={benchmark} />
+      <Candidates benchmark={benchmark} />
 
       <section className="tests" aria-labelledby="tests-title">
         <h2 id="tests-title">Tests</h2>
