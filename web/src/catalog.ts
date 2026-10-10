@@ -14,6 +14,10 @@ export function parseCatalog(value: unknown): BenchmarkCatalog {
       throw new Error("A benchmark entry is incomplete.");
     }
 
+    if (benchmark.run !== undefined && (!isRecord(benchmark.run) || typeof benchmark.run.id !== "string" || typeof benchmark.run.label !== "string")) {
+      throw new Error(`Benchmark ${benchmark.id} has an invalid primary run.`);
+    }
+
     const hasSections = Array.isArray(benchmark.sections) && benchmark.sections.length > 0;
 
     if (!hasSections && benchmark.candidates.length < 2) {

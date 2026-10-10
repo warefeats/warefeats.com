@@ -12,6 +12,8 @@ export interface Benchmark {
   title: string;
   deck: string;
   publishedAt: string;
+  /** The primary run's id and label, as its run file names them. */
+  run?: { id: string; label: string };
   unit: "ms";
   lowerIsBetter: boolean;
   verdict: {

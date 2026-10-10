@@ -5,6 +5,10 @@
   "title": "Martin vs Tegola vs BBOX vs pg_tileserv vs TiPg vs ldproxy",
   "deck": "Six open-source vector tile servers generating Mapbox Vector Tiles on the fly from the same PostGIS database, on a pinned Berlin OpenStreetMap corpus: single-tile latency, throughput at 10 and 100 clients, four-tile viewport bursts, cold start and memory. A re-run of the 2024 Rechsteiner thesis matrix on current releases.",
   "publishedAt": "2026-09-02",
+  "run": {
+    "id": "2026-09-02-m2-max",
+    "label": "M2 Max (local)"
+  },
   "unit": "ms",
   "lowerIsBetter": true,
   "verdict": {

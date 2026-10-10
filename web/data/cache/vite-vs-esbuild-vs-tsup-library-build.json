@@ -5,6 +5,10 @@
   "title": "Vite vs esbuild vs tsup",
   "deck": "Cold production builds of a TypeScript library — ESM, minified, no declarations.",
   "publishedAt": "2026-08-30",
+  "run": {
+    "id": "2026-08-30-m2max",
+    "label": "M2 Max (local)"
+  },
   "unit": "ms",
   "lowerIsBetter": true,
   "verdict": {

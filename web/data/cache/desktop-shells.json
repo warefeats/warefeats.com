@@ -5,6 +5,10 @@
   "title": "Tauri vs Electron",
   "deck": "One web frontend, byte for byte the same, dropped into a Tauri host and an Electron host. Then the questions teams actually fight about: what does it cost to move data across the webview boundary, does the same frontend behave the same in three webviews, what happens to memory after ten minutes of real work, and how big is the thing you ship. Two machines, one per OS. I ship Tauri apps. The runner's public; check my numbers.",
   "publishedAt": "2026-09-10",
+  "run": {
+    "id": "2026-09-10-m2max",
+    "label": "M2 Max / macOS 26 (local)"
+  },
   "unit": "ms",
   "lowerIsBetter": true,
   "verdict": {
