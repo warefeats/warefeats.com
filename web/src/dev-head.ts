@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Plugin } from "vite";
 import { assembleCatalog } from "../scripts/assemble";
+import { toCatalogIndex } from "./catalog";
 import { headTags, routeMeta } from "./head";
 import type { BenchmarkCatalog } from "./types";
 
@@ -15,19 +16,26 @@ export function devHead(root: string): Plugin {
     apply: "serve",
     async transformIndexHtml(html, context) {
       const path = (context.originalUrl ?? context.path).replace(/^https?:\/\/[^/]+/, "");
-      const meta = routeMeta(path, await catalog());
+      const meta = routeMeta(path, toCatalogIndex(await catalog()));
       const host = context.server?.resolvedUrls?.local[0]?.replace(/\/$/, "") ?? "";
       const tags = host ? headTags(meta).replaceAll(`content="${meta.image}"`, `content="${meta.image.replace("https://warefeats.com", host)}"`) : headTags(meta);
       return html.replace("<!--app-head-->", tags);
     },
     configureServer(server) {
       server.middlewares.use(async (request, response, next) => {
-        if (request.url === "/data/benchmarks.json") {
+        const url = request.url?.split("?")[0] ?? "";
+        const dataFile = url === "/data/benchmarks.json" || url === "/data/catalog.json" || /^\/data\/benchmarks\/[a-z0-9-]+\.json$/i.test(url);
+        if (dataFile) {
           try {
             const data = await catalog();
-            const json = JSON.stringify(data, null, 2);
+            const slug = /^\/data\/benchmarks\/([a-z0-9-]+)\.json$/i.exec(url)?.[1];
+            const body = url === "/data/benchmarks.json" ? data : url === "/data/catalog.json" ? toCatalogIndex(data) : data.benchmarks.find((entry) => entry.slug === slug);
+            if (!body) {
+              next();
+              return;
+            }
             response.setHeader("Content-Type", "application/json");
-            response.end(json);
+            response.end(JSON.stringify(body, null, 2));
           } catch (error) {
             next(error);
           }

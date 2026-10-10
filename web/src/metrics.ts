@@ -78,7 +78,7 @@ export function summarize(benchmark: Benchmark): Summary {
   return { winner, comparisons };
 }
 
-export function formatRatio(comparison: Comparison): string {
+export function formatRatio(comparison: Pick<Comparison, "ratio" | "sigma">): string {
   return `${comparison.ratio.toFixed(2)} ± ${comparison.sigma.toFixed(2)}`;
 }
 

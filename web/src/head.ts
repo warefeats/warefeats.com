@@ -1,5 +1,4 @@
-import { summarize } from "./metrics";
-import type { Benchmark, BenchmarkCatalog } from "./types";
+import type { CatalogEntry, CatalogIndex } from "./types";
 
 export const SITE_NAME = "warefeats";
 export const SITE_ORIGIN = "https://warefeats.com";
@@ -33,7 +32,12 @@ export function normalizePath(path: string): string {
   return pathname.endsWith("/") ? pathname : `${pathname}/`;
 }
 
-export function routeMeta(path: string, catalog?: BenchmarkCatalog): RouteMeta {
+/** The slug of the benchmark a path belongs to, if it is a benchmark's page. */
+export function benchmarkSlug(path: string): string | undefined {
+  return /^\/benchmarks\/([^/]+)\/$/.exec(normalizePath(path))?.[1];
+}
+
+export function routeMeta(path: string, index?: CatalogIndex): RouteMeta {
   const pathname = normalizePath(path);
 
   if (pathname === "/") {
@@ -48,8 +52,8 @@ export function routeMeta(path: string, catalog?: BenchmarkCatalog): RouteMeta {
     return { path: pathname, title: `About | ${SITE_NAME}`, description: "warefeats is a one-person benchmark lab for developer tools, run on a named machine with an open-source runner.", type: "website", status: 200, image: SITE_CARD };
   }
 
-  const match = /^\/benchmarks\/([^/]+)\/$/.exec(pathname);
-  const benchmark = match ? catalog?.benchmarks.find((entry) => entry.slug === match[1]) : undefined;
+  const slug = benchmarkSlug(pathname);
+  const benchmark = slug ? index?.benchmarks.find((entry) => entry.slug === slug) : undefined;
 
   if (benchmark) {
     return { path: pathname, title: benchmarkTitle(benchmark), description: benchmarkDescription(benchmark), type: "article", publishedAt: benchmark.publishedAt, status: 200, image: `${SITE_ORIGIN}/og/${benchmark.slug}.png` };
@@ -59,21 +63,20 @@ export function routeMeta(path: string, catalog?: BenchmarkCatalog): RouteMeta {
 }
 
 /** The benchmark title, followed by the site name when both fit in a search result. */
-function benchmarkTitle(benchmark: Benchmark): string {
+function benchmarkTitle(benchmark: CatalogEntry): string {
   const title = `${benchmark.title} | ${SITE_NAME}`;
   return title.length <= TITLE_LIMIT ? title : benchmark.title;
 }
 
 /** The result, then the deck. A section benchmark has no single ratio, so when its deck runs long its verdict stands in. */
-function benchmarkDescription(benchmark: Benchmark): string {
-  const summary = summarize(benchmark);
-  const lead = summary.comparisons[0];
+function benchmarkDescription(benchmark: CatalogEntry): string {
+  const lead = benchmark.lead;
 
   if (lead) {
-    return clipDescription(`${summary.winner.name} ${summary.winner.version} ran ${lead.ratio.toFixed(2)} ± ${lead.sigma.toFixed(2)} times faster than ${lead.other.name} ${lead.other.version}. ${benchmark.deck}`);
+    return clipDescription(`${lead.winner.name} ${lead.winner.version} ran ${lead.ratio.toFixed(2)} ± ${lead.sigma.toFixed(2)} times faster than ${lead.other.name} ${lead.other.version}. ${benchmark.deck}`);
   }
 
-  return benchmark.deck.length <= DESCRIPTION_LIMIT ? benchmark.deck : clipDescription(benchmark.verdict.headline);
+  return benchmark.deck.length <= DESCRIPTION_LIMIT ? benchmark.deck : clipDescription(benchmark.verdictHeadline);
 }
 
 /** Cuts text to the description limit at its last sentence or clause break that fits, so no clause is cut in half; text without one is cut at a word. */
@@ -133,8 +136,8 @@ export function headTags(meta: RouteMeta): string {
   return tags.join("\n    ");
 }
 
-export function prerenderPaths(catalog: BenchmarkCatalog): string[] {
-  return ["/", "/methodology/", "/about/", ...catalog.benchmarks.map((benchmark) => benchmarkPath(benchmark.slug))];
+export function prerenderPaths(index: CatalogIndex): string[] {
+  return ["/", "/methodology/", "/about/", ...index.benchmarks.map((benchmark) => benchmarkPath(benchmark.slug))];
 }
 
 /** Every prerendered page by its canonical URL. */

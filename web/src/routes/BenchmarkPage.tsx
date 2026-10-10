@@ -1,7 +1,7 @@
 import { DownloadSimple } from "@phosphor-icons/react";
 import { useState } from "react";
 import { Link, useParams } from "react-router";
-import { useCatalog } from "../catalog-context";
+import { useBenchmark } from "../catalog-context";
 import { BarChart } from "../components/BarChart";
 import { Conditions } from "../components/Conditions";
 import { Products } from "../components/Products";
@@ -224,21 +224,19 @@ function BenchmarkContent({ benchmark }: { benchmark: Benchmark }) {
 
 export function BenchmarkPage() {
   const { slug } = useParams();
-  const { state, reload } = useCatalog();
+  const load = useBenchmark(slug);
 
-  if (state.status === "loading") {
+  if (load.status === "loading") {
     return <CatalogSkeleton />;
   }
 
-  if (state.status === "error") {
-    return <ErrorState message={state.message} onRetry={reload} />;
+  if (load.status === "error") {
+    return <ErrorState message={load.message} onRetry={load.retry} />;
   }
 
-  const benchmark = state.catalog.benchmarks.find((entry) => entry.slug === slug);
-
-  if (!benchmark) {
+  if (load.status === "missing") {
     return <NotFound />;
   }
 
-  return <BenchmarkContent benchmark={benchmark} />;
+  return <BenchmarkContent benchmark={load.benchmark} />;
 }

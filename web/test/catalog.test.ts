@@ -3,7 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { assembleCatalog } from "../scripts/assemble";
 import { validateRef, validateRunPath } from "../scripts/sync";
-import { parseCatalog } from "../src/catalog";
+import { parseBenchmark, parseCatalog, parseCatalogIndex, toCatalogIndex } from "../src/catalog";
 import { BarChart } from "../src/components/BarChart";
 import { Conditions } from "../src/components/Conditions";
 import { headTags, normalizePath, prerenderPaths, robotsTxt, routeMeta, sitemapXml } from "../src/head";
@@ -141,6 +141,39 @@ describe("catalog assembly", () => {
     expect(proxy.sections).toBeDefined();
     expect(proxy.sections!.length).toBe(4);
     expect(proxy.candidates).toEqual([]);
+  });
+});
+
+describe("catalog index", () => {
+  test("carries each benchmark's summary without its samples", async () => {
+    const catalog = await loadCatalog();
+    const index = toCatalogIndex(catalog);
+
+    expect(index.benchmarks.map((entry) => entry.slug)).toEqual(catalog.benchmarks.map((benchmark) => benchmark.slug));
+    expect(JSON.stringify(index)).not.toContain("samplesMs");
+    expect(index.queue).toEqual(catalog.queue);
+    for (const benchmark of catalog.benchmarks) {
+      const entry = index.benchmarks.find((candidate) => candidate.slug === benchmark.slug)!;
+      const summary = summarize(benchmark);
+      const lead = summary.comparisons[0];
+      expect(entry.chip).toBe(benchmark.environment.chip);
+      expect(entry.runs).toBe(benchmark.protocol.runs);
+      expect(entry.verdictHeadline).toBe(benchmark.verdict.headline);
+      const expected = lead ? { winner: { name: summary.winner.name, version: summary.winner.version }, other: { name: lead.other.name, version: lead.other.version }, ratio: lead.ratio, sigma: lead.sigma } : undefined;
+      expect(entry.lead as unknown).toEqual(expected);
+    }
+  });
+
+  test("parses its own output and rejects an entry without a slug", async () => {
+    const index = toCatalogIndex(await loadCatalog());
+    expect(parseCatalogIndex(JSON.parse(JSON.stringify(index)))).toEqual(index);
+    expect(() => parseCatalogIndex({ schemaVersion: 1, benchmarks: [{ title: "No slug" }], queue: [] })).toThrow("incomplete");
+  });
+
+  test("checks one benchmark on its own", async () => {
+    const catalog = await loadCatalog();
+    expect(parseBenchmark(JSON.parse(JSON.stringify(catalog.benchmarks[0])))).toEqual(catalog.benchmarks[0]!);
+    expect(() => parseBenchmark({ id: "x" })).toThrow("incomplete");
   });
 });
 
@@ -498,7 +531,7 @@ describe("routes", () => {
   });
 
   test("prerenders one page per benchmark plus the fixed pages", async () => {
-    const catalog = await loadCatalog();
+    const catalog = toCatalogIndex(await loadCatalog());
     const paths = prerenderPaths(catalog);
     expect(paths).toContain("/");
     expect(paths).toContain("/methodology/");
@@ -508,7 +541,7 @@ describe("routes", () => {
   });
 
   test("builds benchmark metadata from the catalog", async () => {
-    const catalog = await loadCatalog();
+    const catalog = toCatalogIndex(await loadCatalog());
     const meta = routeMeta("/benchmarks/eslint-vs-biome-javascript-lint", catalog);
 
     expect(meta.status).toBe(200);
@@ -520,7 +553,7 @@ describe("routes", () => {
   });
 
   test("marks unknown routes as not found", async () => {
-    const catalog = await loadCatalog();
+    const catalog = toCatalogIndex(await loadCatalog());
     const meta = routeMeta("/benchmarks/nope", catalog);
 
     expect(meta.status).toBe(404);
@@ -528,7 +561,7 @@ describe("routes", () => {
   });
 
   test("fits every title and description into a search result", async () => {
-    const catalog = await loadCatalog();
+    const catalog = toCatalogIndex(await loadCatalog());
 
     for (const path of prerenderPaths(catalog)) {
       const meta = routeMeta(path, catalog);
@@ -538,21 +571,21 @@ describe("routes", () => {
   });
 
   test("drops the site name from a title too long to carry it", async () => {
-    const catalog = await loadCatalog();
+    const catalog = toCatalogIndex(await loadCatalog());
 
     expect(routeMeta("/benchmarks/desktop-shells/", catalog).title).toBe("Tauri vs Electron | warefeats");
     expect(routeMeta("/benchmarks/pmtiles-mbtiles-tile-servers/", catalog).title).toBe("Martin vs go-pmtiles vs tileserver-gl vs mbtileserver vs BBOX");
   });
 
   test("keeps a deck that fits and cuts a long verdict at its last clause break that fits", async () => {
-    const catalog = await loadCatalog();
+    const catalog = toCatalogIndex(await loadCatalog());
 
     expect(routeMeta("/benchmarks/redis-vs-valkey-vs-dragonfly-kv/", catalog).description).toBe(catalog.benchmarks.find((entry) => entry.slug === "redis-vs-valkey-vs-dragonfly-kv")!.deck);
     expect(routeMeta("/benchmarks/pmtiles-mbtiles-tile-servers/", catalog).description).toBe("Martin served 12,600 tiles a second at 100 clients from the PMTiles archive, more than any other server from either format.");
   });
 
   test("lists every prerendered page in the sitemap by its canonical URL", async () => {
-    const catalog = await loadCatalog();
+    const catalog = toCatalogIndex(await loadCatalog());
     const sitemap = sitemapXml(prerenderPaths(catalog));
 
     expect(sitemap.match(/<loc>/g)).toHaveLength(prerenderPaths(catalog).length);
