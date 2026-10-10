@@ -24,20 +24,19 @@ export function CandidatePicker({ universe, picked, onToggle, onReset, note }: C
     <section className="picker" aria-labelledby="picker-title">
       <div className="picker-head">
         <h2 id="picker-title">Candidates</h2>
-        {full ? null : (
-          <button
-            className="link-button picker-reset"
-            type="button"
-            onClick={() => {
-              setRefused(false);
-              onReset();
-              // The button leaves with the pick it reset, so hand focus to the first checkbox instead of the page.
-              requestAnimationFrame(() => group.current?.querySelector("input")?.focus());
-            }}
-          >
-            Show all
-          </button>
-        )}
+        {/* Always in the layout, hidden for the whole field, so its arrival never pushes the boxes down. */}
+        <button
+          className={full ? "link-button picker-reset is-idle" : "link-button picker-reset"}
+          type="button"
+          onClick={() => {
+            setRefused(false);
+            onReset();
+            // The button leaves with the pick it reset, so hand focus to the first checkbox instead of the page.
+            requestAnimationFrame(() => group.current?.querySelector("input")?.focus());
+          }}
+        >
+          Show all
+        </button>
       </div>
       <div ref={group} role="group" aria-labelledby="picker-title">
         <ul className="picker-list">
