@@ -1,5 +1,4 @@
 import { DownloadSimple } from "@phosphor-icons/react";
-import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { useBenchmark } from "../catalog-context";
 import { BarChart } from "../components/BarChart";
@@ -7,44 +6,14 @@ import { Conditions } from "../components/Conditions";
 import { Products } from "../components/Products";
 import { CopyReport } from "../components/CopyReport";
 import { ReportBlock } from "../components/ReportBlock";
+import { RunToggle } from "../components/RunToggle";
 import { REPO_URL } from "../components/SiteHeader";
 import { BoxPlot } from "../components/BoxPlot";
 import { CatalogSkeleton, ErrorState } from "../components/States";
 import { benchmarkTests, formatDate, formatValue, scorecard } from "../metrics";
+import { useRunSelection } from "../url-state";
 import type { Benchmark } from "../types";
 import { NotFound } from "./NotFound";
-
-const BASE_RUN_ID = "__base";
-
-function EnvironmentToggle({ options, selected, onSelect }: { options: { id: string; label: string }[]; selected: string; onSelect: (id: string) => void }) {
-  return (
-    <div className="env-toggle" aria-label="Test environment">
-      {options.map((option) => (
-        <button key={option.id} aria-pressed={option.id === selected} className={`env-toggle-btn${option.id === selected ? " active" : ""}`} onClick={() => onSelect(option.id)}>
-          {option.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function useActiveRun(benchmark: Benchmark) {
-  const runs = benchmark.runs ?? [];
-  const hasRuns = runs.length > 0;
-  const [selectedId, setSelectedId] = useState(BASE_RUN_ID);
-  const activeRun = selectedId !== BASE_RUN_ID ? runs.find((r) => r.id === selectedId) : undefined;
-  const toggleOptions = hasRuns ? [{ id: BASE_RUN_ID, label: benchmark.environment.machine }, ...runs] : [];
-  return {
-    hasRuns,
-    selectedId,
-    setSelectedId,
-    toggleOptions,
-    environment: activeRun?.environment ?? benchmark.environment,
-    protocol: activeRun?.protocol ?? benchmark.protocol,
-    sections: activeRun?.sections ?? benchmark.sections,
-    candidates: activeRun?.candidates ?? benchmark.candidates,
-  };
-}
 
 /** The verdict's numbers as a table: one row per candidate, one column per section, means. */
 function Scorecard({ sections }: { sections: Benchmark["sections"] }) {
@@ -86,20 +55,20 @@ function Scorecard({ sections }: { sections: Benchmark["sections"] }) {
 }
 
 function BenchmarkContent({ benchmark }: { benchmark: Benchmark }) {
-  const run = useActiveRun(benchmark);
+  const { runs, active, select } = useRunSelection(benchmark);
 
-  if ((run.sections ?? benchmark.sections)?.length) {
-    const displaySections = run.sections ?? benchmark.sections ?? [];
+  if (active.sections?.length) {
+    const displaySections = active.sections;
     return (
       <article className="benchmark">
         <header className="benchmark-head">
           <p className="crumbs"><Link to="/">Benchmarks</Link> <span aria-hidden="true">/</span> {benchmark.category}</p>
           <h1>{benchmark.title}</h1>
           <p className="deck">{benchmark.deck}</p>
-          <p className="byline">Published <time dateTime={benchmark.publishedAt} className="num">{formatDate(benchmark.publishedAt)}</time> on {run.environment.machine}, {run.environment.chip}</p>
+          <p className="byline">Published <time dateTime={benchmark.publishedAt} className="num">{formatDate(benchmark.publishedAt)}</time> on {active.environment.machine}, {active.environment.chip}</p>
         </header>
 
-        {run.hasRuns && <EnvironmentToggle options={run.toggleOptions} selected={run.selectedId} onSelect={run.setSelectedId} />}
+        {runs.length > 1 ? <RunToggle runs={runs} active={active.id} onSelect={select} /> : null}
 
         {displaySections.map((section) => {
           const sectionTests = section.tests ?? [];
@@ -119,7 +88,7 @@ function BenchmarkContent({ benchmark }: { benchmark: Benchmark }) {
           );
         })}
 
-        <Conditions benchmark={{ ...benchmark, environment: run.environment, protocol: run.protocol }} />
+        <Conditions benchmark={{ ...benchmark, environment: active.environment, protocol: active.protocol }} />
 
         <section className="learned" aria-labelledby="learned-title">
           <h2 id="learned-title">What did we learn?</h2>
