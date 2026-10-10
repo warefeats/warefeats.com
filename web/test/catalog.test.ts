@@ -145,6 +145,19 @@ describe("catalog assembly", () => {
 });
 
 describe("catalog validation", () => {
+  test("every cached benchmark names its primary run", async () => {
+    const catalog = await loadCatalog();
+    for (const benchmark of catalog.benchmarks) {
+      expect(typeof benchmark.run?.id).toBe("string");
+      expect(typeof benchmark.run?.label).toBe("string");
+    }
+  });
+
+  test("rejects a primary run without an id and label", () => {
+    const benchmark = { id: "x", title: "X", candidates: [], sections: [], run: { id: 7 } };
+    expect(() => parseCatalog({ schemaVersion: 1, benchmarks: [benchmark], queue: [] })).toThrow("invalid primary run");
+  });
+
   test("rejects unsupported schemas", () => {
     expect(() => parseCatalog({ schemaVersion: 2, benchmarks: [], queue: [] })).toThrow("unsupported shape");
   });

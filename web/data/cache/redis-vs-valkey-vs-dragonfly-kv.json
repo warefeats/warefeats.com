@@ -5,6 +5,10 @@
   "title": "Redis vs Valkey vs Dragonfly",
   "deck": "In-memory SET/GET throughput, pipelining, and memory efficiency — Redis 8 vs Valkey 9 vs Dragonfly 1.40 on dedicated ARM hardware.",
   "publishedAt": "2026-08-31",
+  "run": {
+    "id": "2026-08-31-aws-graviton3",
+    "label": "AWS Graviton3 (cloud)"
+  },
   "unit": "ms",
   "lowerIsBetter": true,
   "verdict": {

@@ -5,6 +5,10 @@
   "title": "MapLibre GL JS vs Mapbox GL JS",
   "deck": "The fork measured against the code it forked from. mapbox-gl 1.13.3, the last BSD-licensed Mapbox release, beside maplibre-gl 5.24.0 and 6.7.0, all three fed the same self-hosted Berlin tiles, style, sprites and glyphs in one pinned Chromium on one GPU: startup timeline, frame time cold and warm, memory. I've committed code to MapLibre. The runner's public; check my numbers.",
   "publishedAt": "2026-09-02",
+  "run": {
+    "id": "2026-09-02-radeon-680m-win11",
+    "label": "Radeon 680M / Windows 11 (local)"
+  },
   "unit": "ms",
   "lowerIsBetter": true,
   "verdict": {

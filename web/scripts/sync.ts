@@ -60,84 +60,91 @@ async function fetchRaw(repo: string, ref: string, path: string): Promise<unknow
   return res.json();
 }
 
-const root = join(import.meta.dir, "..");
-const registry: Registry = JSON.parse(await readFile(join(root, "data", "registry.json"), "utf8"));
-const cacheDir = join(root, "data", "cache");
-await mkdir(cacheDir, { recursive: true });
+async function sync(): Promise<void> {
+  const root = join(import.meta.dir, "..");
+  const registry: Registry = JSON.parse(await readFile(join(root, "data", "registry.json"), "utf8"));
+  const cacheDir = join(root, "data", "cache");
+  await mkdir(cacheDir, { recursive: true });
 
-const buffered: { path: string; content: string }[] = [];
-const manifest: Record<string, { repo: string; ref: string }> = {};
+  const buffered: { path: string; content: string }[] = [];
+  const manifest: Record<string, { repo: string; ref: string }> = {};
 
-for (const entry of registry.benchmarks) {
-  validateRef(entry.ref);
+  for (const entry of registry.benchmarks) {
+    validateRef(entry.ref);
 
-  const meta = (await fetchRaw(entry.repo, entry.ref, "benchmark.json")) as RunnerBenchmark;
+    const meta = (await fetchRaw(entry.repo, entry.ref, "benchmark.json")) as RunnerBenchmark;
 
-  if (meta.slug !== entry.slug) {
-    throw new Error(`Slug mismatch for ${entry.slug}: registry says "${entry.slug}" but benchmark.json says "${meta.slug}"`);
+    if (meta.slug !== entry.slug) {
+      throw new Error(`Slug mismatch for ${entry.slug}: registry says "${entry.slug}" but benchmark.json says "${meta.slug}"`);
+    }
+
+    if (meta.runs.length === 0) {
+      throw new Error(`Benchmark ${entry.slug} has no runs — benchmark.json must list at least one run file`);
+    }
+
+    for (const runPath of meta.runs) {
+      validateRunPath(runPath);
+    }
+
+    const runs: RunFile[] = [];
+    for (const runPath of meta.runs) {
+      runs.push((await fetchRaw(entry.repo, entry.ref, runPath)) as RunFile);
+    }
+
+    const primary = runs[0]!;
+
+    const benchmark: Benchmark = {
+      id: meta.id,
+      slug: meta.slug,
+      category: meta.category,
+      title: meta.title,
+      deck: meta.deck,
+      publishedAt: primary.publishedAt,
+      run: { id: primary.id, label: primary.label },
+      unit: meta.unit,
+      lowerIsBetter: meta.lowerIsBetter,
+      verdict: meta.verdict,
+      ...(meta.corpus ? { corpus: meta.corpus } : {}),
+      environment: primary.environment,
+      protocol: primary.protocol,
+      ...(meta.ruleMap ? { ruleMap: meta.ruleMap } : {}),
+      candidates: primary.candidates ?? [],
+      ...(primary.sections ? { sections: primary.sections } : {}),
+      limitations: meta.limitations,
+      ...(meta.trademarks ? { trademarks: meta.trademarks } : {}),
+      runnerUrl: `https://github.com/${entry.repo}`,
+    };
+
+    if (runs.length > 1) {
+      benchmark.runs = runs.slice(1).map(
+        (run): BenchmarkRun => ({
+          id: run.id,
+          label: run.label,
+          environment: run.environment,
+          protocol: run.protocol,
+          publishedAt: run.publishedAt,
+          ...(run.sections ? { sections: run.sections } : {}),
+          ...((run.candidates?.length ?? 0) > 0 ? { candidates: run.candidates } : {}),
+        }),
+      );
+    }
+
+    parseCatalog({ schemaVersion: 1, generatedAt: new Date().toISOString(), benchmarks: [benchmark], queue: [] });
+
+    buffered.push({ path: join(cacheDir, `${entry.slug}.json`), content: JSON.stringify(benchmark, null, 2) + "\n" });
+    manifest[entry.slug] = { repo: entry.repo, ref: entry.ref };
+    console.log(`  ${entry.slug} ← ${entry.repo}@${entry.ref.slice(0, 7)}`);
   }
 
-  if (meta.runs.length === 0) {
-    throw new Error(`Benchmark ${entry.slug} has no runs — benchmark.json must list at least one run file`);
+  buffered.push({ path: join(cacheDir, "manifest.json"), content: JSON.stringify(manifest, null, 2) + "\n" });
+
+  for (const file of buffered) {
+    await writeFile(file.path, file.content);
   }
 
-  for (const runPath of meta.runs) {
-    validateRunPath(runPath);
-  }
-
-  const runs: RunFile[] = [];
-  for (const runPath of meta.runs) {
-    runs.push((await fetchRaw(entry.repo, entry.ref, runPath)) as RunFile);
-  }
-
-  const primary = runs[0]!;
-
-  const benchmark: Benchmark = {
-    id: meta.id,
-    slug: meta.slug,
-    category: meta.category,
-    title: meta.title,
-    deck: meta.deck,
-    publishedAt: primary.publishedAt,
-    unit: meta.unit,
-    lowerIsBetter: meta.lowerIsBetter,
-    verdict: meta.verdict,
-    ...(meta.corpus ? { corpus: meta.corpus } : {}),
-    environment: primary.environment,
-    protocol: primary.protocol,
-    ...(meta.ruleMap ? { ruleMap: meta.ruleMap } : {}),
-    candidates: primary.candidates ?? [],
-    ...(primary.sections ? { sections: primary.sections } : {}),
-    limitations: meta.limitations,
-    ...(meta.trademarks ? { trademarks: meta.trademarks } : {}),
-    runnerUrl: `https://github.com/${entry.repo}`,
-  };
-
-  if (runs.length > 1) {
-    benchmark.runs = runs.slice(1).map(
-      (run): BenchmarkRun => ({
-        id: run.id,
-        label: run.label,
-        environment: run.environment,
-        protocol: run.protocol,
-        publishedAt: run.publishedAt,
-        ...(run.sections ? { sections: run.sections } : {}),
-        ...((run.candidates?.length ?? 0) > 0 ? { candidates: run.candidates } : {}),
-      }),
-    );
-  }
-
-  parseCatalog({ schemaVersion: 1, generatedAt: new Date().toISOString(), benchmarks: [benchmark], queue: [] });
-
-  buffered.push({ path: join(cacheDir, `${entry.slug}.json`), content: JSON.stringify(benchmark, null, 2) + "\n" });
-  manifest[entry.slug] = { repo: entry.repo, ref: entry.ref };
-  console.log(`  ${entry.slug} ← ${entry.repo}@${entry.ref.slice(0, 7)}`);
+  console.log(`Synced ${Object.keys(manifest).length} benchmarks`);
 }
 
-buffered.push({ path: join(cacheDir, "manifest.json"), content: JSON.stringify(manifest, null, 2) + "\n" });
-
-for (const file of buffered) {
-  await writeFile(file.path, file.content);
+if (import.meta.main) {
+  await sync();
 }
-
-console.log(`Synced ${Object.keys(manifest).length} benchmarks`);

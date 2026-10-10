@@ -5,6 +5,10 @@
   "title": "ESLint vs Biome",
   "deck": "Four equivalent rule classes over nearly 100,000 lines of JavaScript.",
   "publishedAt": "2026-08-26",
+  "run": {
+    "id": "2026-08-25-m2max",
+    "label": "M2 Max (local)"
+  },
   "unit": "ms",
   "lowerIsBetter": true,
   "verdict": {

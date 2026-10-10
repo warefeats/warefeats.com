@@ -5,6 +5,10 @@
   "title": "HTTP caching proxies for HLS delivery",
   "deck": "Varnish, Vinyl, and NGINX across four HLS workloads: hit-path TTFB, segment serve, miss-storm coalescing, and origin-flap grace.",
   "publishedAt": "2026-08-29",
+  "run": {
+    "id": "2026-08-29-m2max",
+    "label": "M2 Max (local)"
+  },
   "unit": "ms",
   "lowerIsBetter": true,
   "verdict": {
