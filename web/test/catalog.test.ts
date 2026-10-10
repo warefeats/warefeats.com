@@ -4,9 +4,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { assembleCatalog } from "../scripts/assemble";
 import { validateRef, validateRunPath } from "../scripts/sync";
 import { parseCatalog } from "../src/catalog";
+import { BarChart } from "../src/components/BarChart";
 import { Conditions } from "../src/components/Conditions";
 import { headTags, normalizePath, prerenderPaths, robotsTxt, routeMeta, sitemapXml } from "../src/head";
-import { axisTicks, benchmarkTests, fiveNumber, reportText, samplePosition, scorecard, standardDeviation, summarize } from "../src/metrics";
+import { axisTicks, benchmarkTests, fiveNumber, formatVersion, reportText, samplePosition, scorecard, standardDeviation, summarize } from "../src/metrics";
 import type { Benchmark, BenchmarkCatalog } from "../src/types";
 
 let _catalog: BenchmarkCatalog | undefined;
@@ -661,6 +662,27 @@ describe("conditions", () => {
     expect(withGpu).toContain("<dt>GPU</dt><dd>Apple M2 Max 38-core (Metal 3)</dd>");
     expect(withGpu).toContain("<dt>Browser</dt><dd>Chromium 140 (ANGLE Metal)</dd>");
     expect(withGpu).toContain("<dt>Display</dt><dd>1280×800 @2x, physical display attached</dd>");
+  });
+});
+
+describe("charts and versions", () => {
+  test("gives each chart its own heading id when two sections reuse a test id", () => {
+    const benchmark = { candidates: [{ id: "a", name: "A" }, { id: "b", name: "B" }] } as unknown as Benchmark;
+    const test = { id: "p50-ttfb", title: "p50 TTFB", description: "p50", unit: "ms", lowerIsBetter: true, results: [{ candidateId: "a", value: 1 }, { candidateId: "b", value: 2 }] };
+    const html = renderToStaticMarkup(createElement("div", null, createElement(BarChart, { benchmark, test, index: 0 }), createElement(BarChart, { benchmark, test, index: 0 })));
+    const ids = [...html.matchAll(/<h3 id="([^"]+)"/g)].map((m) => m[1]);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+    for (const id of ids) expect(html).toContain(`aria-labelledby="${id}"`);
+  });
+
+  test("prefixes v only on release numbers", () => {
+    expect(formatVersion("1.16.0")).toBe("v1.16.0");
+    expect(formatVersion("2.0.0-beta.3")).toBe("v2.0.0-beta.3");
+    expect(formatVersion("stable")).toBe("stable");
+    expect(formatVersion("20250131")).toBe("20250131");
+    expect(formatVersion("c67fd5f57")).toBe("c67fd5f57");
+    expect(formatVersion("df-v1.40.1")).toBe("df-v1.40.1");
   });
 });
 

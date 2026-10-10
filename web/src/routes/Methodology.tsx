@@ -21,7 +21,7 @@ export function Methodology() {
       <p>A result is not one number. The report shows the mean with its standard deviation, the range, and the median. Figure 1 plots every pass on one shared axis, so the gap between tools is something you can see, not something I summarized. The ratio in the summary is the slower mean over the faster mean, with the uncertainty propagated the way <a href="https://github.com/sharkdp/hyperfine" target="_blank" rel="noreferrer">hyperfine</a> does it.</p>
 
       <h2>The rig is named</h2>
-      <p>Machine, chip, cores, memory, OS, runtime: printed next to every result. Numbers from different rigs never share a page.</p>
+      <p>Machine, chip, cores, memory, OS, runtime: printed next to every result. Numbers from different rigs never share a chart.</p>
 
       <h2>Limits are stated</h2>
       <p>Each page ends with what the run does not prove. Lint throughput says nothing about rule coverage, editor integration, or migration cost, and the page says so.</p>

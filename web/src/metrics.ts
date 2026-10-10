@@ -175,6 +175,11 @@ export function testWinner(test: BenchmarkTest): string | undefined {
   return sorted[0]?.candidateId;
 }
 
+/** "v1.16.0" for a release number; anything else, like "stable" or a commit, as written. */
+export function formatVersion(version: string): string {
+  return /^\d+(\.\d+)+([-+].*)?$/.test(version) ? `v${version}` : version;
+}
+
 export function formatValue(value: number, unit: string): string {
   return unit === "ms" ? formatDuration(value) : `${Number.isInteger(value) ? value : value.toFixed(1)} ${unit}`;
 }
