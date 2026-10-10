@@ -5,7 +5,7 @@
   },
   "http-caching-proxies-hls": {
     "repo": "warefeats/http-caching-proxies",
-    "ref": "d791eaed1b551fabf8c93a9630f65e88353a90c7"
+    "ref": "23cefc36ed2766686d83d1f2508d8adb4947abff"
   },
   "vite-vs-esbuild-vs-tsup-library-build": {
     "repo": "warefeats/js-bundlers",

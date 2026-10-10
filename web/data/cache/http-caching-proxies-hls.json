@@ -1439,13 +1439,13 @@
       "unit": "ms",
       "lowerIsBetter": true,
       "verdict": {
-        "winnerId": "vinyl",
+        "winnerId": "vinyl-plaintext",
         "headline": "All three engines coalesced 200 concurrent requests to 1 origin fetch",
         "summary": "200-client burst on a cold 4 MB segment, 20 repetitions, plaintext only. With proxy_cache_lock_age/timeout set to 30s, NGINX coalesces identically to Varnish and Vinyl."
       },
       "candidates": [
         {
-          "id": "vinyl",
+          "id": "vinyl-plaintext",
           "name": "Vinyl c67fd5f57",
           "version": "c67fd5f57",
           "logo": "/logos/vinyl-cache.svg",
@@ -1519,7 +1519,7 @@
           }
         },
         {
-          "id": "nginx",
+          "id": "nginx-plaintext",
           "name": "NGINX stable",
           "version": "stable",
           "logo": "/logos/nginx.svg",
@@ -1593,7 +1593,7 @@
           }
         },
         {
-          "id": "varnish",
+          "id": "varnish-plaintext",
           "name": "Varnish 9.0.3",
           "version": "9.0.3",
           "logo": "/logos/varnish-cache.svg",
@@ -1676,15 +1676,15 @@
           "lowerIsBetter": true,
           "results": [
             {
-              "candidateId": "vinyl",
+              "candidateId": "vinyl-plaintext",
               "value": 743.568
             },
             {
-              "candidateId": "nginx",
+              "candidateId": "nginx-plaintext",
               "value": 854.101
             },
             {
-              "candidateId": "varnish",
+              "candidateId": "varnish-plaintext",
               "value": 1051.265
             }
           ]
@@ -1697,15 +1697,15 @@
           "lowerIsBetter": true,
           "results": [
             {
-              "candidateId": "vinyl",
+              "candidateId": "vinyl-plaintext",
               "value": 1244.646
             },
             {
-              "candidateId": "nginx",
+              "candidateId": "nginx-plaintext",
               "value": 2719.083
             },
             {
-              "candidateId": "varnish",
+              "candidateId": "varnish-plaintext",
               "value": 2712.632
             }
           ]
@@ -1718,15 +1718,15 @@
           "lowerIsBetter": false,
           "results": [
             {
-              "candidateId": "vinyl",
+              "candidateId": "vinyl-plaintext",
               "value": 200
             },
             {
-              "candidateId": "nginx",
+              "candidateId": "nginx-plaintext",
               "value": 200
             },
             {
-              "candidateId": "varnish",
+              "candidateId": "varnish-plaintext",
               "value": 200
             }
           ]
@@ -1740,13 +1740,13 @@
       "unit": "ms",
       "lowerIsBetter": true,
       "verdict": {
-        "winnerId": "nginx",
+        "winnerId": "nginx-plaintext",
         "headline": "All three engines maintained 100% grace hit ratio across five origin failure cycles",
         "summary": "Five origin failure cycles, grace/stale-if-error responses measured at plaintext."
       },
       "candidates": [
         {
-          "id": "nginx",
+          "id": "nginx-plaintext",
           "name": "NGINX stable",
           "version": "stable",
           "logo": "/logos/nginx.svg",
@@ -1815,7 +1815,7 @@
           }
         },
         {
-          "id": "vinyl",
+          "id": "vinyl-plaintext",
           "name": "Vinyl c67fd5f57",
           "version": "c67fd5f57",
           "logo": "/logos/vinyl-cache.svg",
@@ -1884,7 +1884,7 @@
           }
         },
         {
-          "id": "varnish",
+          "id": "varnish-plaintext",
           "name": "Varnish 9.0.3",
           "version": "9.0.3",
           "logo": "/logos/varnish-cache.svg",
@@ -1962,15 +1962,15 @@
           "lowerIsBetter": true,
           "results": [
             {
-              "candidateId": "nginx",
+              "candidateId": "nginx-plaintext",
               "value": 5.86
             },
             {
-              "candidateId": "vinyl",
+              "candidateId": "vinyl-plaintext",
               "value": 5.918
             },
             {
-              "candidateId": "varnish",
+              "candidateId": "varnish-plaintext",
               "value": 6.09
             }
           ]
@@ -1983,15 +1983,15 @@
           "lowerIsBetter": false,
           "results": [
             {
-              "candidateId": "nginx",
+              "candidateId": "nginx-plaintext",
               "value": 100
             },
             {
-              "candidateId": "vinyl",
+              "candidateId": "vinyl-plaintext",
               "value": 100
             },
             {
-              "candidateId": "varnish",
+              "candidateId": "varnish-plaintext",
               "value": 100
             }
           ]
