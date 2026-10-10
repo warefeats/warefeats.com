@@ -116,7 +116,8 @@ export function axisTicks(min: number, max: number, count = 5): number[] {
 }
 
 /** The report as hyperfine prints it, for the clipboard. */
-export function reportText(benchmark: Benchmark): string {
+/** The report as hyperfine prints it. A matchup leaves out the summary sentence, which names a winner (ADR 0001). */
+export function reportText(benchmark: Benchmark, { summary: withSummary = true }: { summary?: boolean } = {}): string {
   const lines: string[] = [];
 
   benchmark.candidates.forEach((candidate, index) => {
@@ -127,13 +128,15 @@ export function reportText(benchmark: Benchmark): string {
     lines.push("");
   });
 
-  const summary = summarize(benchmark);
-  lines.push("Summary");
-  lines.push(`  ${summary.winner.name} ${summary.winner.version} ran`);
-  for (const comparison of summary.comparisons) {
-    lines.push(`    ${formatRatio(comparison)} times faster than ${comparison.other.name} ${comparison.other.version}`);
+  if (withSummary) {
+    const summary = summarize(benchmark);
+    lines.push("Summary");
+    lines.push(`  ${summary.winner.name} ${summary.winner.version} ran`);
+    for (const comparison of summary.comparisons) {
+      lines.push(`    ${formatRatio(comparison)} times faster than ${comparison.other.name} ${comparison.other.version}`);
+    }
+    lines.push("");
   }
-  lines.push("");
   lines.push(`Rig: ${benchmark.environment.machine}, ${benchmark.environment.chip}, ${benchmark.environment.memory}, ${benchmark.environment.os}`);
   lines.push(`Source: https://warefeats.com/benchmarks/${benchmark.slug}/`);
 

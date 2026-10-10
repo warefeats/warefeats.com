@@ -33,7 +33,7 @@ const index = embedded("wf-catalog", parseCatalogIndex);
 const benchmark = embedded("wf-benchmark", parseBenchmark);
 const app = (
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter useTransitions={false}>
       <CatalogProvider index={index} benchmarks={benchmark ? { [benchmark.slug]: benchmark } : undefined}>
         <App />
       </CatalogProvider>

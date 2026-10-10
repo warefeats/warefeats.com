@@ -1,3 +1,4 @@
+import { matchupField } from "./matchup";
 import { summarize } from "./metrics";
 import type { Benchmark, BenchmarkCatalog, CatalogEntry, CatalogIndex } from "./types";
 
@@ -92,6 +93,7 @@ export function toCatalogIndex(catalog: BenchmarkCatalog): CatalogIndex {
 function toCatalogEntry(benchmark: Benchmark): CatalogEntry {
   const summary = summarize(benchmark);
   const lead = summary.comparisons[0];
+  const field = matchupField(benchmark);
 
   return {
     id: benchmark.id,
@@ -104,6 +106,7 @@ function toCatalogEntry(benchmark: Benchmark): CatalogEntry {
     runs: benchmark.protocol.runs,
     verdictHeadline: benchmark.verdict.headline,
     ...(lead ? { lead: { winner: { name: summary.winner.name, version: summary.winner.version }, other: { name: lead.other.name, version: lead.other.version }, ratio: lead.ratio, sigma: lead.sigma } } : {}),
+    ...(field === undefined ? {} : { matchup: { candidates: field } }),
   };
 }
 

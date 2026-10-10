@@ -5,10 +5,12 @@ import type { Benchmark } from "../types";
 
 interface CopyReportProps {
   benchmark: Benchmark;
+  /** False on a matchup, which copies the blocks without hyperfine's summary sentence. */
+  summary?: boolean;
 }
 
 /** Copies the report in hyperfine's plain-text shape, ready to paste into an issue or a chat. */
-export function CopyReport({ benchmark }: CopyReportProps) {
+export function CopyReport({ benchmark, summary = true }: CopyReportProps) {
   const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
 
   useEffect(() => {
@@ -22,7 +24,7 @@ export function CopyReport({ benchmark }: CopyReportProps) {
 
   async function copy(): Promise<void> {
     try {
-      await navigator.clipboard.writeText(reportText(benchmark));
+      await navigator.clipboard.writeText(reportText(benchmark, { summary }));
       setState("copied");
     } catch {
       setState("failed");
