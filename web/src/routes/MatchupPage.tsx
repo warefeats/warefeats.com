@@ -31,16 +31,18 @@ function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
 
   return (
     <article className="benchmark matchup">
+      <p className="crumbs"><Link to="/">Benchmarks</Link> <span aria-hidden="true">/</span> {benchmark.category} <span aria-hidden="true">/</span> Matchup</p>
+
+      {runs.length > 1 ? <RunToggle runs={runs} active={active.id} onSelect={select} /> : null}
+
+      {/* The picker sits above the heading, which changes length with the pick, so a tick never moves the boxes. */}
+      <CandidatePicker universe={universe} picked={pick.ids} onToggle={toggle} onReset={reset} note={pick.ignored ? "That link named fewer than two candidates from this run, so you're seeing all of them." : undefined} />
+
       <header className="benchmark-head">
-        <p className="crumbs"><Link to="/">Benchmarks</Link> <span aria-hidden="true">/</span> {benchmark.category} <span aria-hidden="true">/</span> Matchup</p>
         <h1>{matchupHeading(pick, universe, benchmark.title)}</h1>
         <p className="deck">Tick the candidates you care about and the charts and tables redraw for just them: same run, same rig, same samples. The verdict stays on the published page.</p>
         <p className="byline">From the run of <time dateTime={active.publishedAt} className="num">{formatDate(active.publishedAt)}</time> on {active.environment.machine}, {active.environment.chip}. <Link to={back}>Read the published benchmark</Link></p>
       </header>
-
-      {runs.length > 1 ? <RunToggle runs={runs} active={active.id} onSelect={select} /> : null}
-
-      <CandidatePicker universe={universe} picked={pick.ids} onToggle={toggle} onReset={reset} note={pick.ignored ? "That link named fewer than two candidates from this run, so you're seeing all of them." : undefined} />
 
       {picked && picked.sections.length === 0 ? <p className="matchup-empty">No section ran two of the candidates you picked.</p> : null}
 

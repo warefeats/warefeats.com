@@ -1219,6 +1219,21 @@ th.num {
   margin-top: 1.25rem;
 }
 
+/* On a matchup the crumbs open the page and the picker follows them; the heading comes after the picker. */
+.matchup > .crumbs {
+  padding-top: 3rem;
+  margin-bottom: 0;
+}
+
+.matchup > .crumbs + * {
+  margin-top: 1.5rem;
+}
+
+.matchup > .benchmark-head {
+  padding-top: 0;
+  margin-top: 2rem;
+}
+
 .picker,
 .matchup-scorecard,
 .matchup-limits {
@@ -1245,6 +1260,10 @@ th.num {
 
 .picker-reset {
   font-size: var(--text-sm);
+}
+
+.picker-reset.is-idle {
+  visibility: hidden;
 }
 
 .picker-list {
@@ -1774,8 +1793,13 @@ th.num {
 
   .intro,
   .benchmark-head,
-  .prose {
+  .prose,
+  .matchup > .crumbs {
     padding-top: 2rem;
+  }
+
+  .matchup > .benchmark-head {
+    padding-top: 0;
   }
 
   .page > * + *,
