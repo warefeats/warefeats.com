@@ -673,7 +673,7 @@ code {
   font-size: var(--text-sm);
 }
 
-.env-toggle {
+.run-toggle {
   display: flex;
   gap: 0.25rem;
   font-family: var(--font-mono);
@@ -681,7 +681,7 @@ code {
   font-stretch: 90%;
 }
 
-.env-toggle-btn {
+.run-toggle-btn {
   padding: 0.35rem 0.75rem;
   border: 1px solid var(--rule);
   border-radius: 4px;
@@ -691,7 +691,7 @@ code {
   transition: background 0.1s, color 0.1s;
 }
 
-.env-toggle-btn.active {
+.run-toggle-btn.active {
   background: var(--fg);
   color: var(--bg);
   border-color: var(--fg);

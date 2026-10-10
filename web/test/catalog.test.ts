@@ -8,6 +8,7 @@ import { BarChart } from "../src/components/BarChart";
 import { Conditions } from "../src/components/Conditions";
 import { headTags, normalizePath, prerenderPaths, robotsTxt, routeMeta, sitemapXml } from "../src/head";
 import { axisTicks, benchmarkTests, fiveNumber, formatVersion, reportText, samplePosition, scorecard, standardDeviation, summarize } from "../src/metrics";
+import { runViews } from "../src/runs";
 import type { Benchmark, BenchmarkCatalog } from "../src/types";
 
 let _catalog: BenchmarkCatalog | undefined;
@@ -708,6 +709,28 @@ describe("conditions", () => {
     expect(withGpu).toContain("<dt>GPU</dt><dd>Apple M2 Max 38-core (Metal 3)</dd>");
     expect(withGpu).toContain("<dt>Browser</dt><dd>Chromium 140 (ANGLE Metal)</dd>");
     expect(withGpu).toContain("<dt>Display</dt><dd>1280×800 @2x, physical display attached</dd>");
+  });
+});
+
+describe("runs", () => {
+  test("lists the primary run first under its own id and label, then the others", async () => {
+    const catalog = await loadCatalog();
+    const shells = catalog.benchmarks.find((benchmark) => benchmark.slug === "desktop-shells")!;
+    const views = runViews(shells);
+
+    expect(views.map((view) => view.id)).toEqual(["2026-09-10-m2max", "2026-09-10-radeon-680m-win11"]);
+    expect(views[0]!.label).toBe(shells.run!.label);
+    expect(views[0]!.sections).toBe(shells.sections!);
+    expect(views[1]!.environment.chip).toContain("Ryzen 7 6800H");
+  });
+
+  test("gives a benchmark with one run a single view", async () => {
+    const catalog = await loadCatalog();
+    const lint = catalog.benchmarks.find((benchmark) => benchmark.slug === "eslint-vs-biome-javascript-lint")!;
+    const views = runViews(lint);
+
+    expect(views).toHaveLength(1);
+    expect(views[0]!.candidates).toBe(lint.candidates);
   });
 });
 
