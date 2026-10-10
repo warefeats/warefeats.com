@@ -7,6 +7,7 @@ import { BrowserRouter } from "react-router";
 import App from "./App";
 import { parseCatalog } from "./catalog";
 import { CatalogProvider } from "./catalog-context";
+import { normalizePath } from "./head";
 import "./styles.css";
 import type { BenchmarkCatalog } from "./types";
 
@@ -41,7 +42,7 @@ const app = (
 );
 
 const prerenderedPath = root.dataset.path;
-const matchesPrerender = root.hasChildNodes() && prerenderedPath === window.location.pathname.replace(/\/+$/, "") + (window.location.pathname === "/" ? "/" : "");
+const matchesPrerender = root.hasChildNodes() && prerenderedPath === normalizePath(window.location.pathname);
 
 if (matchesPrerender) {
   hydrateRoot(root, app);

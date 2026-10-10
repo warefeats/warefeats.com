@@ -1,3 +1,4 @@
+import { formatVersion } from "../metrics";
 import type { Benchmark } from "../types";
 
 interface ProductsProps {
@@ -18,7 +19,7 @@ export function Products({ benchmark }: ProductsProps) {
               <span className="product-name">
                 {candidate.homepage ? <a href={candidate.homepage} target="_blank" rel="noreferrer">{candidate.name}</a> : candidate.name}
               </span>
-              <span className="product-version num">v{candidate.version}</span>
+              <span className="product-version num">{formatVersion(candidate.version)}</span>
             </li>
           );
         })}

@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { axisTicks, formatValue, samplePosition, testWinner } from "../metrics";
 import type { Benchmark, BenchmarkTest } from "../types";
 
@@ -22,7 +23,7 @@ export function BarChart({ benchmark, test, index }: BarChartProps) {
   const ticks = axisTicks(0, scaleMax, 6).filter((tick) => tick <= scaleMax);
   const name = (id: string) => benchmark.candidates.find((candidate) => candidate.id === id)?.name ?? id;
   const direction = test.lowerIsBetter ? "LOWER" : "HIGHER";
-  const headingId = `test-${test.id}`;
+  const headingId = `${useId()}-title`;
 
   return (
     <section className="test" aria-labelledby={headingId}>
