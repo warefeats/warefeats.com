@@ -15,7 +15,7 @@ function useDocumentMeta(): void {
   const { state } = useCatalog();
 
   useEffect(() => {
-    const meta = routeMeta(location.pathname, state.status === "ready" ? state.catalog : undefined);
+    const meta = routeMeta(location.pathname, state.status === "ready" ? state.index : undefined);
     document.title = meta.title;
     const set = (selector: string, value: string) => document.querySelector(selector)?.setAttribute("content", value);
     set('meta[name="description"]', meta.description);

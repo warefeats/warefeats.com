@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { parseCatalog } from "../src/catalog";
+import { parseCatalog, toCatalogIndex } from "../src/catalog";
 import type { Benchmark, BenchmarkCatalog } from "../src/types";
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
@@ -52,7 +52,12 @@ export async function assembleCatalog(rootOverride?: string): Promise<BenchmarkC
 if (import.meta.main) {
   const catalog = await assembleCatalog();
   const dist = join(import.meta.dir, "..", "dist");
-  await mkdir(join(dist, "data"), { recursive: true });
+  await mkdir(join(dist, "data", "benchmarks"), { recursive: true });
+  // The whole catalog stays for the OG cards and the raw-JSON link; pages embed or fetch the two smaller files.
   await writeFile(join(dist, "data", "benchmarks.json"), JSON.stringify(catalog, null, 2));
-  console.log(`Assembled catalog: ${catalog.benchmarks.length} benchmarks → dist/data/benchmarks.json`);
+  await writeFile(join(dist, "data", "catalog.json"), JSON.stringify(toCatalogIndex(catalog)));
+  for (const benchmark of catalog.benchmarks) {
+    await writeFile(join(dist, "data", "benchmarks", `${benchmark.slug}.json`), JSON.stringify(benchmark));
+  }
+  console.log(`Assembled catalog: ${catalog.benchmarks.length} benchmarks → dist/data/benchmarks.json, catalog.json and benchmarks/`);
 }

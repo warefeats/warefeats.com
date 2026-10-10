@@ -5,6 +5,36 @@ export interface BenchmarkCatalog {
   queue: QueueItem[];
 }
 
+/** The catalog without samples: enough to list, link and title every benchmark. Every page embeds it. */
+export interface CatalogIndex {
+  schemaVersion: number;
+  generatedAt: string;
+  benchmarks: CatalogEntry[];
+  queue: QueueItem[];
+}
+
+export interface CatalogEntry {
+  id: string;
+  slug: string;
+  category: string;
+  title: string;
+  deck: string;
+  publishedAt: string;
+  /** The primary run's chip and measured pass count, for the home page's rig column. */
+  chip: string;
+  runs: number;
+  verdictHeadline: string;
+  /** The hyperfine summary of a benchmark without sections: the winner against its closest rival. */
+  lead?: CatalogLead;
+}
+
+export interface CatalogLead {
+  winner: { name: string; version: string };
+  other: { name: string; version: string };
+  ratio: number;
+  sigma: number;
+}
+
 export interface Benchmark {
   id: string;
   slug: string;

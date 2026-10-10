@@ -5,11 +5,10 @@ import { StrictMode } from "react";
 import { createRoot, hydrateRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import App from "./App";
-import { parseCatalog } from "./catalog";
+import { parseBenchmark, parseCatalogIndex } from "./catalog";
 import { CatalogProvider } from "./catalog-context";
 import { normalizePath } from "./head";
 import "./styles.css";
-import type { BenchmarkCatalog } from "./types";
 
 const root = document.getElementById("root");
 
@@ -17,24 +16,25 @@ if (!root) {
   throw new Error("The application root element is missing.");
 }
 
-function embeddedCatalog(): BenchmarkCatalog | undefined {
-  const node = document.getElementById("wf-catalog");
+function embedded<T>(id: string, parse: (value: unknown) => T): T | undefined {
+  const node = document.getElementById(id);
   if (!node?.textContent) {
     return undefined;
   }
 
   try {
-    return parseCatalog(JSON.parse(node.textContent));
+    return parse(JSON.parse(node.textContent));
   } catch {
     return undefined;
   }
 }
 
-const initial = embeddedCatalog();
+const index = embedded("wf-catalog", parseCatalogIndex);
+const benchmark = embedded("wf-benchmark", parseBenchmark);
 const app = (
   <StrictMode>
     <BrowserRouter>
-      <CatalogProvider initial={initial}>
+      <CatalogProvider index={index} benchmarks={benchmark ? { [benchmark.slug]: benchmark } : undefined}>
         <App />
       </CatalogProvider>
     </BrowserRouter>
