@@ -1,4 +1,4 @@
-import type { Benchmark, BenchmarkSection, Candidate } from "./types";
+import type { Benchmark, BenchmarkSection, BenchmarkTest, Candidate } from "./types";
 
 /** One run of a benchmark as a page shows it: its rig, its protocol, and the samples it produced. */
 export interface RunView {
@@ -9,6 +9,8 @@ export interface RunView {
   publishedAt: string;
   sections?: BenchmarkSection[];
   candidates: Candidate[];
+  /** Charted tests of a benchmark without sections. Run files carry them for the primary run only. */
+  tests?: BenchmarkTest[];
 }
 
 /** Every run of a benchmark, the primary first. */
@@ -21,6 +23,7 @@ export function runViews(benchmark: Benchmark): RunView[] {
     publishedAt: benchmark.publishedAt,
     ...(benchmark.sections ? { sections: benchmark.sections } : {}),
     candidates: benchmark.candidates,
+    ...(benchmark.tests ? { tests: benchmark.tests } : {}),
   };
   const others = (benchmark.runs ?? []).map((run): RunView => {
     const sections = run.sections ?? benchmark.sections;

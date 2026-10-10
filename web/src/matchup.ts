@@ -80,22 +80,25 @@ export function applyPick(sections: BenchmarkSection[], ids: string[]): { sectio
 }
 
 /**
- * A benchmark without sections narrowed to the pick. Its winner becomes the picked candidate with the best mean,
- * the same mark the scorecard draws from the cells on screen; no authored verdict carries over.
+ * A benchmark without sections narrowed to the pick, using the run's own candidates and tests. No authored verdict
+ * carries over: the winner is the picked candidate that leads on both the mean and the median, which the report and the
+ * box plot each print, so the mark never sits beside a number that contradicts it. When they disagree, nothing is marked.
  */
 export function pickFlat(benchmark: Benchmark, run: RunView, ids: string[]): Benchmark {
   const picked = new Set(ids);
   const candidates = run.candidates.filter((candidate) => picked.has(candidate.id));
-  const best = [...candidates].sort((a, b) => (benchmark.lowerIsBetter ? a.statistics.meanMs - b.statistics.meanMs : b.statistics.meanMs - a.statistics.meanMs))[0];
-  const tests = benchmark.tests?.map((test) => pickTest(test, picked)).filter((test) => test.results.length >= 2);
+  const better = (a: number, b: number) => (benchmark.lowerIsBetter ? a < b : a > b);
+  const leader = (statistic: "meanMs" | "medianMs") => candidates.reduce<Candidate | undefined>((best, candidate) => (best === undefined || better(candidate.statistics[statistic], best.statistics[statistic]) ? candidate : best), undefined);
+  const byMean = leader("meanMs");
+  const tests = run.tests?.map((test) => pickTest(test, picked)).filter((test) => test.results.length >= 2) ?? [];
 
   return {
     ...benchmark,
     environment: run.environment,
     protocol: run.protocol,
     candidates,
-    ...(tests ? { tests } : {}),
-    verdict: { ...benchmark.verdict, winnerId: best?.id ?? "" },
+    tests,
+    verdict: { ...benchmark.verdict, winnerId: byMean !== undefined && byMean === leader("medianMs") ? byMean.id : "" },
   };
 }
 

@@ -660,6 +660,30 @@ describe("matchups", () => {
     expect(reportText(picked)).toContain("Summary");
   });
 
+  test("mark no winner when the picked mean and median leaders disagree, and chart only the run's own tests", async () => {
+    const catalog = await loadCatalog();
+    const bundlers = catalog.benchmarks.find((benchmark) => benchmark.slug === "vite-vs-esbuild-vs-tsup-library-build")!;
+    const [vite, tsup] = ["vite", "tsup"].map((id) => bundlers.candidates.find((candidate) => candidate.id === id)!);
+    const split = { ...bundlers, candidates: [{ ...vite!, statistics: { ...vite!.statistics, meanMs: 10, medianMs: 20 } }, { ...tsup!, statistics: { ...tsup!.statistics, meanMs: 12, medianMs: 15 } }] };
+    const test = { id: "t", title: "T", description: "T", unit: "ms", lowerIsBetter: true, results: [{ candidateId: "vite", value: 1 }, { candidateId: "tsup", value: 2 }] };
+    const withTests = { ...split, tests: [test], runs: [{ id: "second", label: "Second", environment: split.environment, protocol: split.protocol, publishedAt: split.publishedAt, candidates: split.candidates }] };
+    const [primary, second] = runViews(withTests);
+
+    expect(pickFlat(split, runViews(split)[0]!, ["vite", "tsup"]).verdict.winnerId).toBe("");
+    expect(pickFlat(withTests, primary!, ["vite", "tsup"]).tests).toHaveLength(1);
+    expect(pickFlat(withTests, second!, ["vite", "tsup"]).tests).toEqual([]);
+  });
+
+  test("leave no section when the picked candidates never ran in one together", async () => {
+    const catalog = await loadCatalog();
+    const archive = catalog.benchmarks.find((benchmark) => benchmark.slug === "pmtiles-mbtiles-tile-servers")!;
+    const postgis = catalog.benchmarks.find((benchmark) => benchmark.slug === "postgis-vector-tile-servers")!;
+    const mixed = [...archive.sections!, ...postgis.sections!];
+
+    expect(applyPick(mixed, ["martin-pmtiles", "martin"]).sections).toEqual([]);
+    expect(applyPick(mixed, ["martin-pmtiles", "martin"]).omitted).toHaveLength(mixed.length);
+  });
+
   test("head the page with the picked names, or the benchmark title for the whole field", async () => {
     const catalog = await loadCatalog();
     const bundlers = catalog.benchmarks.find((benchmark) => benchmark.slug === "vite-vs-esbuild-vs-tsup-library-build")!;

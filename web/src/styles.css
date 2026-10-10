@@ -1322,6 +1322,11 @@ th.num {
   margin-top: 1rem;
 }
 
+.matchup-empty {
+  max-width: 60ch;
+  color: var(--fg-muted);
+}
+
 .matchup-omitted {
   max-width: 60ch;
   color: var(--fg-muted);

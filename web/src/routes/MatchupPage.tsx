@@ -27,6 +27,7 @@ function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
   const sectioned = Boolean(active.sections?.length);
   const picked = sectioned ? applyPick(active.sections ?? [], pick.ids) : undefined;
   const flat = sectioned ? undefined : pickFlat(benchmark, active, pick.ids);
+  const back = { pathname: published, search: active.id === runs[0]!.id ? "" : `?run=${encodeURIComponent(active.id)}` };
 
   return (
     <article className="benchmark matchup">
@@ -34,14 +35,16 @@ function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
         <p className="crumbs"><Link to="/">Benchmarks</Link> <span aria-hidden="true">/</span> {benchmark.category} <span aria-hidden="true">/</span> Matchup</p>
         <h1>{matchupHeading(pick, universe, benchmark.title)}</h1>
         <p className="deck">Tick the candidates you care about and the charts and tables redraw for just them: same run, same rig, same samples. The verdict stays on the published page.</p>
-        <p className="byline">From the run of <time dateTime={active.publishedAt} className="num">{formatDate(active.publishedAt)}</time> on {active.environment.machine}, {active.environment.chip}. <Link to={published}>Read the published benchmark</Link></p>
+        <p className="byline">From the run of <time dateTime={active.publishedAt} className="num">{formatDate(active.publishedAt)}</time> on {active.environment.machine}, {active.environment.chip}. <Link to={back}>Read the published benchmark</Link></p>
       </header>
 
       {runs.length > 1 ? <RunToggle runs={runs} active={active.id} onSelect={select} /> : null}
 
       <CandidatePicker universe={universe} picked={pick.ids} onToggle={toggle} onReset={reset} note={pick.ignored ? "That link named fewer than two candidates from this run, so you're seeing all of them." : undefined} />
 
-      {picked ? (
+      {picked && picked.sections.length === 0 ? <p className="matchup-empty">No section ran two of the candidates you picked.</p> : null}
+
+      {picked && picked.sections.length > 0 ? (
         <>
           <section className="matchup-scorecard" aria-labelledby="scorecard-title">
             <h2 id="scorecard-title">Scorecard</h2>
@@ -63,10 +66,10 @@ function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
           ))}
 
           {picked.omitted.length ? <p className="matchup-omitted">Not in this matchup: {picked.omitted.map((section) => section.title).join(", ")}. Fewer than two of the candidates you picked ran them.</p> : null}
-
-          <Conditions benchmark={{ ...benchmark, environment: active.environment, protocol: active.protocol }} />
         </>
       ) : null}
+
+      {picked ? <Conditions benchmark={{ ...benchmark, environment: active.environment, protocol: active.protocol }} /> : null}
 
       {flat ? <FlatTests benchmark={flat} /> : null}
 
@@ -76,7 +79,7 @@ function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
           {benchmark.limitations.map((limitation) => <li key={limitation}>{limitation}</li>)}
         </ul>
         <p className="limits-foot">Rerun it yourself: the runner and configuration are in the <a href={benchmark.runnerUrl ?? REPO_URL} target="_blank" rel="noreferrer">repository</a>, and the <Link to="/methodology/">methodology</Link> page covers what every run holds constant. Think a result is wrong? Open an issue with your rig and your samples.</p>
-        <p className="limits-foot"><Link to={published}>Read the published benchmark</Link></p>
+        <p className="limits-foot"><Link to={back}>Read the published benchmark</Link></p>
         {benchmark.trademarks ? <p className="limits-foot">{benchmark.trademarks.join(" ")}</p> : null}
       </section>
     </article>

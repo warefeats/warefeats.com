@@ -1,5 +1,5 @@
 import { useMemo, useSyncExternalStore } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { pickParam, readPick } from "./matchup";
 import type { Pick } from "./matchup";
 import { runViews } from "./runs";
@@ -11,13 +11,14 @@ const noSubscription = () => () => undefined;
 /** Rewrites the query string, leaving commas readable so a shared pick reads ?pick=martin,tegola. */
 function useSetQuery(): (update: (params: URLSearchParams) => void, options?: { replace?: boolean }) => void {
   const [params] = useSearchParams();
+  const { hash } = useLocation();
   const navigate = useNavigate();
 
   return (update, options) => {
     const next = new URLSearchParams(params);
     update(next);
     const query = [...next].map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value).replace(/%2C/g, ",")}`).join("&");
-    navigate({ search: query ? `?${query}` : "" }, { replace: options?.replace ?? false });
+    navigate({ search: query ? `?${query}` : "", hash }, { replace: options?.replace ?? false });
   };
 }
 
