@@ -1,4 +1,5 @@
 import { DownloadSimple, ListChecks } from "@phosphor-icons/react";
+import { useMemo } from "react";
 import { Link, useParams } from "react-router";
 import { useBenchmark } from "../catalog-context";
 import { BarChart } from "../components/BarChart";
@@ -13,21 +14,27 @@ import { BoxPlot } from "../components/BoxPlot";
 import { CatalogSkeleton, ErrorState } from "../components/States";
 import { matchupPath } from "../head";
 import { candidateUniverse, MATCHUP_FIELD } from "../matchup";
+import { runChoices } from "../runs";
 import type { RunView } from "../runs";
 import { benchmarkTests, formatDate } from "../metrics";
 import { useRunSelection } from "../url-state";
 import type { Benchmark } from "../types";
 import { NotFound } from "./NotFound";
 
-/** The way into a benchmark's matchup, for a run with enough candidates, carrying that run when it isn't the primary. */
-function MatchupLink({ benchmark, run, primary }: { benchmark: Benchmark; run: RunView; primary: boolean }) {
+/**
+ * The way into a benchmark's matchup, for a run with enough candidates. It carries the run the reader is on whenever that
+ * isn't the run the matchup opens on (the newest, which may be a fleet run), so the numbers don't change on the way.
+ */
+function MatchupLink({ benchmark, run }: { benchmark: Benchmark; run: RunView }) {
+  const opensOn = useMemo(() => runChoices(benchmark, "matchup").fallback.id, [benchmark]);
+
   if (candidateUniverse(run).length < MATCHUP_FIELD) {
     return null;
   }
 
   return (
     <p className="matchup-link">
-      <Link className="button button-quiet" to={{ pathname: matchupPath(benchmark.slug), search: primary ? "" : `?run=${encodeURIComponent(run.id)}` }}>
+      <Link className="button button-quiet" to={{ pathname: matchupPath(benchmark.slug), search: run.id === opensOn ? "" : `?run=${encodeURIComponent(run.id)}` }}>
         <ListChecks aria-hidden="true" />
         Build a matchup
       </Link>
@@ -47,7 +54,7 @@ function BenchmarkContent({ benchmark }: { benchmark: Benchmark }) {
           <h1>{benchmark.title}</h1>
           <p className="deck">{benchmark.deck}</p>
           <p className="byline">Published <time dateTime={benchmark.publishedAt} className="num">{formatDate(benchmark.publishedAt)}</time> on {active.environment.machine}, {active.environment.chip}</p>
-          <MatchupLink benchmark={benchmark} run={active} primary={active.id === runs[0]!.id} />
+          <MatchupLink benchmark={benchmark} run={active} />
         </header>
 
         {runs.length > 1 ? <RunToggle runs={runs} active={active.id} onSelect={select} /> : null}
@@ -99,7 +106,7 @@ function BenchmarkContent({ benchmark }: { benchmark: Benchmark }) {
         <h1>{benchmark.title}</h1>
         <p className="deck">{benchmark.deck}</p>
         <p className="byline">Published <time dateTime={benchmark.publishedAt} className="num">{formatDate(benchmark.publishedAt)}</time> on {benchmark.environment.machine}, {benchmark.environment.chip}</p>
-        <MatchupLink benchmark={benchmark} run={active} primary={active.id === runs[0]!.id} />
+        <MatchupLink benchmark={benchmark} run={active} />
       </header>
 
       <Candidates benchmark={benchmark} />

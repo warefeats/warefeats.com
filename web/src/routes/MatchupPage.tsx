@@ -14,20 +14,25 @@ import { CatalogSkeleton, ErrorState } from "../components/States";
 import { benchmarkPath } from "../head";
 import { applyPick, candidateUniverse, matchupField, matchupHeading, pickFlat } from "../matchup";
 import { benchmarkTests, formatDate } from "../metrics";
+import { rigLabel } from "../runs";
 import { usePick, useRunSelection } from "../url-state";
 import type { Benchmark } from "../types";
 import { NotFound } from "./NotFound";
 
-/** A reader-picked view of one benchmark's run: its charts and tables for the candidates ticked, and no verdict (ADR 0001). */
+/**
+ * A reader-picked view of one benchmark's run: its charts and tables for the candidates ticked, and no verdict (ADR 0001).
+ * It offers every run, fleet runs included, and opens on the newest; a change of pick pins the run in the URL (ADR 0002).
+ */
 function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
-  const { runs, active, select } = useRunSelection(benchmark);
+  const { runs, active, select } = useRunSelection(benchmark, "matchup");
   const universe = useMemo(() => candidateUniverse(active), [active]);
-  const { pick, toggle, reset } = usePick(universe);
+  const { pick, toggle, reset } = usePick(universe, active.id);
   const published = benchmarkPath(benchmark.slug);
   const sectioned = Boolean(active.sections?.length);
   const picked = sectioned ? applyPick(active.sections ?? [], pick.ids) : undefined;
   const flat = sectioned ? undefined : pickFlat(benchmark, active, pick.ids);
-  const back = { pathname: published, search: active.id === runs[0]!.id ? "" : `?run=${encodeURIComponent(active.id)}` };
+  // The benchmark page shows authored runs only, so a fleet run sends the reader to the post's own run.
+  const back = { pathname: published, search: active.fleet || active.id === runs[0]!.id ? "" : `?run=${encodeURIComponent(active.id)}` };
 
   return (
     <article className="benchmark matchup">
@@ -41,7 +46,11 @@ function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
       <header className="benchmark-head">
         <h1>{matchupHeading(pick, universe, benchmark.title)}</h1>
         <p className="deck">Tick the candidates you care about and the charts and tables redraw for just them: same run, same rig, same samples. The verdict stays on the published page.</p>
-        <p className="byline">From the run of <time dateTime={active.publishedAt} className="num">{formatDate(active.publishedAt)}</time> on {active.environment.machine}, {active.environment.chip}. <Link to={back}>Read the published benchmark</Link></p>
+        {active.fleet ? (
+          <p className="byline">From the fleet run of <time dateTime={active.publishedAt} className="num">{formatDate(active.publishedAt)}</time> on {rigLabel(active)}: {active.environment.machine}, {active.environment.chip}. A fleet run carries no verdict; the published benchmark's verdict covers its own run. <Link to={back}>Read the published benchmark</Link></p>
+        ) : (
+          <p className="byline">From the run of <time dateTime={active.publishedAt} className="num">{formatDate(active.publishedAt)}</time> on {active.environment.machine}, {active.environment.chip}. <Link to={back}>Read the published benchmark</Link></p>
+        )}
       </header>
 
       {picked && picked.sections.length === 0 ? <p className="matchup-empty">No section ran two of the candidates you picked.</p> : null}

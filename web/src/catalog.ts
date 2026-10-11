@@ -69,6 +69,9 @@ export function parseBenchmark(benchmark: unknown): Benchmark {
       if (!isRecord(run) || typeof run.id !== "string" || typeof run.label !== "string" || !isRecord(run.environment)) {
         throw new Error(`Benchmark ${benchmark.id} has an invalid run entry.`);
       }
+      if (run.fleet !== undefined && run.fleet !== true) {
+        throw new Error(`Run ${run.id} in ${benchmark.id} has an invalid fleet flag.`);
+      }
       if (Array.isArray(run.sections)) {
         for (const section of run.sections as unknown[]) {
           if (!isRecord(section) || typeof section.id !== "string" || !Array.isArray(section.candidates) || section.candidates.length < 2) {

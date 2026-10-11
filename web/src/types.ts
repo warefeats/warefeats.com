@@ -88,7 +88,7 @@ export interface Benchmark {
   tests?: BenchmarkTest[];
   /** Titled sub-benchmarks, each with its own candidates and charts. When present, top-level candidates may be empty. */
   sections?: BenchmarkSection[];
-  /** Alternate environment runs of the same benchmark. When present with length > 1, the page offers an environment toggle. */
+  /** The benchmark's other runs: authored runs first, then fleet runs, newest first. The page toggles among authored runs only. */
   runs?: BenchmarkRun[];
   limitations: string[];
   /** Logo and trademark notices for the products under test, shown under the limitations. */
@@ -99,6 +99,8 @@ export interface Benchmark {
 export interface BenchmarkRun {
   id: string;
   label: string;
+  /** A fleet run: published numbers with no verdict, shown on the matchup and never on the benchmark page (ADR 0002). */
+  fleet?: true;
   environment: Benchmark["environment"];
   protocol: Benchmark["protocol"];
   publishedAt: string;
