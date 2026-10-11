@@ -5,7 +5,7 @@ The benchmark catalog: one runner repository per benchmark, one site that render
 ## Catalog
 
 **Benchmark**:
-One published comparison of a fixed set of candidates on a fixed corpus under a fixed protocol, with its own page.
+One published comparison of candidates on a fixed corpus and protocol, with its own page; its authored runs fix the candidates its verdict covers.
 _Avoid_: comparison, study, suite
 
 **Candidate**:
@@ -16,12 +16,16 @@ _Avoid_: engine, tool, contestant, competitor
 The upstream software a candidate is one release of, such as Martin or ESLint.
 _Avoid_: project, tool, package
 
+**Release line**:
+A product's releases that share a major version (a minor below 1.0), represented in each fleet run by its newest stable release.
+_Avoid_: branch, track, channel
+
 **Verdict**:
 The one-sentence outcome of a benchmark or a section, ranked by the same statistic the page displays.
 _Avoid_: winner, result, conclusion
 
 **Matchup**:
-A reader-picked set of two or more candidates from one benchmark, shown on one rig with the benchmark's charts and tables and no verdict.
+A reader-picked set of two or more candidates from one run of one benchmark, shown on one rig with the benchmark's charts and tables and no verdict.
 _Avoid_: comparison, explorer, versus, head-to-head
 
 **Category**:
@@ -49,6 +53,10 @@ _Avoid_: environment, hardware, box
 **Run**:
 One execution of the protocol on one rig on one date, producing one run file.
 _Avoid_: execution, trial, session
+
+**Fleet run**:
+A run made without a person when a release line moves. It carries no verdict and appears only on the matchup.
+_Avoid_: CI run, nightly
 
 **Warmup**:
 A pass whose samples are discarded.

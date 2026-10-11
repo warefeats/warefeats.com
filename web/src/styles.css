@@ -675,6 +675,7 @@ code {
 
 .run-toggle {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.25rem;
   font-family: var(--font-mono);
   font-size: var(--text-xs);
@@ -695,6 +696,10 @@ code {
   background: var(--fg);
   color: var(--bg);
   border-color: var(--fg);
+}
+
+.run-toggle-kind {
+  opacity: 0.7;
 }
 
 .tests h2,

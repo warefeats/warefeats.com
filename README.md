@@ -28,6 +28,8 @@ Runner repos:
 1. Run the benchmark in its runner repo; the importer writes `runs/<file>.json` and updates `benchmark.json`; PR, merge.
 2. In this repo: bump that slug's `ref` in `web/data/registry.json` to the new SHA, run `bun run sync`, commit registry + cache together, PR, merge → deploy.
 
+A fleet run publishes the same way, except that the runner lists it in `benchmark.json`'s `fleetRuns` (newest first, at most four) instead of `runs`. The matchup shows fleet runs; the benchmark page never does (`docs/adr/0002-fleet-runs-feed-the-matchup-not-the-post.md`).
+
 ## Local development
 
 Run `bun install`, then `bun run --cwd web dev` for the site (`bun run --cwd web preview` serves the prerendered `web/dist`). Run `bun run check`, `bun run test`, and `bun run build` before pushing.

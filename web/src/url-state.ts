@@ -2,8 +2,8 @@ import { useMemo, useSyncExternalStore } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { pickParam, readPick } from "./matchup";
 import type { Pick } from "./matchup";
-import { runViews } from "./runs";
-import type { RunView } from "./runs";
+import { activeRun, runChoices } from "./runs";
+import type { RunScope, RunView } from "./runs";
 import type { Benchmark, Candidate } from "./types";
 
 const noSubscription = () => () => undefined;
@@ -27,48 +27,62 @@ export function useHydrated(): boolean {
   return useSyncExternalStore(noSubscription, () => true, () => false);
 }
 
-/** The run named by `?run=`, or the primary. Switching runs adds a history entry; the primary keeps the URL clean. */
-export function useRunSelection(benchmark: Benchmark): { runs: RunView[]; active: RunView; select: (id: string) => void } {
-  const runs = useMemo(() => runViews(benchmark), [benchmark]);
+/**
+ * Writes a run choice into the query. A post keeps its primary run's URL clean; a matchup always names the run, so a
+ * shared link keeps showing the numbers it was made on after a newer run lands (ADR 0002).
+ */
+export function writeRun(params: URLSearchParams, id: string, scope: RunScope, fallbackId: string): void {
+  if (scope === "post" && id === fallbackId) {
+    params.delete("run");
+  } else {
+    params.set("run", id);
+  }
+}
+
+/** Writes a pick into the query, and on a matchup the run it was made on. The whole field drops the parameter. */
+export function writePick(params: URLSearchParams, ids: string[], universe: Candidate[], pinRun?: string): void {
+  const value = pickParam(ids, universe);
+  if (value === null) {
+    params.delete("pick");
+  } else {
+    params.set("pick", value);
+  }
+  if (pinRun !== undefined) {
+    params.set("run", pinRun);
+  }
+}
+
+/**
+ * The run named by `?run=`, or the page's fallback: the primary on a post, which offers authored runs only, and the
+ * newest run on a matchup, which offers every run. Switching runs adds a history entry.
+ */
+export function useRunSelection(benchmark: Benchmark, scope: RunScope = "post"): { runs: RunView[]; active: RunView; select: (id: string) => void } {
+  const choices = useMemo(() => runChoices(benchmark, scope), [benchmark, scope]);
   const [params] = useSearchParams();
   const setQuery = useSetQuery();
   const hydrated = useHydrated();
-  const primary = runs[0]!;
-  const requested = hydrated ? params.get("run") : null;
-  const active = runs.find((run) => run.id === requested) ?? primary;
+  const active = activeRun(choices, hydrated ? params.get("run") : null);
 
   function select(id: string): void {
-    setQuery((next) => {
-      if (id === primary.id) {
-        next.delete("run");
-      } else {
-        next.set("run", id);
-      }
-    });
+    setQuery((next) => writeRun(next, id, scope, choices.fallback.id));
   }
 
-  return { runs, active, select };
+  return { runs: choices.runs, active, select };
 }
 
 /**
  * The candidates named by `?pick=`, or the whole field. Ticking a candidate replaces the history entry, so the back button
- * leaves the matchup instead of stepping through every tick. A change that would leave fewer than two is refused.
+ * leaves the matchup instead of stepping through every tick. A change that would leave fewer than two is refused. With
+ * `pinRun`, every change also writes that run into the URL.
  */
-export function usePick(universe: Candidate[]): { pick: Pick; toggle: (id: string) => boolean; reset: () => void } {
+export function usePick(universe: Candidate[], pinRun?: string): { pick: Pick; toggle: (id: string) => boolean; reset: () => void } {
   const [params] = useSearchParams();
   const setQuery = useSetQuery();
   const hydrated = useHydrated();
   const pick = readPick(hydrated ? params.get("pick") : null, universe);
 
   function write(ids: string[]): void {
-    setQuery((next) => {
-      const value = pickParam(ids, universe);
-      if (value === null) {
-        next.delete("pick");
-      } else {
-        next.set("pick", value);
-      }
-    }, { replace: true });
+    setQuery((next) => writePick(next, ids, universe, pinRun), { replace: true });
   }
 
   function toggle(id: string): boolean {
