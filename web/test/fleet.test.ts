@@ -8,7 +8,7 @@ import { parseBenchmark, toCatalogIndex } from "../src/catalog";
 import { render } from "../src/entry-server";
 import { matchupPath } from "../src/head";
 import { candidateUniverse, readPick } from "../src/matchup";
-import { activeRun, newestRun, rigLabel, runChoices, runViews, toggleLabels } from "../src/runs";
+import { activeRun, changedCandidates, newestRun, rigLabel, runChoices, runViews, toggleLabels, versionedName } from "../src/runs";
 import type { Benchmark, BenchmarkRun } from "../src/types";
 import { writePick, writeRun } from "../src/url-state";
 
@@ -185,6 +185,14 @@ describe("which run a page shows", () => {
     expect(runChoices(buildBenchmark(entry, meta, runs), "matchup").fallback.id).toBe("2026-09-02-radeon-680m-win11");
   });
 
+  test("names the candidates a run measured at another release than an earlier run", async () => {
+    const [primary, fleet] = runViews(await withFleet(["2026-10-12"]));
+
+    expect(changedCandidates(primary!, fleet!).map(versionedName)).toEqual(["MapLibre GL JS 6 v6.13.0"]);
+    expect(changedCandidates(fleet!, fleet!)).toEqual([]);
+    expect(changedCandidates({ ...primary!, candidates: [], sections: [] }, fleet!).map((candidate) => candidate.id)).toEqual(["mapbox-gl-1-13", "maplibre-gl-5", "maplibre-gl-6"]);
+  });
+
   test("names the rig without repeating the date a fleet run's label ends with", async () => {
     const [primary, fleet] = runViews(await withFleet(["2026-10-12"]));
     expect(rigLabel(fleet!)).toBe("Radeon 680M / Windows 11");
@@ -255,13 +263,37 @@ describe("pages with fleet runs", () => {
     return { post: html(`/benchmarks/${SLUG}/`), matchup: html(matchupPath(SLUG)) };
   }
 
-  test("the post draws its own run, never mentions a fleet run, and links the matchup to its run", async () => {
-    const { post } = await pages();
+  /** The post's matchup button and the line beside it, and the rest of the post. */
+  function matchupLink(post: string): { link: string; rest: string } {
+    const link = post.match(/<p class="matchup-link">.*?<\/p>/)?.[0] ?? "";
+    return { link, rest: post.replace(link, "") };
+  }
 
-    expect(post).not.toContain("2026-10-19");
-    expect(post).not.toContain("6.13.0");
-    expect(post).not.toContain("fleet");
-    expect(post).toContain(`href="${matchupPath(SLUG)}?run=2026-09-02-radeon-680m-win11"`);
+  test("the post draws its own run, and its matchup button opens the newest fleet run and names it", async () => {
+    const { link, rest } = matchupLink((await pages()).post);
+
+    expect(rest).not.toContain("2026-10-19");
+    expect(rest).not.toContain("6.13.0");
+    expect(rest).not.toContain("fleet");
+    expect(rest).toContain("6.7.0");
+    expect(link).toContain(`href="${matchupPath(SLUG)}"`);
+    expect(link.replace(/<[^>]+>/g, "")).toBe("Build a matchupThe matchup opens on the fleet run of Oct 19, 2026, with MapLibre GL JS 6 v6.13.0.");
+  });
+
+  test("the post names the fleet run's rig when it isn't the post's, and every release that moved", async () => {
+    const base = await cached(SLUG);
+    const mini = withVersion(fleetRun(base, "2026-10-19", { label: "Mac mini / macOS 26, 2026-10-19", environment: { ...base.environment, machine: "Mac mini", chip: "Apple M4" } }), "6.14.0");
+    const moved = { ...mini, sections: mini.sections!.map((section) => ({ ...section, candidates: section.candidates.map((candidate) => (candidate.id === "maplibre-gl-5" ? { ...candidate, version: "5.25.0" } : candidate)) })) };
+    const { link } = matchupLink((await pages([moved])).post);
+
+    expect(link.replace(/<[^>]+>/g, "")).toBe("Build a matchupThe matchup opens on the fleet run of Oct 19, 2026 on Mac mini / macOS 26, with MapLibre GL JS 5 v5.25.0 and MapLibre GL JS 6 v6.14.0.");
+  });
+
+  test("without a fleet run, the post's matchup button opens its run and adds nothing", async () => {
+    const { link } = matchupLink((await pages([])).post);
+
+    expect(link).toContain(`href="${matchupPath(SLUG)}"`);
+    expect(link.replace(/<[^>]+>/g, "")).toBe("Build a matchup");
   });
 
   test("the matchup opens on the newest fleet run, says so, and offers every run", async () => {

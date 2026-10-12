@@ -50,25 +50,37 @@ export function rigLabel(run: RunView): string {
   return run.label.endsWith(suffix) ? run.label.slice(0, -suffix.length) : run.label;
 }
 
+/** Each candidate a run measured, once, by id: its own candidates first, then any its sections add. */
+function runCandidates(run: RunView): Map<string, Candidate> {
+  const seen = new Map<string, Candidate>();
+  for (const candidate of [...run.candidates, ...(run.sections ?? []).flatMap((section) => section.candidates)]) {
+    if (!seen.has(candidate.id)) {
+      seen.set(candidate.id, candidate);
+    }
+  }
+  return seen;
+}
+
+/** A candidate's name with its version, unless the name already carries it. */
+export function versionedName(candidate: Candidate): string {
+  return candidate.name.includes(candidate.version) ? candidate.name : `${candidate.name} ${formatVersion(candidate.version)}`;
+}
+
+/** The candidates `to` measured at a version `from` didn't: a newer release, or a candidate `from` never ran. */
+export function changedCandidates(from: RunView, to: RunView): Candidate[] {
+  const before = runCandidates(from);
+  return [...runCandidates(to).values()].filter((candidate) => before.get(candidate.id)?.version !== candidate.version);
+}
+
 /**
  * What a run toggle calls each run, by id: its label, unless another run shares it, as two fleet runs on one day do. Then
  * the label adds the candidate versions that tell those runs apart, and the run's id if two still read alike.
  */
 export function toggleLabels(runs: RunView[]): Map<string, string> {
-  const versions = (run: RunView) => {
-    const seen = new Map<string, Candidate>();
-    for (const candidate of [...run.candidates, ...(run.sections ?? []).flatMap((section) => section.candidates)]) {
-      if (!seen.has(candidate.id)) {
-        seen.set(candidate.id, candidate);
-      }
-    }
-    return seen;
-  };
   const withVersions = (run: RunView) => {
     const twins = runs.filter((other) => other !== run && other.label === run.label);
-    const differing = [...versions(run).values()].filter((candidate) => twins.some((twin) => versions(twin).get(candidate.id)?.version !== candidate.version));
-    const names = differing.map((candidate) => (candidate.name.includes(candidate.version) ? candidate.name : `${candidate.name} ${formatVersion(candidate.version)}`));
-    return names.length ? `${run.label}, ${names.join(", ")}` : run.label;
+    const differing = [...runCandidates(run).values()].filter((candidate) => twins.some((twin) => runCandidates(twin).get(candidate.id)?.version !== candidate.version));
+    return differing.length ? `${run.label}, ${differing.map(versionedName).join(", ")}` : run.label;
   };
   const texts = new Map(runs.map((run) => [run, withVersions(run)]));
   return new Map(

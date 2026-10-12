@@ -1221,7 +1221,17 @@ th.num {
 /* Matchup: a reader-picked view of one run, with no verdict */
 
 .matchup-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
   margin-top: 1.25rem;
+}
+
+.matchup-link-note {
+  max-width: 46ch;
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
 }
 
 /* On a matchup the crumbs open the page and the picker follows them; the heading comes after the picker. */
