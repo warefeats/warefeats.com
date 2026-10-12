@@ -82,7 +82,7 @@ function BenchmarkContent({ benchmark }: { benchmark: Benchmark }) {
         <section className="learned" aria-labelledby="learned-title">
           <h2 id="learned-title">What did we learn?</h2>
           <p className="learned-lead">{benchmark.verdict.headline}.</p>
-          <Scorecard sections={displaySections} />
+          <Scorecard sections={displaySections} repeats={benchmark.sectionSamples === "repeats"} />
           <p className="learned-summary">{benchmark.verdict.summary}</p>
           <h3>What this does not prove</h3>
           <ul>

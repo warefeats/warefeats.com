@@ -106,6 +106,22 @@ describe("scorecard", () => {
   test("is empty for a benchmark without sections", () => {
     expect(scorecard([])).toEqual({ columns: [], rows: [] });
   });
+
+  test("with repeated samples, leaves a lead inside the noise unmarked", () => {
+    const sampled = (id: string, samples: number[]) => {
+      const mean = samples.reduce((sum, value) => sum + value, 0) / samples.length;
+      return { ...candidate(id, mean), samplesMs: samples };
+    };
+    const sections = [
+      // 3.16 against 3.14 with a spread of 0.16: inside twice the standard error of the difference (0.26).
+      section("frame", "ms", true, "a", [sampled("a", [3.0, 3.16, 3.32]), sampled("b", [2.98, 3.14, 3.3]), sampled("c", [6.4, 6.5, 6.6])]),
+      // 3.05 against 2.90 with a spread of 0.01: far outside it (0.02).
+      section("startup", "ms", true, "a", [sampled("a", [3.04, 3.05, 3.06]), sampled("b", [2.89, 2.9, 2.91])]),
+    ];
+    const card = scorecard(sections, true);
+    expect(card.columns.map((c) => [c.bestId, c.tied])).toEqual([[null, true], ["b", false]]);
+    expect(scorecard(sections).columns.map((c) => [c.bestId, c.tied])).toEqual([["b", false], ["b", false]]);
+  });
 });
 
 describe("catalog assembly", () => {

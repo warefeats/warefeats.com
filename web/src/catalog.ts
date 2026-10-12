@@ -28,6 +28,10 @@ export function parseBenchmark(benchmark: unknown): Benchmark {
     throw new Error(`Benchmark ${benchmark.id} has an invalid primary run.`);
   }
 
+  if (benchmark.sectionSamples !== undefined && benchmark.sectionSamples !== "repeats") {
+    throw new Error(`Benchmark ${benchmark.id} has an invalid sectionSamples.`);
+  }
+
   const hasSections = Array.isArray(benchmark.sections) && benchmark.sections.length > 0;
 
   if (!hasSections && benchmark.candidates.length < 2) {
