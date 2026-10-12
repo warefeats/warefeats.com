@@ -8,7 +8,7 @@ import { parseBenchmark, toCatalogIndex } from "../src/catalog";
 import { render } from "../src/entry-server";
 import { matchupPath } from "../src/head";
 import { candidateUniverse, readPick } from "../src/matchup";
-import { activeRun, newestRun, rigLabel, runChoices, runViews } from "../src/runs";
+import { activeRun, newestRun, rigLabel, runChoices, runViews, toggleLabels } from "../src/runs";
 import type { Benchmark, BenchmarkRun } from "../src/types";
 import { writePick, writeRun } from "../src/url-state";
 
@@ -71,6 +71,17 @@ function fleetRun(base: Benchmark, date: string, extra: Record<string, unknown> 
     sections: base.sections!.map((section) => ({ ...section, candidates: section.candidates.map((candidate) => (candidate.id === "maplibre-gl-6" ? { ...candidate, version: "6.13.0" } : candidate)) })),
     ...extra,
   } as RunFile;
+}
+
+/** A run with MapLibre 6 at another release. */
+function withVersion(run: RunFile, version: string): RunFile {
+  return { ...run, sections: run.sections!.map((section) => ({ ...section, candidates: section.candidates.map((candidate) => (candidate.id === "maplibre-gl-6" ? { ...candidate, version } : candidate)) })) };
+}
+
+/** The cached MapLibre benchmark's authored runs and the given fleet runs, newest first, in place of any real ones. */
+async function withFleetRuns(fleet: RunFile[]): Promise<Benchmark> {
+  const { entry, meta, runs } = unbuild(await cached(SLUG));
+  return buildBenchmark(entry, { ...meta, fleetRuns: fleet.map((run) => `runs/${run.id}.json`) }, runs, fleet);
 }
 
 /** The cached MapLibre benchmark's authored runs, with made-up fleet runs in place of any real ones. */
@@ -179,6 +190,30 @@ describe("which run a page shows", () => {
     expect(rigLabel(fleet!)).toBe("Radeon 680M / Windows 11");
     expect(rigLabel(primary!)).toBe(primary!.label);
   });
+
+  test("tells runs that share a label apart by the versions that differ, then by id", async () => {
+    const base = await cached(SLUG);
+    const morning = fleetRun(base, "2026-10-12");
+    const evening = withVersion(fleetRun(base, "2026-10-12", { id: "2026-10-12-radeon-680m-win11-2" }), "6.14.0");
+    const rerun = fleetRun(base, "2026-10-12", { id: "2026-10-12-radeon-680m-win11-3" });
+    const labels = async (fleet: RunFile[]) => toggleLabels(runViews(await withFleetRuns(fleet)));
+
+    const two = await labels([evening, morning]);
+    expect(two.get("2026-09-02-radeon-680m-win11")).toBe("Radeon 680M / Windows 11 (local)");
+    expect(two.get("2026-10-12-radeon-680m-win11-2")).toBe("Radeon 680M / Windows 11, 2026-10-12, MapLibre GL JS 6 v6.14.0");
+    expect(two.get("2026-10-12-radeon-680m-win11")).toBe("Radeon 680M / Windows 11, 2026-10-12, MapLibre GL JS 6 v6.13.0");
+
+    const same = await labels([rerun, morning]);
+    expect(same.get("2026-10-12-radeon-680m-win11-3")).toBe("Radeon 680M / Windows 11, 2026-10-12, 2026-10-12-radeon-680m-win11-3");
+    expect(same.get("2026-10-12-radeon-680m-win11")).toBe("Radeon 680M / Windows 11, 2026-10-12, 2026-10-12-radeon-680m-win11");
+
+    const three = await labels([evening, rerun, morning]);
+    expect(three.get("2026-10-12-radeon-680m-win11-2")).toBe("Radeon 680M / Windows 11, 2026-10-12, MapLibre GL JS 6 v6.14.0");
+    expect(three.get("2026-10-12-radeon-680m-win11-3")).toBe("Radeon 680M / Windows 11, 2026-10-12, MapLibre GL JS 6 v6.13.0, 2026-10-12-radeon-680m-win11-3");
+
+    const apart = await labels([fleetRun(base, "2026-10-19"), morning]);
+    expect([...apart.values()]).toEqual(["Radeon 680M / Windows 11 (local)", "Radeon 680M / Windows 11, 2026-10-19", "Radeon 680M / Windows 11, 2026-10-12"]);
+  });
 });
 
 describe("matchup URLs", () => {
@@ -211,8 +246,8 @@ describe("matchup URLs", () => {
 });
 
 describe("pages with fleet runs", () => {
-  async function pages() {
-    const benchmark = await withFleet(["2026-10-19", "2026-10-12"]);
+  async function pages(fleet?: RunFile[]) {
+    const benchmark = fleet ? await withFleetRuns(fleet) : await withFleet(["2026-10-19", "2026-10-12"]);
     const catalog = await assembleCatalog();
     const index = toCatalogIndex({ ...catalog, benchmarks: catalog.benchmarks.map((entry) => (entry.slug === SLUG ? benchmark : entry)) });
     // React separates adjacent text nodes with empty comments; the assertions read the text as a reader would.
@@ -240,5 +275,14 @@ describe("pages with fleet runs", () => {
     expect(matchup.match(/class="run-toggle-kind"/g)).toHaveLength(2);
     expect(matchup).toContain(`href="/benchmarks/${SLUG}/"`);
     expect(matchup).not.toContain(`/benchmarks/${SLUG}/?run=`);
+  });
+
+  test("the matchup's run toggle tells two fleet runs of one day apart", async () => {
+    const base = await cached(SLUG);
+    const { matchup } = await pages([withVersion(fleetRun(base, "2026-10-12", { id: "2026-10-12-radeon-680m-win11-2" }), "6.14.0"), fleetRun(base, "2026-10-12")]);
+
+    expect(matchup).toContain("Radeon 680M / Windows 11, 2026-10-12, MapLibre GL JS 6 v6.14.0<span class=\"run-toggle-kind\"> fleet</span>");
+    expect(matchup).toContain("Radeon 680M / Windows 11, 2026-10-12, MapLibre GL JS 6 v6.13.0<span class=\"run-toggle-kind\"> fleet</span>");
+    expect(matchup).toContain("6.14.0");
   });
 });
