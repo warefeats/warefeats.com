@@ -42,6 +42,7 @@ function unbuild(benchmark: Benchmark): { entry: RegistryEntry; meta: RunnerBenc
     deck: benchmark.deck,
     unit: benchmark.unit,
     lowerIsBetter: benchmark.lowerIsBetter,
+    ...(benchmark.sectionSamples ? { sectionSamples: benchmark.sectionSamples } : {}),
     verdict: benchmark.verdict,
     ...(benchmark.corpus ? { corpus: benchmark.corpus } : {}),
     ...(benchmark.ruleMap ? { ruleMap: benchmark.ruleMap } : {}),

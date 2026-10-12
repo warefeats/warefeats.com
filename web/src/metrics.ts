@@ -192,8 +192,10 @@ export interface ScorecardColumn {
   title: string;
   unit: string;
   lowerIsBetter: boolean;
-  /** The candidate with the best displayed value in this column, or null when the column is empty. */
+  /** The candidate with the best displayed value in this column, or null when the column is empty or tied. */
   bestId: string | null;
+  /** The best value's lead over another candidate is inside the run's noise, so nothing is marked. */
+  tied: boolean;
 }
 
 export interface ScorecardRow {
@@ -209,13 +211,26 @@ export interface Scorecard {
 }
 
 /**
+ * Whether two candidates' means are closer than the run's noise: twice the standard error of the difference, about a
+ * 95% interval. Only meaningful when each sample repeats one measurement; false when either has fewer than two.
+ */
+export function insideNoise(a: Candidate, b: Candidate): boolean {
+  const n = a.samplesMs.length;
+  const m = b.samplesMs.length;
+  if (n < 2 || m < 2) return false;
+  const noise = 2 * Math.sqrt(standardDeviation(a.samplesMs) ** 2 / n + standardDeviation(b.samplesMs) ** 2 / m);
+  return Math.abs(a.statistics.meanMs - b.statistics.meanMs) <= noise;
+}
+
+/**
  * One row per candidate, one column per section, each cell the mean of that section's samples (the
  * statistic the section's charts and the hyperfine summary already use). The best value in each
  * column is computed from the cells themselves, so the mark always agrees with the number shown.
- * Candidates keep the order of their first appearance; a candidate absent from a section leaves that
- * cell empty.
+ * With `repeats` (samples that repeat one measurement), a best value inside the noise of any other
+ * candidate's is left unmarked. Candidates keep the order of their first appearance; a candidate
+ * absent from a section leaves that cell empty.
  */
-export function scorecard(sections: BenchmarkSection[]): Scorecard {
+export function scorecard(sections: BenchmarkSection[], repeats = false): Scorecard {
   const order: string[] = [];
   const names = new Map<string, string>();
   for (const section of sections) {
@@ -242,7 +257,9 @@ export function scorecard(sections: BenchmarkSection[]): Scorecard {
         bestId = row.candidateId;
       }
     }
-    return { id: section.id, title: section.title, unit: section.unit, lowerIsBetter: section.lowerIsBetter, bestId };
+    const leader = bestId === null ? undefined : section.candidates.find((candidate) => candidate.id === bestId);
+    const tied = repeats && leader !== undefined && section.candidates.some((candidate) => candidate !== leader && insideNoise(leader, candidate));
+    return { id: section.id, title: section.title, unit: section.unit, lowerIsBetter: section.lowerIsBetter, bestId: tied ? null : bestId, tied };
   });
   return { columns, rows };
 }

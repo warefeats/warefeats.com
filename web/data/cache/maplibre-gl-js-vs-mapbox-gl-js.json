@@ -11,6 +11,7 @@
   },
   "unit": "ms",
   "lowerIsBetter": true,
+  "sectionSamples": "repeats",
   "verdict": {
     "winnerId": "maplibre-gl-5",
     "headline": "MapLibre GL JS 5 painted a warm frame in 3.1 ms to Mapbox GL JS 1.13's 6.5 ms and held 919 MB to its 1,448 MB after the same camera path; 1.13 drew its first complete frame in 193 ms to MapLibre's 335, starting six workers to MapLibre's one",

@@ -2,15 +2,16 @@ import { formatValue, scorecard } from "../metrics";
 import type { BenchmarkSection } from "../types";
 
 const DEFAULT_CAPTION = "Mean of each section's samples per candidate. The best value in each column is marked in red.";
+const TIED = " A column has no mark when the lead is inside the run's noise, twice the standard error of the difference.";
 
 /** The verdict's numbers as a table: one row per candidate, one column per section, means. */
-export function Scorecard({ sections, caption = DEFAULT_CAPTION }: { sections: BenchmarkSection[] | undefined; caption?: string }) {
+export function Scorecard({ sections, caption = DEFAULT_CAPTION, repeats = false }: { sections: BenchmarkSection[] | undefined; caption?: string; repeats?: boolean }) {
   if (!sections?.length) return null;
-  const card = scorecard(sections);
+  const card = scorecard(sections, repeats);
   return (
     <div className="table-scroll scorecard">
       <table>
-        <caption>{caption}</caption>
+        <caption>{caption}{card.columns.some((column) => column.tied) ? TIED : ""}</caption>
         <thead>
           <tr>
             <th scope="col">Candidate</th>

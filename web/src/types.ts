@@ -48,6 +48,11 @@ export interface Benchmark {
   run?: { id: string; label: string };
   unit: "ms";
   lowerIsBetter: boolean;
+  /**
+   * "repeats" when each section's samples are one value per pass of its headline measure, so their spread is run-to-run
+   * noise and the scorecard can leave a lead inside it unmarked. Absent when a section's samples pool its tests.
+   */
+  sectionSamples?: "repeats";
   verdict: {
     winnerId: string;
     headline: string;

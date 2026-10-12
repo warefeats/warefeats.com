@@ -59,7 +59,7 @@ function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
         <>
           <section className="matchup-scorecard" aria-labelledby="scorecard-title">
             <h2 id="scorecard-title">Scorecard</h2>
-            <Scorecard sections={picked.sections} caption="Mean of each section's samples for the candidates you picked. The best value in each column is marked in red." />
+            <Scorecard sections={picked.sections} repeats={benchmark.sectionSamples === "repeats"} caption="Mean of each section's samples for the candidates you picked. The best value in each column is marked in red." />
           </section>
 
           {picked.sections.map((section) => (

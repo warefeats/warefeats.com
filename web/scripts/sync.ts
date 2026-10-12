@@ -23,6 +23,7 @@ export interface RunnerBenchmark {
   deck: string;
   unit: "ms";
   lowerIsBetter: boolean;
+  sectionSamples?: Benchmark["sectionSamples"];
   verdict: Benchmark["verdict"];
   corpus?: Benchmark["corpus"];
   ruleMap?: Benchmark["ruleMap"];
@@ -125,6 +126,7 @@ export function buildBenchmark(entry: RegistryEntry, meta: RunnerBenchmark, runs
     run: { id: primary.id, label: primary.label },
     unit: meta.unit,
     lowerIsBetter: meta.lowerIsBetter,
+    ...(meta.sectionSamples ? { sectionSamples: meta.sectionSamples } : {}),
     verdict: meta.verdict,
     ...(meta.corpus ? { corpus: meta.corpus } : {}),
     environment: primary.environment,
