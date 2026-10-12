@@ -21,7 +21,7 @@
   },
   "maplibre-gl-js-vs-mapbox-gl-js": {
     "repo": "warefeats/web-map-renderers",
-    "ref": "01af5e595bb75efc0908d7ec80498f6e8f4e8d00"
+    "ref": "666162838a316381b9c899bd3101cd0bb9295a45"
   },
   "pmtiles-mbtiles-tile-servers": {
     "repo": "warefeats/archive-tile-servers",

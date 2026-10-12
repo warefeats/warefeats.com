@@ -15,8 +15,11 @@ import { writePick, writeRun } from "../src/url-state";
 const CACHE = join(import.meta.dir, "..", "data", "cache");
 const SLUG = "maplibre-gl-js-vs-mapbox-gl-js";
 
-/** Splits a cached benchmark back into the runner files sync read, so sync's builder can be checked against its own output. */
-function unbuild(benchmark: Benchmark): { entry: RegistryEntry; meta: RunnerBenchmark; runs: RunFile[] } {
+/**
+ * Splits a cached benchmark back into the runner files sync read, so sync's builder can be checked against its own output.
+ * `runs` holds the authored runs and `fleet` the fleet runs, so a test can build on the authored runs alone.
+ */
+function unbuild(benchmark: Benchmark): { entry: RegistryEntry; meta: RunnerBenchmark; runs: RunFile[]; fleet: RunFile[] } {
   const runFile = (run: Pick<BenchmarkRun, "id" | "label" | "publishedAt" | "environment" | "protocol" | "candidates" | "sections">): RunFile => ({
     schemaVersion: 1,
     id: run.id,
@@ -28,7 +31,8 @@ function unbuild(benchmark: Benchmark): { entry: RegistryEntry; meta: RunnerBenc
     ...(run.sections ? { sections: run.sections } : {}),
   });
   const primary = runFile({ id: benchmark.run!.id, label: benchmark.run!.label, publishedAt: benchmark.publishedAt, environment: benchmark.environment, protocol: benchmark.protocol, candidates: benchmark.candidates, ...(benchmark.sections ? { sections: benchmark.sections } : {}) });
-  const runs = [primary, ...(benchmark.runs ?? []).map(runFile)];
+  const runs = [primary, ...(benchmark.runs ?? []).filter((run) => !run.fleet).map(runFile)];
+  const fleet = (benchmark.runs ?? []).filter((run) => run.fleet).map(runFile);
   const meta: RunnerBenchmark = {
     schemaVersion: 1,
     id: benchmark.id,
@@ -44,15 +48,16 @@ function unbuild(benchmark: Benchmark): { entry: RegistryEntry; meta: RunnerBenc
     limitations: benchmark.limitations,
     ...(benchmark.trademarks ? { trademarks: benchmark.trademarks } : {}),
     runs: runs.map((run) => `runs/${run.id}.json`),
+    ...(fleet.length ? { fleetRuns: fleet.map((run) => `runs/${run.id}.json`) } : {}),
   };
-  return { entry: { slug: benchmark.slug, repo: benchmark.runnerUrl!.replace("https://github.com/", ""), ref: "0".repeat(40) }, meta, runs };
+  return { entry: { slug: benchmark.slug, repo: benchmark.runnerUrl!.replace("https://github.com/", ""), ref: "0".repeat(40) }, meta, runs, fleet };
 }
 
 async function cached(slug: string): Promise<Benchmark> {
   return JSON.parse(await readFile(join(CACHE, `${slug}.json`), "utf8"));
 }
 
-/** A fleet run of the cached MapLibre benchmark: the primary's numbers under a new id, date and MapLibre 6 release. */
+/** A made-up fleet run of the cached MapLibre benchmark: the primary's numbers under a new id, date and MapLibre 6 release. */
 function fleetRun(base: Benchmark, date: string, extra: Record<string, unknown> = {}): RunFile {
   return {
     schemaVersion: 1,
@@ -67,6 +72,7 @@ function fleetRun(base: Benchmark, date: string, extra: Record<string, unknown> 
   } as RunFile;
 }
 
+/** The cached MapLibre benchmark's authored runs, with made-up fleet runs in place of any real ones. */
 async function withFleet(dates: string[]): Promise<Benchmark> {
   const base = await cached(SLUG);
   const { entry, meta, runs } = unbuild(base);
@@ -75,15 +81,18 @@ async function withFleet(dates: string[]): Promise<Benchmark> {
 }
 
 describe("sync with fleet runs", () => {
-  test("rebuilds every cached benchmark byte for byte when the runner lists no fleet runs", async () => {
+  test("rebuilds every cached benchmark byte for byte, and without fleet runs when the runner lists none", async () => {
     const files = (await readdir(CACHE)).filter((file) => file.endsWith(".json") && file !== "manifest.json");
     expect(files.length).toBeGreaterThanOrEqual(8);
 
     for (const file of files) {
       const text = await readFile(join(CACHE, file), "utf8");
-      const { entry, meta, runs } = unbuild(JSON.parse(text));
-      expect(JSON.stringify(buildBenchmark(entry, meta, runs), null, 2) + "\n").toBe(text);
-      expect(JSON.stringify(buildBenchmark(entry, { ...meta, fleetRuns: [] }, runs, []), null, 2) + "\n").toBe(text);
+      const { entry, meta, runs, fleet } = unbuild(JSON.parse(text));
+      expect(JSON.stringify(buildBenchmark(entry, meta, runs, fleet), null, 2) + "\n").toBe(text);
+      if (fleet.length === 0) {
+        expect(JSON.stringify(buildBenchmark(entry, meta, runs), null, 2) + "\n").toBe(text);
+        expect(JSON.stringify(buildBenchmark(entry, { ...meta, fleetRuns: [] }, runs, []), null, 2) + "\n").toBe(text);
+      }
     }
   });
 
@@ -161,7 +170,7 @@ describe("which run a page shows", () => {
     expect(newestRun(views).fleet).toBe(true);
     const authoredOnly = runViews(await cached("desktop-shells"));
     expect(newestRun(authoredOnly).id).toBe("2026-09-10-m2max");
-    expect(runChoices(await cached(SLUG), "matchup").fallback.id).toBe("2026-09-02-radeon-680m-win11");
+    expect(runChoices(buildBenchmark(entry, meta, runs), "matchup").fallback.id).toBe("2026-09-02-radeon-680m-win11");
   });
 
   test("names the rig without repeating the date a fleet run's label ends with", async () => {
