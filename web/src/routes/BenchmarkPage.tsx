@@ -14,7 +14,7 @@ import { BoxPlot } from "../components/BoxPlot";
 import { CatalogSkeleton, ErrorState } from "../components/States";
 import { matchupPath } from "../head";
 import { candidateUniverse, MATCHUP_FIELD } from "../matchup";
-import { runChoices } from "../runs";
+import { changedCandidates, rigLabel, runChoices, versionedName } from "../runs";
 import type { RunView } from "../runs";
 import { benchmarkTests, formatDate } from "../metrics";
 import { useRunSelection } from "../url-state";
@@ -22,11 +22,12 @@ import type { Benchmark } from "../types";
 import { NotFound } from "./NotFound";
 
 /**
- * The way into a benchmark's matchup, for a run with enough candidates. It carries the run the reader is on whenever that
- * isn't the run the matchup opens on (the newest, which may be a fleet run), so the numbers don't change on the way.
+ * The way into a benchmark's matchup, for a run with enough candidates. The matchup opens on its newest run. When that is
+ * a fleet run, the link goes there and names it, because the post never draws a fleet run (ADR 0002). Otherwise it
+ * carries the run the reader is on whenever that isn't the newest, so the numbers don't change on the way.
  */
 function MatchupLink({ benchmark, run }: { benchmark: Benchmark; run: RunView }) {
-  const opensOn = useMemo(() => runChoices(benchmark, "matchup").fallback.id, [benchmark]);
+  const opensOn = useMemo(() => runChoices(benchmark, "matchup").fallback, [benchmark]);
 
   if (candidateUniverse(run).length < MATCHUP_FIELD) {
     return null;
@@ -34,11 +35,26 @@ function MatchupLink({ benchmark, run }: { benchmark: Benchmark; run: RunView })
 
   return (
     <p className="matchup-link">
-      <Link className="button button-quiet" to={{ pathname: matchupPath(benchmark.slug), search: run.id === opensOn ? "" : `?run=${encodeURIComponent(run.id)}` }}>
+      <Link className="button button-quiet" to={{ pathname: matchupPath(benchmark.slug), search: opensOn.fleet || run.id === opensOn.id ? "" : `?run=${encodeURIComponent(run.id)}` }}>
         <ListChecks aria-hidden="true" />
         Build a matchup
       </Link>
+      {opensOn.fleet ? <FleetRunNote from={run} fleet={opensOn} /> : null}
     </p>
+  );
+}
+
+/** Names the fleet run a matchup opens on: its date, its rig when the reader's run used another, and the releases it measured that the reader's run didn't. */
+function FleetRunNote({ from, fleet }: { from: RunView; fleet: RunView }) {
+  const sameRig = fleet.environment.machine === from.environment.machine && fleet.environment.chip === from.environment.chip;
+  const changed = changedCandidates(from, fleet).map(versionedName);
+
+  return (
+    <span className="matchup-link-note">
+      The matchup opens on the fleet run of <time dateTime={fleet.publishedAt} className="num">{formatDate(fleet.publishedAt)}</time>
+      {sameRig ? null : ` on ${rigLabel(fleet)}`}
+      {changed.length ? `, with ${new Intl.ListFormat("en-US").format(changed)}` : null}.
+    </span>
   );
 }
 
