@@ -138,7 +138,7 @@ export function reportText(benchmark: Benchmark, { summary: withSummary = true }
     lines.push("");
   }
   lines.push(`Rig: ${benchmark.environment.machine}, ${benchmark.environment.chip}, ${benchmark.environment.memory}, ${benchmark.environment.os}`);
-  lines.push(`Source: https://warefeats.com/benchmarks/${benchmark.slug}/`);
+  lines.push(`Source: https://warefeats.com/posts/${benchmark.post}/`);
 
   return lines.join("\n");
 }

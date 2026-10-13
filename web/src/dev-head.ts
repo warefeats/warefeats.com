@@ -42,7 +42,7 @@ export function devHead(root: string): Plugin {
           return;
         }
 
-        const match = /^\/og\/(matchup\/)?([a-z0-9-]+)\.png$/i.exec(request.url ?? "");
+        const match = /^\/og\/(?:(posts|benchmarks)\/)?([a-z0-9-]+)\.png$/i.exec(request.url ?? "");
         if (!match) {
           next();
           return;
@@ -55,8 +55,9 @@ export function devHead(root: string): Plugin {
             return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
           };
           const fonts = { mono500: await font("MartianMono-500.ttf"), mono700: await font("MartianMono-700.ttf"), sans500: await font("RedHatText-500.ttf") };
-          const benchmark = (await catalog()).benchmarks.find((entry) => entry.slug === match[2]);
-          const card = match[1] ? matchupCard : benchmarkCard;
+          const benchmarks = (await catalog()).benchmarks;
+          const benchmark = match[1] === "posts" ? benchmarks.find((entry) => entry.post === match[2]) : match[1] === "benchmarks" ? benchmarks.find((entry) => entry.slug === match[2]) : undefined;
+          const card = match[1] === "benchmarks" ? matchupCard : benchmarkCard;
           const svg = !match[1] && match[2] === "site" ? await siteCard(fonts) : benchmark ? await card(benchmark, fonts) : undefined;
 
           if (!svg) {

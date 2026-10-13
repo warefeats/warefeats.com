@@ -16,6 +16,8 @@ export interface CatalogIndex {
 export interface CatalogEntry {
   id: string;
   slug: string;
+  /** The URL slug of the benchmark's post: its date, the benchmark's slug, and the products it compares (ADR 0004). */
+  post: string;
   category: string;
   title: string;
   deck: string;
@@ -39,7 +41,10 @@ export interface CatalogLead {
 
 export interface Benchmark {
   id: string;
+  /** The benchmark's category of tools, its runner's name: the page at /benchmarks/<slug>/ (ADR 0004). */
   slug: string;
+  /** The URL slug of its post, /posts/<post>/: the post's date, the benchmark's slug, and the products it compares. */
+  post: string;
   category: string;
   title: string;
   deck: string;

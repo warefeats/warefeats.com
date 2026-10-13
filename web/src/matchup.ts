@@ -17,9 +17,14 @@ export function candidateUniverse(run: RunView): Candidate[] {
   return [...seen.values()];
 }
 
-/** The size of the largest field among a benchmark's runs, or undefined when no run has enough candidates for a matchup. */
+/** The size of the largest field among a benchmark's runs. */
+export function largestField(benchmark: Benchmark): number {
+  return Math.max(...runViews(benchmark).map((run) => candidateUniverse(run).length));
+}
+
+/** The size of the largest field among a benchmark's runs, or undefined when no run has enough candidates to pick from. */
 export function matchupField(benchmark: Benchmark): number | undefined {
-  const largest = Math.max(...runViews(benchmark).map((run) => candidateUniverse(run).length));
+  const largest = largestField(benchmark);
   return largest >= MATCHUP_FIELD ? largest : undefined;
 }
 

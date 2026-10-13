@@ -2,7 +2,6 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Resvg } from "@resvg/resvg-js";
 import { parseCatalog } from "../src/catalog";
-import { matchupField } from "../src/matchup";
 import { benchmarkCard, matchupCard, siteCard } from "../src/og";
 import type { OgFonts } from "../src/og";
 
@@ -25,17 +24,16 @@ function toPng(svg: string): Buffer {
 }
 
 const catalog = parseCatalog(JSON.parse(await readFile(join(root, "dist", "data", "benchmarks.json"), "utf8")));
-await mkdir(join(out, "matchup"), { recursive: true });
+await mkdir(join(out, "posts"), { recursive: true });
+await mkdir(join(out, "benchmarks"), { recursive: true });
 await writeFile(join(out, "site.png"), toPng(await siteCard(fonts)));
 
+// A post's card at og/posts/<post>.png, its benchmark page's at og/benchmarks/<slug>.png (ADR 0004).
 let cards = 1;
 for (const benchmark of catalog.benchmarks) {
-  await writeFile(join(out, `${benchmark.slug}.png`), toPng(await benchmarkCard(benchmark, fonts)));
-  cards += 1;
-  if (matchupField(benchmark) !== undefined) {
-    await writeFile(join(out, "matchup", `${benchmark.slug}.png`), toPng(await matchupCard(benchmark, fonts)));
-    cards += 1;
-  }
+  await writeFile(join(out, "posts", `${benchmark.post}.png`), toPng(await benchmarkCard(benchmark, fonts)));
+  await writeFile(join(out, "benchmarks", `${benchmark.slug}.png`), toPng(await matchupCard(benchmark, fonts)));
+  cards += 2;
 }
 
 console.log(`Rendered ${cards} OG cards into dist/og`);

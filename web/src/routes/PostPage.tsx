@@ -1,7 +1,7 @@
 import { DownloadSimple, ListChecks } from "@phosphor-icons/react";
 import { useMemo } from "react";
 import { Link, useParams } from "react-router";
-import { useBenchmark } from "../catalog-context";
+import { useBenchmark, useCatalog } from "../catalog-context";
 import { BarChart } from "../components/BarChart";
 import { Candidates } from "../components/Candidates";
 import { Conditions } from "../components/Conditions";
@@ -12,7 +12,7 @@ import { Scorecard } from "../components/Scorecard";
 import { REPO_URL } from "../components/SiteHeader";
 import { BoxPlot } from "../components/BoxPlot";
 import { CatalogSkeleton, ErrorState } from "../components/States";
-import { matchupPath } from "../head";
+import { benchmarkPath } from "../head";
 import { candidateUniverse, MATCHUP_FIELD } from "../matchup";
 import { changedCandidates, rigLabel, runChoices, versionedName } from "../runs";
 import type { RunView } from "../runs";
@@ -35,7 +35,7 @@ function MatchupLink({ benchmark, run }: { benchmark: Benchmark; run: RunView })
 
   return (
     <p className="matchup-link">
-      <Link className="button button-quiet" to={{ pathname: matchupPath(benchmark.slug), search: opensOn.fleet || run.id === opensOn.id ? "" : `?run=${encodeURIComponent(run.id)}` }}>
+      <Link className="button button-quiet" to={{ pathname: benchmarkPath(benchmark.slug), search: opensOn.fleet || run.id === opensOn.id ? "" : `?run=${encodeURIComponent(run.id)}` }}>
         <ListChecks aria-hidden="true" />
         Build a matchup
       </Link>
@@ -66,7 +66,7 @@ function BenchmarkContent({ benchmark }: { benchmark: Benchmark }) {
     return (
       <article className="benchmark">
         <header className="benchmark-head">
-          <p className="crumbs"><Link to="/">Benchmarks</Link> <span aria-hidden="true">/</span> {benchmark.category}</p>
+          <p className="crumbs"><Link to="/">Posts</Link> <span aria-hidden="true">/</span> {benchmark.category}</p>
           <h1>{benchmark.title}</h1>
           <p className="deck">{benchmark.deck}</p>
           <p className="byline">Published <time dateTime={benchmark.publishedAt} className="num">{formatDate(benchmark.publishedAt)}</time> on {active.environment.machine}, {active.environment.chip}</p>
@@ -118,7 +118,7 @@ function BenchmarkContent({ benchmark }: { benchmark: Benchmark }) {
   return (
     <article className="benchmark">
       <header className="benchmark-head">
-        <p className="crumbs"><Link to="/">Benchmarks</Link> <span aria-hidden="true">/</span> {benchmark.category}</p>
+        <p className="crumbs"><Link to="/">Posts</Link> <span aria-hidden="true">/</span> {benchmark.category}</p>
         <h1>{benchmark.title}</h1>
         <p className="deck">{benchmark.deck}</p>
         <p className="byline">Published <time dateTime={benchmark.publishedAt} className="num">{formatDate(benchmark.publishedAt)}</time> on {benchmark.environment.machine}, {benchmark.environment.chip}</p>
@@ -197,8 +197,11 @@ function BenchmarkContent({ benchmark }: { benchmark: Benchmark }) {
   );
 }
 
-export function BenchmarkPage() {
-  const { slug } = useParams();
+/** A post, found by its URL slug among the benchmarks the catalog lists. */
+export function PostPage() {
+  const { post } = useParams();
+  const { state } = useCatalog();
+  const slug = state.status === "ready" ? state.index.benchmarks.find((entry) => entry.post === post)?.slug : undefined;
   const load = useBenchmark(slug);
 
   if (load.status === "loading") {

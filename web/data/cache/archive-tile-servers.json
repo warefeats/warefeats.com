@@ -1,6 +1,7 @@
 {
   "id": "archive-tile-servers-2026-09",
-  "slug": "pmtiles-mbtiles-tile-servers",
+  "slug": "archive-tile-servers",
+  "post": "2026-09-08-archive-tile-servers-martin-vs-go-pmtiles-vs-tileserver-gl-vs-mbtileserver-vs-bbox",
   "category": "Tile servers",
   "title": "Martin vs go-pmtiles vs tileserver-gl vs mbtileserver vs BBOX",
   "deck": "Five open-source tile servers serving one pre-built vector tile archive of Berlin, as MBTiles and as PMTiles, with identical tiles in both: single-tile latency at four zoom levels, throughput at 10 and 100 clients, a random tile walk over 256 tiles, four-tile viewport bursts, cold start and memory.",

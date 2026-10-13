@@ -73,6 +73,25 @@ describe("viewer request function", () => {
     expect(response.headers.location?.value).toBe("https://warefeats.com/methodology/");
   });
 
+  test("redirects a moved page, card or matchup to where it lives now, in one hop, keeping the query", () => {
+    const post = request("/benchmarks/maplibre-gl-js-vs-mapbox-gl-js/");
+    expect(post.statusCode).toBe(301);
+    expect(post.headers.location?.value).toBe("https://warefeats.com/posts/2026-09-02-web-map-renderers-mapbox-gl-js-vs-maplibre-gl-js/");
+    expect(request("/benchmarks/maplibre-gl-js-vs-mapbox-gl-js").headers.location?.value).toBe("https://warefeats.com/posts/2026-09-02-web-map-renderers-mapbox-gl-js-vs-maplibre-gl-js/");
+    const matchup = request("/benchmarks/maplibre-gl-js-vs-mapbox-gl-js/matchup/", "warefeats.com", { run: { value: "2026-10-12-radeon-680m-win11" }, pick: { value: "maplibre-gl-5%2Cmaplibre-gl-6" } });
+    expect(matchup.headers.location?.value).toBe("https://warefeats.com/benchmarks/web-map-renderers/?run=2026-10-12-radeon-680m-win11&pick=maplibre-gl-5%2Cmaplibre-gl-6");
+    expect(request("/og/matchup/maplibre-gl-js-vs-mapbox-gl-js.png").headers.location?.value).toBe("https://warefeats.com/og/benchmarks/web-map-renderers.png");
+    expect(request("/og/desktop-shells.png").headers.location?.value).toBe("https://warefeats.com/og/posts/2026-09-10-desktop-shells-tauri-vs-electron.png");
+    expect(request("/posts/").headers.location?.value).toBe("https://warefeats.com/");
+  });
+
+  test("serves the new pages, and the old desktop-shells post URL as that benchmark's page", () => {
+    expect(request("/posts/2026-09-02-web-map-renderers-mapbox-gl-js-vs-maplibre-gl-js/").uri).toBe("/posts/2026-09-02-web-map-renderers-mapbox-gl-js-vs-maplibre-gl-js/index.html");
+    expect(request("/benchmarks/web-map-renderers/").uri).toBe("/benchmarks/web-map-renderers/index.html");
+    expect(request("/benchmarks/").uri).toBe("/benchmarks/index.html");
+    expect(request("/constructor/").uri).toBe("/constructor/index.html");
+  });
+
   test("redirects www to the apex, keeping the path and the query", () => {
     const response = request("/benchmarks/desktop-shells", "www.warefeats.com", { ref: { value: "a%20b" }, tag: { value: "x", multiValue: [{ value: "x" }, { value: "y" }] } });
     expect(response.statusCode).toBe(301);

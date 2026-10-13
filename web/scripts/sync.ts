@@ -17,7 +17,10 @@ interface Registry {
 export interface RunnerBenchmark {
   schemaVersion: number;
   id: string;
+  /** The benchmark's category of tools, its runner's name, which its page's URL carries. */
   slug: string;
+  /** Its post's URL slug: the primary run's date, then the slug, then the products it compares. */
+  post: string;
   category: string;
   title: string;
   deck: string;
@@ -46,6 +49,7 @@ export interface RunFile {
 }
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
+const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const RUN_PATH_PATTERN = /^runs\/[A-Za-z0-9._-]+\.json$/;
 
 /** The most fleet runs a benchmark may list. Retention is the runner's call; this bounds what a page carries. */
@@ -57,6 +61,15 @@ export function validateRef(ref: string): void {
 
 export function validateRunPath(path: string): void {
   if (!RUN_PATH_PATTERN.test(path)) throw new Error(`Invalid run path "${path}" — must match runs/<name>.json`);
+}
+
+/** Checks a benchmark's URL slugs: its own names a category in lowercase words, and its post's starts with its date and that slug, then names the products. */
+export function validateSlugs(slug: string, post: string, publishedAt: string): void {
+  if (!SLUG_PATTERN.test(slug)) throw new Error(`Invalid slug "${slug}" — expected lowercase words joined by hyphens`);
+  const prefix = `${publishedAt}-${slug}-`;
+  if (typeof post !== "string" || !post.startsWith(prefix) || !SLUG_PATTERN.test(post.slice(prefix.length))) {
+    throw new Error(`Invalid post "${post}" for ${slug} — expected ${prefix}<products>, lowercase words joined by hyphens`);
+  }
 }
 
 /** Checks a runner's run lists: at least one authored run, at most four fleet runs, every path valid and listed once. */
@@ -116,9 +129,12 @@ export function buildBenchmark(entry: RegistryEntry, meta: RunnerBenchmark, runs
     ids.add(run.id);
   }
 
+  validateSlugs(meta.slug, meta.post, primary.publishedAt);
+
   const benchmark: Benchmark = {
     id: meta.id,
     slug: meta.slug,
+    post: meta.post,
     category: meta.category,
     title: meta.title,
     deck: meta.deck,

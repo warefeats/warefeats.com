@@ -7,19 +7,25 @@ import * as route53 from "aws-cdk-lib/aws-route53";
 import * as targets from "aws-cdk-lib/aws-route53-targets";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import type { Construct } from "constructs";
+import moved from "./moved.json";
 
 const DOMAIN = "warefeats.com";
 
 /**
  * One URL per page: www and extensionless paths without a trailing slash redirect to the canonical
- * URL, which the page's canonical tag names. Prerendered pages live at <route>/index.html, and S3
- * through OAC does not resolve directory indexes.
+ * URL, which the page's canonical tag names, and a page or card that moved (moved.json, ADR 0004)
+ * redirects to where it lives now, its query kept. Prerendered pages live at <route>/index.html, and
+ * S3 through OAC does not resolve directory indexes.
  */
-export const VIEWER_REQUEST_CODE = `function handler(event) {
+export const VIEWER_REQUEST_CODE = `var MOVED = ${JSON.stringify(moved)};
+function handler(event) {
   var request = event.request;
   var uri = request.uri;
   var file = uri.lastIndexOf(".") > uri.lastIndexOf("/");
   var path = file || uri.endsWith("/") ? uri : uri + "/";
+  if (Object.prototype.hasOwnProperty.call(MOVED, path)) {
+    path = MOVED[path];
+  }
   var host = request.headers.host ? request.headers.host.value : "";
   if (host === "www.${DOMAIN}" || path !== uri) {
     var query = [];

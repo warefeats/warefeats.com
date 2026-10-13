@@ -5,11 +5,12 @@ import { SiteFooter } from "./components/SiteFooter";
 import { SiteHeader } from "./components/SiteHeader";
 import { routeMeta } from "./head";
 import { About } from "./routes/About";
-import { BenchmarkPage } from "./routes/BenchmarkPage";
+import { Benchmarks } from "./routes/Benchmarks";
 import { Home } from "./routes/Home";
 import { MatchupPage } from "./routes/MatchupPage";
 import { Methodology } from "./routes/Methodology";
 import { NotFound } from "./routes/NotFound";
+import { PostPage } from "./routes/PostPage";
 
 function useDocumentMeta(): void {
   const location = useLocation();
@@ -49,8 +50,9 @@ export default function App() {
       <main id="main" className="page">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/benchmarks/:slug" element={<BenchmarkPage />} />
-          <Route path="/benchmarks/:slug/matchup" element={<MatchupPage />} />
+          <Route path="/posts/:post" element={<PostPage />} />
+          <Route path="/benchmarks" element={<Benchmarks />} />
+          <Route path="/benchmarks/:slug" element={<MatchupPage />} />
           <Route path="/methodology" element={<Methodology />} />
           <Route path="/about" element={<About />} />
           <Route path="*" element={<NotFound />} />

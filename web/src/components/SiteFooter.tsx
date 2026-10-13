@@ -9,7 +9,8 @@ export function SiteFooter() {
         <span>Independent benchmarks for developer tools. Every run published, every rig named.</span>
       </p>
       <nav className="footer-nav" aria-label="Footer">
-        <Link to="/">Benchmarks</Link>
+        <Link to="/">Posts</Link>
+        <Link to="/benchmarks/">Benchmarks</Link>
         <Link to="/methodology/">Methodology</Link>
         <Link to="/about/">About</Link>
         <a href={REPO_URL} target="_blank" rel="noreferrer">Source and runner</a>

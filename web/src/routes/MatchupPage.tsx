@@ -11,8 +11,8 @@ import { RunToggle } from "../components/RunToggle";
 import { Scorecard } from "../components/Scorecard";
 import { CatalogSkeleton, ErrorState } from "../components/States";
 import { WinnerLine } from "../components/WinnerLine";
-import { benchmarkPath } from "../head";
-import { applyPick, candidateUniverse, matchupField, matchupHeading, pickFlat } from "../matchup";
+import { BENCHMARKS_PATH, postPath } from "../head";
+import { applyPick, candidateUniverse, MATCHUP_FIELD, matchupHeading, pickFlat } from "../matchup";
 import { benchmarkTests, formatDate, scorecard } from "../metrics";
 import { rigLabel } from "../runs";
 import { usePick, useRunSelection } from "../url-state";
@@ -20,15 +20,18 @@ import type { Benchmark, BenchmarkSection } from "../types";
 import { NotFound } from "./NotFound";
 
 /**
- * A reader-picked view of one benchmark's run, laid out like the post without its prose: each section's charts and the
- * winner computed from its samples, then the conditions and the scorecard, with nothing after it (ADR 0003). It offers
- * every run, fleet runs included, and opens on the newest; a change of pick pins the run in the URL (ADR 0002).
+ * A benchmark's page: a reader-picked view of one of its runs, laid out like the post without its prose. Each section's
+ * charts and the winner computed from its samples, then the conditions and the scorecard, with nothing after it (ADR
+ * 0003). It offers every run, fleet runs included, and opens on the newest; a change of pick pins the run in the URL
+ * (ADR 0002). It lives at the benchmark's category, /benchmarks/<slug>/ (ADR 0004).
  */
 function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
   const { runs, active, select } = useRunSelection(benchmark, "matchup");
   const universe = useMemo(() => candidateUniverse(active), [active]);
   const { pick, toggle, reset } = usePick(universe, active.id);
-  const published = benchmarkPath(benchmark.slug);
+  const published = postPath(benchmark.post);
+  // Two candidates leave nothing to pick: both stay on the page.
+  const pickable = universe.length >= MATCHUP_FIELD;
   const repeats = benchmark.sectionSamples === "repeats";
   const sectioned = Boolean(active.sections?.length);
   const picked = sectioned ? applyPick(active.sections ?? [], pick.ids) : undefined;
@@ -40,16 +43,16 @@ function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
 
   return (
     <article className="benchmark matchup">
-      <p className="crumbs"><Link to="/">Benchmarks</Link> <span aria-hidden="true">/</span> {benchmark.category} <span aria-hidden="true">/</span> Matchup</p>
+      <p className="crumbs"><Link to={BENCHMARKS_PATH}>Benchmarks</Link> <span aria-hidden="true">/</span> {benchmark.category}</p>
 
       {runs.length > 1 ? <RunToggle runs={runs} active={active.id} onSelect={select} /> : null}
 
       {/* The picker sits above the heading, which changes length with the pick, so a tick never moves the boxes. */}
-      <CandidatePicker universe={universe} picked={pick.ids} onToggle={toggle} onReset={reset} note={pick.ignored ? "That link named fewer than two candidates from this run, so you're seeing all of them." : undefined} />
+      {pickable ? <CandidatePicker universe={universe} picked={pick.ids} onToggle={toggle} onReset={reset} note={pick.ignored ? "That link named fewer than two candidates from this run, so you're seeing all of them." : undefined} /> : null}
 
       <header className="benchmark-head">
         <h1>{matchupHeading(pick, universe, benchmark.title)}</h1>
-        <p className="deck">Tick the candidates you care about and the charts, winners and table redraw for just them: same run, same rig, same samples. Winners come from the numbers alone; the story is in the post.</p>
+        <p className="deck">{pickable ? "Tick the candidates you care about and the charts, winners and table redraw for just them: same run, same rig, same samples." : "Every candidate on one rig, from the same samples."} Winners come from the numbers alone; the story is in the post.</p>
         {active.fleet ? (
           <p className="byline">From the fleet run of <time dateTime={active.publishedAt} className="num">{formatDate(active.publishedAt)}</time> on {rigLabel(active)}: {active.environment.machine}, {active.environment.chip}. The post covers the run of <time dateTime={post.publishedAt} className="num">{formatDate(post.publishedAt)}</time>. <Link to={back}>Read the post</Link></p>
         ) : (
@@ -152,7 +155,7 @@ export function MatchupPage() {
     return <ErrorState message={load.message} onRetry={load.retry} />;
   }
 
-  if (load.status === "missing" || matchupField(load.benchmark) === undefined) {
+  if (load.status === "missing") {
     return <NotFound />;
   }
 

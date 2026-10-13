@@ -1,6 +1,7 @@
 {
   "id": "vector-tile-servers-2026-09",
-  "slug": "postgis-vector-tile-servers",
+  "slug": "vector-tile-servers",
+  "post": "2026-09-02-vector-tile-servers-martin-vs-tegola-vs-bbox-vs-pg-tileserv-vs-tipg-vs-ldproxy",
   "category": "Tile servers",
   "title": "Martin vs Tegola vs BBOX vs pg_tileserv vs TiPg vs ldproxy",
   "deck": "Six open-source vector tile servers generating Mapbox Vector Tiles on the fly from the same PostGIS database, on a pinned Berlin OpenStreetMap corpus: single-tile latency, throughput at 10 and 100 clients, four-tile viewport bursts, cold start and memory. A re-run of the 2024 Rechsteiner thesis matrix on current releases.",
