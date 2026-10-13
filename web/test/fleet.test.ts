@@ -5,9 +5,13 @@ import { assembleCatalog } from "../scripts/assemble";
 import { buildBenchmark, FLEET_RUN_LIMIT, validateRunLists } from "../scripts/sync";
 import type { RegistryEntry, RunFile, RunnerBenchmark } from "../scripts/sync";
 import { parseBenchmark, toCatalogIndex } from "../src/catalog";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { WinnerLine } from "../src/components/WinnerLine";
 import { render } from "../src/entry-server";
 import { matchupPath } from "../src/head";
 import { candidateUniverse, readPick } from "../src/matchup";
+import { scorecard } from "../src/metrics";
 import { activeRun, changedCandidates, newestRun, rigLabel, runChoices, runViews, toggleLabels, versionedName } from "../src/runs";
 import type { Benchmark, BenchmarkRun } from "../src/types";
 import { writePick, writeRun } from "../src/url-state";
@@ -301,7 +305,7 @@ describe("pages with fleet runs", () => {
 
     expect(matchup).toContain("From the fleet run of");
     expect(matchup).toContain("on Radeon 680M / Windows 11: BOSGAME");
-    expect(matchup).toContain("A fleet run carries no verdict");
+    expect(matchup.replace(/<[^>]+>/g, "")).toContain("The post covers the run of Sep 2, 2026.");
     expect(matchup).toContain("6.13.0");
     expect(matchup.match(/class="run-toggle-btn/g)).toHaveLength(3);
     expect(matchup.match(/class="run-toggle-kind"/g)).toHaveLength(2);
@@ -316,5 +320,59 @@ describe("pages with fleet runs", () => {
     expect(matchup).toContain("Radeon 680M / Windows 11, 2026-10-12, MapLibre GL JS 6 v6.14.0<span class=\"run-toggle-kind\"> fleet</span>");
     expect(matchup).toContain("Radeon 680M / Windows 11, 2026-10-12, MapLibre GL JS 6 v6.13.0<span class=\"run-toggle-kind\"> fleet</span>");
     expect(matchup).toContain("6.14.0");
+  });
+});
+
+describe("the matchup reads like a post without its prose", () => {
+  /** Markup as a reader reads it: tags dropped, entities and spacing tidied. */
+  const text = (html: string) => html.replaceAll("<!-- -->", "").replace(/<[^>]+>/g, " ").replaceAll("&#x27;", "'").replace(/\s+/g, " ").replace(/ ([,.])/g, "$1").trim();
+  const matchupOf = async (slug: string) => {
+    const benchmark = await cached(slug);
+    const catalog = await assembleCatalog();
+    return render(matchupPath(slug), toCatalogIndex(catalog), benchmark).html.replaceAll("<!-- -->", "");
+  };
+
+  test("each section's charts end in a winner, then the conditions, then the scorecard last", async () => {
+    const html = await matchupOf(SLUG);
+    const at = (needle: string) => {
+      const index = html.indexOf(needle);
+      expect(index).toBeGreaterThan(-1);
+      return index;
+    };
+    const order = [
+      at('id="section-startup"'), at('id="section-frame-time"'), at('id="section-memory"'),
+      at("Test conditions"), at('id="scorecard-title"'), at("trademark"),
+    ];
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+
+    const winners = [...html.matchAll(/<p class="section-winner">(.*?)<\/p>/g)].map((match) => text(match[1]!));
+    expect(winners).toEqual(["Winner Mapbox GL JS 1.13 (192.6 ms)", "Winner MapLibre GL JS 6 (2.9 ms)", "Winner MapLibre GL JS 5 (906.7 MB)"]);
+    expect(html.lastIndexOf('class="section-winner"')).toBeLessThan(at('id="scorecard-title"'));
+
+    const benchmark = await cached(SLUG);
+    expect(html).not.toContain(benchmark.sections![0]!.deck);
+    expect(html).not.toContain("What this does not prove");
+    expect(html).not.toContain(benchmark.limitations[0]!);
+  });
+
+  test("a lead inside the run's noise is a tie that names every candidate inside it", async () => {
+    const morning = runViews(await cached(SLUG)).find((run) => run.id === "2026-10-12-radeon-680m-win11")!;
+    const card = scorecard(morning.sections!, true);
+    const frame = card.columns.findIndex((column) => column.id === "frame-time");
+
+    expect(card.columns[frame]!.tied).toBe(true);
+    expect(text(renderToStaticMarkup(createElement(WinnerLine, { card, index: frame })))).toBe("Tie MapLibre GL JS 6 (3.1 ms) and MapLibre GL JS 5 (3.2 ms), inside this run's noise");
+  });
+
+  test("a benchmark without sections names its winner by time per pass and ends on a one-column scorecard", async () => {
+    const slug = "vite-vs-esbuild-vs-tsup-library-build";
+    const html = await matchupOf(slug);
+    const best = [...(await cached(slug)).candidates].sort((a, b) => a.statistics.meanMs - b.statistics.meanMs)[0]!;
+    const winner = text(html.match(/<p class="section-winner">(.*?)<\/p>/)![1]!);
+
+    expect(winner.startsWith(`Winner ${best.name} (`)).toBe(true);
+    expect(html.indexOf('class="section-winner"')).toBeLessThan(html.indexOf('id="scorecard-title"'));
+    expect(text(html.slice(html.indexOf('id="scorecard-title"')))).toContain("Time per pass");
+    expect(html).not.toContain("What this does not prove");
   });
 });

@@ -9,30 +9,34 @@ import { CopyReport } from "../components/CopyReport";
 import { ReportBlock } from "../components/ReportBlock";
 import { RunToggle } from "../components/RunToggle";
 import { Scorecard } from "../components/Scorecard";
-import { REPO_URL } from "../components/SiteHeader";
 import { CatalogSkeleton, ErrorState } from "../components/States";
+import { WinnerLine } from "../components/WinnerLine";
 import { benchmarkPath } from "../head";
 import { applyPick, candidateUniverse, matchupField, matchupHeading, pickFlat } from "../matchup";
-import { benchmarkTests, formatDate } from "../metrics";
+import { benchmarkTests, formatDate, scorecard } from "../metrics";
 import { rigLabel } from "../runs";
 import { usePick, useRunSelection } from "../url-state";
-import type { Benchmark } from "../types";
+import type { Benchmark, BenchmarkSection } from "../types";
 import { NotFound } from "./NotFound";
 
 /**
- * A reader-picked view of one benchmark's run: its charts and tables for the candidates ticked, and no verdict (ADR 0001).
- * It offers every run, fleet runs included, and opens on the newest; a change of pick pins the run in the URL (ADR 0002).
+ * A reader-picked view of one benchmark's run, laid out like the post without its prose: each section's charts and the
+ * winner computed from its samples, then the conditions and the scorecard, with nothing after it (ADR 0003). It offers
+ * every run, fleet runs included, and opens on the newest; a change of pick pins the run in the URL (ADR 0002).
  */
 function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
   const { runs, active, select } = useRunSelection(benchmark, "matchup");
   const universe = useMemo(() => candidateUniverse(active), [active]);
   const { pick, toggle, reset } = usePick(universe, active.id);
   const published = benchmarkPath(benchmark.slug);
+  const repeats = benchmark.sectionSamples === "repeats";
   const sectioned = Boolean(active.sections?.length);
   const picked = sectioned ? applyPick(active.sections ?? [], pick.ids) : undefined;
   const flat = sectioned ? undefined : pickFlat(benchmark, active, pick.ids);
+  const card = picked ? scorecard(picked.sections, repeats) : undefined;
   // The benchmark page shows authored runs only, so a fleet run sends the reader to the post's own run.
-  const back = { pathname: published, search: active.fleet || active.id === runs[0]!.id ? "" : `?run=${encodeURIComponent(active.id)}` };
+  const post = runs[0]!;
+  const back = { pathname: published, search: active.fleet || active.id === post.id ? "" : `?run=${encodeURIComponent(active.id)}` };
 
   return (
     <article className="benchmark matchup">
@@ -45,85 +49,94 @@ function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
 
       <header className="benchmark-head">
         <h1>{matchupHeading(pick, universe, benchmark.title)}</h1>
-        <p className="deck">Tick the candidates you care about and the charts and tables redraw for just them: same run, same rig, same samples. The verdict stays on the published page.</p>
+        <p className="deck">Tick the candidates you care about and the charts, winners and table redraw for just them: same run, same rig, same samples. Winners come from the numbers alone; the story is in the post.</p>
         {active.fleet ? (
-          <p className="byline">From the fleet run of <time dateTime={active.publishedAt} className="num">{formatDate(active.publishedAt)}</time> on {rigLabel(active)}: {active.environment.machine}, {active.environment.chip}. A fleet run carries no verdict; the published benchmark's verdict covers its own run. <Link to={back}>Read the published benchmark</Link></p>
+          <p className="byline">From the fleet run of <time dateTime={active.publishedAt} className="num">{formatDate(active.publishedAt)}</time> on {rigLabel(active)}: {active.environment.machine}, {active.environment.chip}. The post covers the run of <time dateTime={post.publishedAt} className="num">{formatDate(post.publishedAt)}</time>. <Link to={back}>Read the post</Link></p>
         ) : (
-          <p className="byline">From the run of <time dateTime={active.publishedAt} className="num">{formatDate(active.publishedAt)}</time> on {active.environment.machine}, {active.environment.chip}. <Link to={back}>Read the published benchmark</Link></p>
+          <p className="byline">From the run of <time dateTime={active.publishedAt} className="num">{formatDate(active.publishedAt)}</time> on {active.environment.machine}, {active.environment.chip}. <Link to={back}>Read the post</Link></p>
         )}
       </header>
 
       {picked && picked.sections.length === 0 ? <p className="matchup-empty">No section ran two of the candidates you picked.</p> : null}
 
-      {picked && picked.sections.length > 0 ? (
+      {picked && card && picked.sections.length > 0 ? (
         <>
-          <section className="matchup-scorecard" aria-labelledby="scorecard-title">
-            <h2 id="scorecard-title">Scorecard</h2>
-            <Scorecard sections={picked.sections} repeats={benchmark.sectionSamples === "repeats"} caption="Mean of each section's samples for the candidates you picked. The best value in each column is marked in red." />
-          </section>
-
-          {picked.sections.map((section) => (
+          {picked.sections.map((section, index) => (
             <section className="benchmark-section" key={section.id} aria-labelledby={`section-${section.id}`}>
               <h2 id={`section-${section.id}`}>{section.title}</h2>
-              <p className="deck">{section.deck}</p>
               {section.tests?.length ? (
                 <div className="test-grid">
-                  {section.tests.map((test, index) => (
-                    <BarChart benchmark={{ ...benchmark, candidates: section.candidates }} test={test} index={index} key={test.id} />
+                  {section.tests.map((test, testIndex) => (
+                    <BarChart benchmark={{ ...benchmark, candidates: section.candidates }} test={test} index={testIndex} key={test.id} />
                   ))}
                 </div>
               ) : null}
+              <WinnerLine card={card} index={index} />
             </section>
           ))}
 
           {picked.omitted.length ? <p className="matchup-omitted">Not in this matchup: {picked.omitted.map((section) => section.title).join(", ")}. Fewer than two of the candidates you picked ran them.</p> : null}
+
+          <Conditions benchmark={{ ...benchmark, environment: active.environment, protocol: active.protocol }} />
+
+          <OverallTable sections={picked.sections} repeats={repeats} caption="Mean of each section's samples for the candidates you picked. The best value in each column is marked in red." trademarks={benchmark.trademarks} />
         </>
       ) : null}
 
-      {picked ? <Conditions benchmark={{ ...benchmark, environment: active.environment, protocol: active.protocol }} /> : null}
-
-      {flat ? <FlatTests benchmark={flat} /> : null}
-
-      <section className="matchup-limits" aria-labelledby="limits-title">
-        <h2 id="limits-title">What this does not prove</h2>
-        <ul>
-          {benchmark.limitations.map((limitation) => <li key={limitation}>{limitation}</li>)}
-        </ul>
-        <p className="limits-foot">Rerun it yourself: the runner and configuration are in the <a href={benchmark.runnerUrl ?? REPO_URL} target="_blank" rel="noreferrer">repository</a>, and the <Link to="/methodology/">methodology</Link> page covers what every run holds constant. Think a result is wrong? Open an issue with your rig and your samples.</p>
-        <p className="limits-foot"><Link to={back}>Read the published benchmark</Link></p>
-        {benchmark.trademarks ? <p className="limits-foot">{benchmark.trademarks.join(" ")}</p> : null}
-      </section>
+      {flat ? <FlatTests benchmark={flat} repeats={repeats} /> : null}
     </article>
   );
 }
 
-/** A benchmark without sections, narrowed to the pick: the same charts and hyperfine blocks, minus the summary sentence. */
-function FlatTests({ benchmark }: { benchmark: Benchmark }) {
+/** The matchup's last word: the scorecard for the pick, and nothing after it but the products' trademark notices. */
+function OverallTable({ sections, repeats, caption, trademarks }: { sections: BenchmarkSection[]; repeats: boolean; caption: string; trademarks: string[] | undefined }) {
+  return (
+    <section className="matchup-scorecard" aria-labelledby="scorecard-title">
+      <h2 id="scorecard-title">Scorecard</h2>
+      <Scorecard sections={sections} repeats={repeats} caption={caption} />
+      {trademarks ? <p className="limits-foot">{trademarks.join(" ")}</p> : null}
+    </section>
+  );
+}
+
+/**
+ * A benchmark without sections, narrowed to the pick: the same charts and hyperfine blocks, the winner by mean time per
+ * pass, then the conditions and a one-column scorecard.
+ */
+function FlatTests({ benchmark, repeats }: { benchmark: Benchmark; repeats: boolean }) {
   const tests = benchmarkTests(benchmark);
+  const timePerPass: BenchmarkSection = { id: "time-per-pass", title: "Time per pass", deck: "", unit: benchmark.unit, lowerIsBetter: benchmark.lowerIsBetter, verdict: benchmark.verdict, candidates: benchmark.candidates };
+  const card = scorecard([timePerPass], repeats);
 
   return (
-    <section className="tests" aria-labelledby="tests-title">
-      <h2 id="tests-title">Tests</h2>
-      {tests.length ? (
-        <div className="test-grid">
-          {tests.map((test, index) => <BarChart benchmark={benchmark} test={test} index={index} key={test.id} />)}
-        </div>
-      ) : (
-        <div className="test-single">
-          <BoxPlot benchmark={benchmark} index={0} />
-        </div>
-      )}
-      <details className="report-details">
-        <summary>Full report, as hyperfine prints it</summary>
-        <div className="report-grid">
-          {benchmark.candidates.map((candidate, index) => <ReportBlock benchmark={benchmark} candidate={candidate} index={index} key={candidate.id} />)}
-        </div>
-        <div className="report-actions">
-          <CopyReport benchmark={benchmark} summary={false} />
-        </div>
-      </details>
+    <>
+      <section className="tests" aria-labelledby="tests-title">
+        <h2 id="tests-title">Tests</h2>
+        {tests.length ? (
+          <div className="test-grid">
+            {tests.map((test, index) => <BarChart benchmark={benchmark} test={test} index={index} key={test.id} />)}
+          </div>
+        ) : (
+          <div className="test-single">
+            <BoxPlot benchmark={benchmark} index={0} />
+          </div>
+        )}
+        <WinnerLine card={card} index={0} />
+        <details className="report-details">
+          <summary>Full report, as hyperfine prints it</summary>
+          <div className="report-grid">
+            {benchmark.candidates.map((candidate, index) => <ReportBlock benchmark={benchmark} candidate={candidate} index={index} key={candidate.id} />)}
+          </div>
+          <div className="report-actions">
+            <CopyReport benchmark={benchmark} summary={false} />
+          </div>
+        </details>
+      </section>
+
       <Conditions benchmark={benchmark} />
-    </section>
+
+      <OverallTable sections={[timePerPass]} repeats={repeats} caption="Mean time per pass for the candidates you picked. The best value is marked in red." trademarks={benchmark.trademarks} />
+    </>
   );
 }
 
