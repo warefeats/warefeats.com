@@ -3,20 +3,12 @@ import { useCatalog } from "../catalog-context";
 import { Queue } from "../components/Queue";
 import { CatalogSkeleton, EmptyState, ErrorState } from "../components/States";
 import { benchmarkPath } from "../head";
-import { formatDate, formatRatio } from "../metrics";
+import { formatDate } from "../metrics";
 import type { CatalogEntry } from "../types";
 
-function groupByCategory(benchmarks: CatalogEntry[]): Array<[string, CatalogEntry[]]> {
-  const groups = new Map<string, CatalogEntry[]>();
-  const sorted = [...benchmarks].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
-
-  for (const benchmark of sorted) {
-    const group = groups.get(benchmark.category) ?? [];
-    group.push(benchmark);
-    groups.set(benchmark.category, group);
-  }
-
-  return [...groups.entries()];
+/** Every post on one timeline, newest first, whatever its category. */
+function timeline(posts: CatalogEntry[]): CatalogEntry[] {
+  return [...posts].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
 }
 
 export function Home() {
@@ -34,38 +26,22 @@ export function Home() {
       {state.status === "ready" && state.index.benchmarks.length === 0 ? <EmptyState /> : null}
 
       {state.status === "ready" && state.index.benchmarks.length > 0 ? (
-        <section className="index" aria-labelledby="index-title">
+        <section className="timeline" aria-labelledby="timeline-title">
           <div className="section-head">
-            <h2 id="index-title">Published</h2>
-            <p>Newest first inside each category. The ratio is the mean of the fastest tool against the slower one, with its propagated σ.</p>
+            <h2 id="timeline-title">Posts</h2>
+            <p>Newest first.</p>
           </div>
-          {groupByCategory(state.index.benchmarks).map(([category, benchmarks]) => (
-            <div className="index-group" key={category}>
-              <h3 className="index-category">{category}</h3>
-              <ol className="index-list">
-                {benchmarks.map((benchmark) => {
-                  const lead = benchmark.lead;
-
-                  return (
-                    <li className="index-row" key={benchmark.id}>
-                      <span className="index-date num">{formatDate(benchmark.publishedAt)}</span>
-                      <Link className="index-title" to={benchmarkPath(benchmark.slug)}>{benchmark.title}</Link>
-                      <span className="index-summary">
-                        {lead ? (
-                          <>
-                            <strong>{lead.winner.name}</strong> ran <span className="num">{formatRatio(lead)}</span> times faster than {lead.other.name}
-                          </>
-                        ) : (
-                          benchmark.verdictHeadline
-                        )}
-                      </span>
-                      <span className="index-rig">{benchmark.chip} · <span className="num">{benchmark.runs}</span> runs</span>
-                    </li>
-                  );
-                })}
-              </ol>
-            </div>
-          ))}
+          <ol className="timeline-list">
+            {timeline(state.index.benchmarks).map((post) => (
+              <li className="timeline-entry" key={post.id}>
+                <p className="timeline-meta">
+                  <time dateTime={post.publishedAt} className="num">{formatDate(post.publishedAt)}</time> <span aria-hidden="true">·</span> {post.category} <span aria-hidden="true">·</span> {post.chip}
+                </p>
+                <h3 className="timeline-title"><Link to={benchmarkPath(post.slug)}>{post.title}</Link></h3>
+                <p className="timeline-deck">{post.deck}</p>
+              </li>
+            ))}
+          </ol>
         </section>
       ) : null}
 

@@ -9,6 +9,7 @@ import { Conditions } from "../src/components/Conditions";
 import { benchmarkSlug, headTags, isMatchupPath, matchupPath, normalizePath, prerenderPaths, robotsTxt, routeMeta, sitemapPaths, sitemapXml } from "../src/head";
 import { applyPick, candidateUniverse, matchupField, matchupHeading, pickerVersion, pickFlat, pickParam, readPick } from "../src/matchup";
 import { axisTicks, benchmarkTests, fiveNumber, formatVersion, reportText, samplePosition, scorecard, standardDeviation, summarize } from "../src/metrics";
+import { render } from "../src/entry-server";
 import { runViews } from "../src/runs";
 import type { Benchmark, BenchmarkCatalog } from "../src/types";
 
@@ -538,6 +539,19 @@ describe("catalog validation", () => {
     for (const section of proxy!.sections!) {
       expect(section.candidates.length).toBeGreaterThanOrEqual(2);
     }
+  });
+});
+
+describe("home", () => {
+  test("lists every post on one timeline, newest first, whatever its category", async () => {
+    const index = toCatalogIndex(await loadCatalog());
+    const html = render("/", index).html.replaceAll("<!-- -->", "");
+    const titles = [...html.matchAll(/class="timeline-title"><a [^>]*>([^<]+)<\/a>/g)].map((match) => match[1]);
+    const newestFirst = [...index.benchmarks].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt)).map((post) => post.title.replaceAll("&", "&amp;"));
+
+    expect(titles).toEqual(newestFirst);
+    expect(new Set(index.benchmarks.map((post) => post.category)).size).toBeGreaterThan(1);
+    expect(html).toContain(`<h2 id="timeline-title">Posts</h2>`);
   });
 });
 
