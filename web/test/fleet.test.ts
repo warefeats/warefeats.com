@@ -11,7 +11,7 @@ import { WinnerLine } from "../src/components/WinnerLine";
 import { render } from "../src/entry-server";
 import { benchmarkPath, postPath, prerenderPaths, routeMeta, sitemapPaths } from "../src/head";
 import { candidateUniverse, readPick } from "../src/matchup";
-import { scorecard } from "../src/metrics";
+import { formatValue, scorecard } from "../src/metrics";
 import { postView } from "../src/posts";
 import { activeRun, changedCandidates, newestRun, rigLabel, runChoices, runViews, toggleLabels, versionedName } from "../src/runs";
 import type { Benchmark, BenchmarkRun } from "../src/types";
@@ -329,8 +329,10 @@ describe("pages with fleet runs", () => {
 describe("the matchup reads like a post without its prose", () => {
   /** Markup as a reader reads it: tags dropped, entities and spacing tidied. */
   const text = (html: string) => html.replaceAll("<!-- -->", "").replace(/<[^>]+>/g, " ").replaceAll("&#x27;", "'").replace(/\s+/g, " ").replace(/ ([,.])/g, "$1").trim();
+  /** A benchmark's page drawn from its authored runs alone, so what it shows doesn't change when the next fleet run lands. */
   const matchupOf = async (slug: string) => {
-    const benchmark = await cached(slug);
+    const { entry, meta, runs } = unbuild(await cached(slug));
+    const benchmark = buildBenchmark(entry, { ...meta, fleetRuns: [] }, runs, []);
     const catalog = await assembleCatalog();
     return render(benchmarkPath(slug), toCatalogIndex(catalog), benchmark).html.replaceAll("<!-- -->", "");
   };
@@ -349,7 +351,7 @@ describe("the matchup reads like a post without its prose", () => {
     expect([...order].sort((a, b) => a - b)).toEqual(order);
 
     const winners = [...html.matchAll(/<p class="section-winner">(.*?)<\/p>/g)].map((match) => text(match[1]!));
-    expect(winners).toEqual(["Winner Mapbox GL JS 1.13 (192.6 ms)", "Winner MapLibre GL JS 6 (2.9 ms)", "Winner MapLibre GL JS 5 (906.7 MB)"]);
+    expect(winners).toEqual(["Winner Mapbox GL JS 1.13 (192.7 ms)", "Winner MapLibre GL JS 5 (3.1 ms)", "Winner MapLibre GL JS 5 (918.6 MB)"]);
     expect(html.lastIndexOf('class="section-winner"')).toBeLessThan(at('id="scorecard-title"'));
 
     const benchmark = await cached(SLUG);
@@ -359,12 +361,15 @@ describe("the matchup reads like a post without its prose", () => {
   });
 
   test("a lead inside the run's noise is a tie that names every candidate inside it", async () => {
-    const morning = runViews(await cached(SLUG)).find((run) => run.id === "2026-10-12-radeon-680m-win11")!;
-    const card = scorecard(morning.sections!, true);
-    const frame = card.columns.findIndex((column) => column.id === "frame-time");
+    // The post's frame-time section with MapLibre 6 a hundredth of a millisecond ahead of MapLibre 5 on every pass.
+    const frame = (await cached(SLUG)).sections!.find((section) => section.id === "frame-time")!;
+    const five = frame.candidates.find((candidate) => candidate.id === "maplibre-gl-5")!;
+    const ahead = five.samplesMs.map((sample) => sample - 0.01);
+    const six = { ...frame.candidates.find((candidate) => candidate.id === "maplibre-gl-6")!, samplesMs: ahead, statistics: { ...five.statistics, meanMs: five.statistics.meanMs - 0.01 } };
+    const card = scorecard([{ ...frame, candidates: frame.candidates.map((candidate) => (candidate.id === "maplibre-gl-6" ? six : candidate)) }], true);
 
-    expect(card.columns[frame]!.tied).toBe(true);
-    expect(text(renderToStaticMarkup(createElement(WinnerLine, { card, index: frame })))).toBe("Tie MapLibre GL JS 6 (3.1 ms) and MapLibre GL JS 5 (3.2 ms), inside this run's noise");
+    expect(card.columns[0]!.tied).toBe(true);
+    expect(text(renderToStaticMarkup(createElement(WinnerLine, { card, index: 0 })))).toBe(`Tie MapLibre GL JS 6 (${formatValue(six.statistics.meanMs, "ms")}) and MapLibre GL JS 5 (${formatValue(five.statistics.meanMs, "ms")}), inside this run's noise`);
   });
 
   test("a benchmark without sections names its winner by time per pass and ends on a one-column scorecard", async () => {
@@ -395,9 +400,15 @@ describe("later posts", () => {
     limitations: ["One rig."],
     ...extra,
   });
-  /** The cached MapLibre benchmark, its real fleet runs included, with the given later posts. */
+  /** The cached MapLibre benchmark's authored runs and one made-up 6.13.0 fleet run, the newest, which the later post tells. */
+  async function inputs() {
+    const base = await cached(SLUG);
+    const { entry, meta, runs } = unbuild(base);
+    const fleet = [fleetRun(base, "2026-10-12", { id: "2026-10-12-radeon-680m-win11-2" })];
+    return { entry, meta: { ...meta, fleetRuns: fleet.map((run) => `runs/${run.id}.json`) }, runs, fleet };
+  }
   async function withPosts(posts: PostFile[]): Promise<Benchmark> {
-    const { entry, meta, runs, fleet } = unbuild(await cached(SLUG));
+    const { entry, meta, runs, fleet } = await inputs();
     return buildBenchmark(entry, { ...meta, posts: posts.map((post) => `posts/${post.slug}.json`) }, runs, fleet, posts);
   }
   async function site(benchmark: Benchmark) {
@@ -411,7 +422,7 @@ describe("later posts", () => {
     const benchmark = await withPosts([later()]);
     expect(benchmark.posts).toEqual([{ ...later(), schemaVersion: undefined }].map(({ schemaVersion: _, ...post }) => post));
 
-    const { runs, fleet } = unbuild(await cached(SLUG));
+    const { entry, meta, runs, fleet } = await inputs();
     const all = [...runs, ...fleet];
     const refuses = (extra: Partial<PostFile>, message: string) => expect(() => validatePost(SLUG, later(extra), all)).toThrow(message);
     refuses({ slug: "2026-10-13-maplibre-gl-js-5-vs-6" }, "Invalid post");
@@ -422,7 +433,6 @@ describe("later posts", () => {
     refuses({ sections: { startup: "Startup headline", memory: "Memory headline" } }, "section frame-time");
     refuses({ sections: { ...later().sections, extra: "Extra" } }, "section extra");
     refuses({ publishedAt: "2026-10-11", slug: "2026-10-11-web-map-renderers-maplibre-gl-js-5-vs-6" }, "before its run");
-    const { entry, meta } = unbuild(await cached(SLUG));
     expect(() => buildBenchmark(entry, meta, runs, fleet, [later(), later()])).toThrow("two posts");
   });
 
