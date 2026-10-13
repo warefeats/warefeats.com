@@ -21,16 +21,21 @@ export interface RouteMeta {
   image: string;
 }
 
+/** The index of benchmark pages. */
+export const BENCHMARKS_PATH = "/benchmarks/";
+
+/** A benchmark's page, the matchup over its runs, named for its category of tools and never its products (ADR 0004). */
 export function benchmarkPath(slug: string): string {
   return `/benchmarks/${slug}/`;
 }
 
-export function matchupPath(slug: string): string {
-  return `/benchmarks/${slug}/matchup/`;
+/** A post's page, named for its date, its benchmark's category and the products it compares (ADR 0004). */
+export function postPath(post: string): string {
+  return `/posts/${post}/`;
 }
 
-export function isMatchupPath(path: string): boolean {
-  return /^\/benchmarks\/[^/]+\/matchup\/$/.test(normalizePath(path));
+export function isBenchmarkPath(path: string): boolean {
+  return /^\/benchmarks\/[^/]+\/$/.test(normalizePath(path));
 }
 
 export function normalizePath(path: string): string {
@@ -42,9 +47,15 @@ export function normalizePath(path: string): string {
   return pathname.endsWith("/") ? pathname : `${pathname}/`;
 }
 
-/** The slug of the benchmark whose data a page draws: its own page or its matchup. */
-export function benchmarkSlug(path: string): string | undefined {
-  return /^\/benchmarks\/([^/]+)\/(?:matchup\/)?$/.exec(normalizePath(path))?.[1];
+/** The benchmark whose data a page draws: a benchmark page's own, or the one a post belongs to. */
+export function pageBenchmark(path: string, index: CatalogIndex | undefined): CatalogEntry | undefined {
+  const pathname = normalizePath(path);
+  const slug = /^\/benchmarks\/([^/]+)\/$/.exec(pathname)?.[1];
+  if (slug) {
+    return index?.benchmarks.find((entry) => entry.slug === slug);
+  }
+  const post = /^\/posts\/([^/]+)\/$/.exec(pathname)?.[1];
+  return post ? index?.benchmarks.find((entry) => entry.post === post) : undefined;
 }
 
 export function routeMeta(path: string, index?: CatalogIndex): RouteMeta {
@@ -62,16 +73,19 @@ export function routeMeta(path: string, index?: CatalogIndex): RouteMeta {
     return { path: pathname, title: `About | ${SITE_NAME}`, description: "warefeats is a one-person benchmark lab for developer tools, run on a named machine with an open-source runner.", type: "website", status: 200, image: SITE_CARD };
   }
 
-  const slug = benchmarkSlug(pathname);
-  const benchmark = slug ? index?.benchmarks.find((entry) => entry.slug === slug) : undefined;
+  if (pathname === BENCHMARKS_PATH) {
+    return { path: pathname, title: `Benchmarks | ${SITE_NAME}`, description: "Every benchmark's runs on one page each: the charts, a winner per section, and the scorecard, for the candidates you pick.", type: "website", status: 200, image: SITE_CARD };
+  }
 
-  if (benchmark && isMatchupPath(pathname)) {
-    if (benchmark.matchup) {
-      // A matchup redraws its benchmark's numbers, so search engines index the benchmark page (ADR 0001).
-      return { path: pathname, canonical: benchmarkPath(benchmark.slug), title: matchupTitle(benchmark), description: clipDescription(`Pick any of the ${benchmark.matchup.candidates} candidates in ${benchmark.title} and compare them on one rig. No verdict, just the numbers.`), type: "website", status: 200, image: `${SITE_ORIGIN}/og/matchup/${benchmark.slug}.png` };
-    }
-  } else if (benchmark) {
-    return { path: pathname, title: benchmarkTitle(benchmark), description: benchmarkDescription(benchmark), type: "article", publishedAt: benchmark.publishedAt, status: 200, image: `${SITE_ORIGIN}/og/${benchmark.slug}.png` };
+  const benchmark = pageBenchmark(pathname, index);
+
+  if (benchmark && isBenchmarkPath(pathname)) {
+    // A benchmark page redraws numbers its post publishes, so search engines index the post (ADR 0001, ADR 0004).
+    return { path: pathname, canonical: postPath(benchmark.post), title: matchupTitle(benchmark), description: clipDescription(`${benchmark.title}: the charts, a winner for each section, and the scorecard, without the prose.`), type: "website", status: 200, image: `${SITE_ORIGIN}/og/benchmarks/${benchmark.slug}.png` };
+  }
+
+  if (benchmark) {
+    return { path: pathname, title: benchmarkTitle(benchmark), description: benchmarkDescription(benchmark), type: "article", publishedAt: benchmark.publishedAt, status: 200, image: `${SITE_ORIGIN}/og/posts/${benchmark.post}.png` };
   }
 
   return { path: pathname, title: `Not found | ${SITE_NAME}`, description: DEFAULT_DESCRIPTION, type: "website", status: 404, image: SITE_CARD };
@@ -156,15 +170,14 @@ export function headTags(meta: RouteMeta): string {
   return tags.join("\n    ");
 }
 
-/** Every page the build writes: the fixed pages, each benchmark, and each benchmark's matchup. */
+/** Every page the build writes: the fixed pages, each post, and each benchmark's page. */
 export function prerenderPaths(index: CatalogIndex): string[] {
-  const matchups = index.benchmarks.filter((benchmark) => benchmark.matchup).map((benchmark) => matchupPath(benchmark.slug));
-  return [...sitemapPaths(index), ...matchups];
+  return [...sitemapPaths(index), ...index.benchmarks.map((benchmark) => benchmarkPath(benchmark.slug))];
 }
 
-/** The pages search engines should index. Matchups point their canonical URL at their benchmark, so they stay out. */
+/** The pages search engines should index. A benchmark page points its canonical URL at its post, so it stays out. */
 export function sitemapPaths(index: CatalogIndex): string[] {
-  return ["/", "/methodology/", "/about/", ...index.benchmarks.map((benchmark) => benchmarkPath(benchmark.slug))];
+  return ["/", BENCHMARKS_PATH, "/methodology/", "/about/", ...index.benchmarks.map((benchmark) => postPath(benchmark.post))];
 }
 
 /** Every prerendered page by its canonical URL. */

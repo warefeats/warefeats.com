@@ -2,7 +2,7 @@ import { Link } from "react-router";
 import { useCatalog } from "../catalog-context";
 import { Queue } from "../components/Queue";
 import { CatalogSkeleton, EmptyState, ErrorState } from "../components/States";
-import { benchmarkPath } from "../head";
+import { postPath } from "../head";
 import { formatDate } from "../metrics";
 import type { CatalogEntry } from "../types";
 
@@ -37,7 +37,7 @@ export function Home() {
                 <p className="timeline-meta">
                   <time dateTime={post.publishedAt} className="num">{formatDate(post.publishedAt)}</time> <span aria-hidden="true">·</span> {post.category} <span aria-hidden="true">·</span> {post.chip}
                 </p>
-                <h3 className="timeline-title"><Link to={benchmarkPath(post.slug)}>{post.title}</Link></h3>
+                <h3 className="timeline-title"><Link to={postPath(post.post)}>{post.title}</Link></h3>
                 <p className="timeline-deck">{post.deck}</p>
               </li>
             ))}

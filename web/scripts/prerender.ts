@@ -2,7 +2,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseBenchmark, parseCatalogIndex } from "../src/catalog";
-import { benchmarkSlug, robotsTxt, sitemapPaths, sitemapXml } from "../src/head";
+import { pageBenchmark, robotsTxt, sitemapPaths, sitemapXml } from "../src/head";
 import type { Benchmark, CatalogIndex } from "../src/types";
 
 interface ServerEntry {
@@ -31,7 +31,7 @@ for (const placeholder of ["<!--app-head-->", "<!--app-html-->", "<!--app-data--
 const paths = entry.prerenderPaths(index);
 
 for (const path of paths) {
-  const slug = benchmarkSlug(path);
+  const slug = pageBenchmark(path, index)?.slug;
   const benchmark = slug ? parseBenchmark(JSON.parse(await readFile(join(dist, "data", "benchmarks", `${slug}.json`), "utf8"))) : undefined;
   const { html, head } = entry.render(path, index, benchmark);
   const page = template

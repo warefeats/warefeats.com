@@ -1,6 +1,7 @@
 {
   "id": "proxy-hls-2026-08",
-  "slug": "http-caching-proxies-hls",
+  "slug": "http-caching-proxies",
+  "post": "2026-08-29-http-caching-proxies-varnish-vs-vinyl-vs-nginx",
   "category": "Caching proxies",
   "title": "HTTP caching proxies for HLS delivery",
   "deck": "Varnish, Vinyl, and NGINX across four HLS workloads: hit-path TTFB, segment serve, miss-storm coalescing, and origin-flap grace.",

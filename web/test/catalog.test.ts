@@ -6,7 +6,7 @@ import { validateRef, validateRunPath } from "../scripts/sync";
 import { parseBenchmark, parseCatalog, parseCatalogIndex, toCatalogIndex } from "../src/catalog";
 import { BarChart } from "../src/components/BarChart";
 import { Conditions } from "../src/components/Conditions";
-import { benchmarkSlug, headTags, isMatchupPath, matchupPath, normalizePath, prerenderPaths, robotsTxt, routeMeta, sitemapPaths, sitemapXml } from "../src/head";
+import { benchmarkPath, BENCHMARKS_PATH, headTags, isBenchmarkPath, normalizePath, pageBenchmark, postPath, prerenderPaths, robotsTxt, routeMeta, sitemapPaths, sitemapXml } from "../src/head";
 import { applyPick, candidateUniverse, matchupField, matchupHeading, pickerVersion, pickFlat, pickParam, readPick } from "../src/matchup";
 import { axisTicks, benchmarkTests, fiveNumber, formatTick, formatValue, formatVersion, fittedTicks, tickLabels, reportText, samplePosition, scorecard, standardDeviation, summarize } from "../src/metrics";
 import { render } from "../src/entry-server";
@@ -248,6 +248,7 @@ describe("catalog validation", () => {
       benchmarks: [{
         id: "proxy-bench-test",
         slug: "proxy-bench-test",
+        post: "2026-08-29-proxy-bench-test-a-vs-b",
         category: "Caching proxies",
         title: "Test",
         deck: "Test benchmark",
@@ -279,6 +280,7 @@ describe("catalog validation", () => {
       benchmarks: [{
         id: "test-sections",
         slug: "test-sections",
+        post: "2026-08-29-test-sections-a-vs-b",
         category: "Test",
         title: "Sections test",
         deck: "A test",
@@ -317,6 +319,7 @@ describe("catalog validation", () => {
       benchmarks: [{
         id: "replicated",
         slug: "replicated",
+        post: "2026-08-29-replicated-a-vs-b",
         category: "Test",
         title: "Replicated",
         deck: "Test",
@@ -343,6 +346,7 @@ describe("catalog validation", () => {
       benchmarks: [{
         id: "replicated-section",
         slug: "replicated-section",
+        post: "2026-08-29-replicated-section-a-vs-b",
         category: "Test",
         title: "Replicated Section",
         deck: "Test",
@@ -378,6 +382,7 @@ describe("catalog validation", () => {
       benchmarks: [{
         id: "single-run",
         slug: "single-run",
+        post: "2026-08-29-single-run-a-vs-b",
         category: "Test",
         title: "Single",
         deck: "Test",
@@ -405,6 +410,7 @@ describe("catalog validation", () => {
       benchmarks: [{
         id: "multi-env",
         slug: "multi-env",
+        post: "2026-08-29-multi-env-a-vs-b",
         category: "Test",
         title: "Multi-env test",
         deck: "A benchmark with two environment runs",
@@ -454,6 +460,7 @@ describe("catalog validation", () => {
       benchmarks: [{
         id: "no-runs",
         slug: "no-runs",
+        post: "2026-08-29-no-runs-a-vs-b",
         category: "Test",
         title: "No runs",
         deck: "Test",
@@ -487,6 +494,7 @@ describe("catalog validation", () => {
         {
           id: "gpu-rig",
           slug: "gpu-rig",
+          post: "2026-08-29-gpu-rig-a-vs-b",
           category: "Test",
           title: "GPU rig",
           deck: "Test",
@@ -505,6 +513,7 @@ describe("catalog validation", () => {
         {
           id: "cpu-rig",
           slug: "cpu-rig",
+          post: "2026-08-29-cpu-rig-a-vs-b",
           category: "Test",
           title: "CPU rig",
           deck: "Test",
@@ -588,34 +597,49 @@ describe("routes", () => {
     expect(normalizePath("/about/?x=1")).toBe("/about/");
   });
 
-  test("prerenders one page per benchmark plus the fixed pages", async () => {
+  test("prerenders each post and each benchmark page, plus the fixed pages", async () => {
     const catalog = toCatalogIndex(await loadCatalog());
     const paths = prerenderPaths(catalog);
-    expect(paths).toContain("/");
-    expect(paths).toContain("/methodology/");
-    expect(paths).toContain("/about/");
-    expect(paths).toContain("/benchmarks/eslint-vs-biome-javascript-lint/");
-    expect(paths).toContain("/benchmarks/http-caching-proxies-hls/");
+    expect(paths.slice(0, 4)).toEqual(["/", "/benchmarks/", "/methodology/", "/about/"]);
+    expect(paths).toContain("/posts/2026-08-26-js-linter-tools-eslint-vs-biome/");
+    expect(paths).toContain("/benchmarks/js-linter-tools/");
+    expect(paths).toContain("/benchmarks/http-caching-proxies/");
+    expect(paths).toHaveLength(4 + 2 * catalog.benchmarks.length);
   });
 
-  test("builds benchmark metadata from the catalog", async () => {
+  test("names a post by its date, its category and its products, and a benchmark page by its category alone", async () => {
     const catalog = toCatalogIndex(await loadCatalog());
-    const meta = routeMeta("/benchmarks/eslint-vs-biome-javascript-lint", catalog);
+
+    for (const entry of catalog.benchmarks) {
+      expect(entry.post.startsWith(`${entry.publishedAt}-${entry.slug}-`)).toBe(true);
+      expect(pageBenchmark(postPath(entry.post), catalog)).toBe(entry);
+      expect(pageBenchmark(benchmarkPath(entry.slug), catalog)).toBe(entry);
+    }
+    expect(catalog.benchmarks.map((entry) => entry.slug).sort()).toEqual(["archive-tile-servers", "desktop-shells", "http-caching-proxies", "js-bundlers", "js-linter-tools", "kv-stores", "vector-tile-servers", "web-map-renderers"]);
+    expect(pageBenchmark("/posts/nope/", catalog)).toBeUndefined();
+  });
+
+  test("builds post metadata from the catalog", async () => {
+    const catalog = toCatalogIndex(await loadCatalog());
+    const meta = routeMeta("/posts/2026-08-26-js-linter-tools-eslint-vs-biome", catalog);
 
     expect(meta.status).toBe(200);
     expect(meta.title).toBe("ESLint vs Biome | warefeats");
     expect(meta.description).toContain("Biome 2.2.2 ran");
-    expect(headTags(meta)).toContain('<link rel="canonical" href="https://warefeats.com/benchmarks/eslint-vs-biome-javascript-lint/" />');
-    expect(meta.image).toBe("https://warefeats.com/og/eslint-vs-biome-javascript-lint.png");
-    expect(headTags(meta)).toContain('<meta property="og:image" content="https://warefeats.com/og/eslint-vs-biome-javascript-lint.png" />');
+    expect(headTags(meta)).toContain('<link rel="canonical" href="https://warefeats.com/posts/2026-08-26-js-linter-tools-eslint-vs-biome/" />');
+    expect(meta.image).toBe("https://warefeats.com/og/posts/2026-08-26-js-linter-tools-eslint-vs-biome.png");
+    expect(headTags(meta)).toContain('<meta property="og:image" content="https://warefeats.com/og/posts/2026-08-26-js-linter-tools-eslint-vs-biome.png" />');
   });
 
-  test("marks unknown routes as not found", async () => {
+  test("marks unknown routes as not found, old benchmark URLs included (the CDN redirects those first)", async () => {
     const catalog = toCatalogIndex(await loadCatalog());
     const meta = routeMeta("/benchmarks/nope", catalog);
 
     expect(meta.status).toBe(404);
     expect(headTags(meta)).toContain('name="robots" content="noindex"');
+    expect(routeMeta("/posts/nope/", catalog).status).toBe(404);
+    expect(routeMeta("/benchmarks/eslint-vs-biome-javascript-lint/", catalog).status).toBe(404);
+    expect(routeMeta(BENCHMARKS_PATH, catalog).status).toBe(200);
   });
 
   test("fits every title and description into a search result", async () => {
@@ -631,44 +655,45 @@ describe("routes", () => {
   test("drops the site name from a title too long to carry it", async () => {
     const catalog = toCatalogIndex(await loadCatalog());
 
-    expect(routeMeta("/benchmarks/desktop-shells/", catalog).title).toBe("Tauri vs Electron | warefeats");
-    expect(routeMeta("/benchmarks/pmtiles-mbtiles-tile-servers/", catalog).title).toBe("Martin vs go-pmtiles vs tileserver-gl vs mbtileserver vs BBOX");
+    expect(routeMeta("/posts/2026-09-10-desktop-shells-tauri-vs-electron/", catalog).title).toBe("Tauri vs Electron | warefeats");
+    expect(routeMeta("/posts/2026-09-08-archive-tile-servers-martin-vs-go-pmtiles-vs-tileserver-gl-vs-mbtileserver-vs-bbox/", catalog).title).toBe("Martin vs go-pmtiles vs tileserver-gl vs mbtileserver vs BBOX");
   });
 
   test("keeps a deck that fits and cuts a long verdict at its last clause break that fits", async () => {
     const catalog = toCatalogIndex(await loadCatalog());
 
-    expect(routeMeta("/benchmarks/redis-vs-valkey-vs-dragonfly-kv/", catalog).description).toBe(catalog.benchmarks.find((entry) => entry.slug === "redis-vs-valkey-vs-dragonfly-kv")!.deck);
-    expect(routeMeta("/benchmarks/pmtiles-mbtiles-tile-servers/", catalog).description).toBe("Martin served 12,600 tiles a second at 100 clients from the PMTiles archive, more than any other server from either format.");
+    expect(routeMeta("/posts/2026-08-31-kv-stores-redis-vs-valkey-vs-dragonfly/", catalog).description).toBe(catalog.benchmarks.find((entry) => entry.slug === "kv-stores")!.deck);
+    expect(routeMeta("/posts/2026-09-08-archive-tile-servers-martin-vs-go-pmtiles-vs-tileserver-gl-vs-mbtileserver-vs-bbox/", catalog).description).toBe("Martin served 12,600 tiles a second at 100 clients from the PMTiles archive, more than any other server from either format.");
   });
 
-  test("lists every page that is its own canonical in the sitemap, and no matchup", async () => {
+  test("lists every page that is its own canonical in the sitemap, and no benchmark page", async () => {
     const catalog = toCatalogIndex(await loadCatalog());
     const sitemap = sitemapXml(sitemapPaths(catalog));
 
-    expect(sitemap.match(/<loc>/g)).toHaveLength(prerenderPaths(catalog).filter((path) => !isMatchupPath(path)).length);
-    expect(sitemap).not.toContain("/matchup/");
+    expect(sitemap.match(/<loc>/g)).toHaveLength(prerenderPaths(catalog).filter((path) => !isBenchmarkPath(path)).length);
+    expect(sitemap).not.toContain("/benchmarks/js-linter-tools/");
+    expect(sitemap).toContain("<loc>https://warefeats.com/benchmarks/</loc>");
     expect(sitemap).toContain("<loc>https://warefeats.com/methodology/</loc>");
-    expect(sitemap).toContain("<loc>https://warefeats.com/benchmarks/desktop-shells/</loc>");
+    expect(sitemap).toContain("<loc>https://warefeats.com/posts/2026-09-10-desktop-shells-tauri-vs-electron/</loc>");
     expect(robotsTxt()).toContain("Sitemap: https://warefeats.com/sitemap.xml");
   });
 });
 
 describe("matchups", () => {
-  const SLUGS = ["http-caching-proxies-hls", "vite-vs-esbuild-vs-tsup-library-build", "redis-vs-valkey-vs-dragonfly-kv", "postgis-vector-tile-servers", "maplibre-gl-js-vs-mapbox-gl-js", "pmtiles-mbtiles-tile-servers"];
+  const SLUGS = ["http-caching-proxies", "js-bundlers", "kv-stores", "vector-tile-servers", "web-map-renderers", "archive-tile-servers"];
 
   test("go to benchmarks with three or more candidates in a run", async () => {
     const catalog = await loadCatalog();
     const withMatchup = catalog.benchmarks.filter((benchmark) => matchupField(benchmark) !== undefined).map((benchmark) => benchmark.slug);
 
     expect(withMatchup.sort()).toEqual([...SLUGS].sort());
-    expect(toCatalogIndex(catalog).benchmarks.find((entry) => entry.slug === "postgis-vector-tile-servers")!.matchup).toEqual({ candidates: 7 });
+    expect(toCatalogIndex(catalog).benchmarks.find((entry) => entry.slug === "vector-tile-servers")!.matchup).toEqual({ candidates: 7 });
     expect(toCatalogIndex(catalog).benchmarks.find((entry) => entry.slug === "desktop-shells")!.matchup).toBeUndefined();
   });
 
   test("pick from every candidate in the run, once each, in run order", async () => {
     const catalog = await loadCatalog();
-    const proxies = catalog.benchmarks.find((benchmark) => benchmark.slug === "http-caching-proxies-hls")!;
+    const proxies = catalog.benchmarks.find((benchmark) => benchmark.slug === "http-caching-proxies")!;
     const universe = candidateUniverse(runViews(proxies)[0]!);
 
     expect(universe.map((candidate) => candidate.id)).toEqual(["varnish-plaintext", "varnish-tls-inprocess", "varnish-proxyv2-haproxy", "vinyl-plaintext", "vinyl-proxyv2-haproxy", "nginx-plaintext", "nginx-tls-inprocess", "nginx-proxyv2-haproxy"]);
@@ -676,7 +701,7 @@ describe("matchups", () => {
 
   test("read a pick in run order, and fall back to the whole field when it names fewer than two", async () => {
     const catalog = await loadCatalog();
-    const universe = candidateUniverse(runViews(catalog.benchmarks.find((benchmark) => benchmark.slug === "postgis-vector-tile-servers")!)[0]!);
+    const universe = candidateUniverse(runViews(catalog.benchmarks.find((benchmark) => benchmark.slug === "vector-tile-servers")!)[0]!);
 
     expect(readPick(null, universe)).toEqual({ ids: universe.map((candidate) => candidate.id), full: true, ignored: false });
     expect(readPick("tegola,martin", universe)).toEqual({ ids: ["martin", "tegola"], full: false, ignored: false });
@@ -688,7 +713,7 @@ describe("matchups", () => {
 
   test("drop the sections fewer than two picked candidates ran, and recompute best marks from what stays", async () => {
     const catalog = await loadCatalog();
-    const proxies = catalog.benchmarks.find((benchmark) => benchmark.slug === "http-caching-proxies-hls")!;
+    const proxies = catalog.benchmarks.find((benchmark) => benchmark.slug === "http-caching-proxies")!;
     const sections = proxies.sections!;
 
     const plaintext = applyPick(sections, ["varnish-plaintext", "nginx-plaintext"]);
@@ -707,7 +732,7 @@ describe("matchups", () => {
 
   test("name the fastest picked candidate as the winner of a benchmark without sections", async () => {
     const catalog = await loadCatalog();
-    const bundlers = catalog.benchmarks.find((benchmark) => benchmark.slug === "vite-vs-esbuild-vs-tsup-library-build")!;
+    const bundlers = catalog.benchmarks.find((benchmark) => benchmark.slug === "js-bundlers")!;
     const picked = pickFlat(bundlers, runViews(bundlers)[0]!, ["vite", "tsup"]);
 
     expect(picked.candidates.map((candidate) => candidate.id)).toEqual(["vite", "tsup"]);
@@ -718,7 +743,7 @@ describe("matchups", () => {
 
   test("mark no winner when the picked mean and median leaders disagree, and chart only the run's own tests", async () => {
     const catalog = await loadCatalog();
-    const bundlers = catalog.benchmarks.find((benchmark) => benchmark.slug === "vite-vs-esbuild-vs-tsup-library-build")!;
+    const bundlers = catalog.benchmarks.find((benchmark) => benchmark.slug === "js-bundlers")!;
     const [vite, tsup] = ["vite", "tsup"].map((id) => bundlers.candidates.find((candidate) => candidate.id === id)!);
     const split = { ...bundlers, candidates: [{ ...vite!, statistics: { ...vite!.statistics, meanMs: 10, medianMs: 20 } }, { ...tsup!, statistics: { ...tsup!.statistics, meanMs: 12, medianMs: 15 } }] };
     const test = { id: "t", title: "T", description: "T", unit: "ms", lowerIsBetter: true, results: [{ candidateId: "vite", value: 1 }, { candidateId: "tsup", value: 2 }] };
@@ -732,8 +757,8 @@ describe("matchups", () => {
 
   test("leave no section when the picked candidates never ran in one together", async () => {
     const catalog = await loadCatalog();
-    const archive = catalog.benchmarks.find((benchmark) => benchmark.slug === "pmtiles-mbtiles-tile-servers")!;
-    const postgis = catalog.benchmarks.find((benchmark) => benchmark.slug === "postgis-vector-tile-servers")!;
+    const archive = catalog.benchmarks.find((benchmark) => benchmark.slug === "archive-tile-servers")!;
+    const postgis = catalog.benchmarks.find((benchmark) => benchmark.slug === "vector-tile-servers")!;
     const mixed = [...archive.sections!, ...postgis.sections!];
 
     expect(applyPick(mixed, ["martin-pmtiles", "martin"]).sections).toEqual([]);
@@ -742,7 +767,7 @@ describe("matchups", () => {
 
   test("head the page with the picked names, or the benchmark title for the whole field", async () => {
     const catalog = await loadCatalog();
-    const bundlers = catalog.benchmarks.find((benchmark) => benchmark.slug === "vite-vs-esbuild-vs-tsup-library-build")!;
+    const bundlers = catalog.benchmarks.find((benchmark) => benchmark.slug === "js-bundlers")!;
     const universe = candidateUniverse(runViews(bundlers)[0]!);
 
     expect(matchupHeading(readPick(null, universe), universe, bundlers.title)).toBe(bundlers.title);
@@ -751,21 +776,21 @@ describe("matchups", () => {
     expect(pickerVersion({ ...universe[0]!, name: "Martin (PMTiles)", version: "1.16.0" })).toBe("v1.16.0");
   });
 
-  test("point a matchup's canonical URL at its benchmark and keep it out of the sitemap", async () => {
+  test("live on every benchmark's page, which points its canonical URL at the post and stays out of the sitemap", async () => {
     const index = toCatalogIndex(await loadCatalog());
-    const meta = routeMeta("/benchmarks/postgis-vector-tile-servers/matchup/?pick=martin,tegola", index);
+    const meta = routeMeta("/benchmarks/vector-tile-servers/?pick=martin,tegola", index);
     const tags = headTags(meta);
 
     expect(meta.status).toBe(200);
     expect(meta.title.startsWith("Matchup: ")).toBe(true);
     expect(meta.description.length).toBeLessThanOrEqual(160);
-    expect(tags).toContain('<link rel="canonical" href="https://warefeats.com/benchmarks/postgis-vector-tile-servers/" />');
-    expect(tags).toContain('<meta property="og:url" content="https://warefeats.com/benchmarks/postgis-vector-tile-servers/matchup/" />');
-    expect(tags).toContain('<meta property="og:image" content="https://warefeats.com/og/matchup/postgis-vector-tile-servers.png" />');
-    expect(routeMeta("/benchmarks/eslint-vs-biome-javascript-lint/matchup/", index).status).toBe(404);
-    expect(benchmarkSlug(matchupPath("desktop-shells"))).toBe("desktop-shells");
-    expect(prerenderPaths(index).filter(isMatchupPath).sort()).toEqual(SLUGS.map(matchupPath).sort());
-    expect(sitemapPaths(index).some(isMatchupPath)).toBe(false);
+    expect(tags).toContain('<link rel="canonical" href="https://warefeats.com/posts/2026-09-02-vector-tile-servers-martin-vs-tegola-vs-bbox-vs-pg-tileserv-vs-tipg-vs-ldproxy/" />');
+    expect(tags).toContain('<meta property="og:url" content="https://warefeats.com/benchmarks/vector-tile-servers/" />');
+    expect(tags).toContain('<meta property="og:image" content="https://warefeats.com/og/benchmarks/vector-tile-servers.png" />');
+    expect(routeMeta("/benchmarks/js-linter-tools/", index).status).toBe(200);
+    expect(prerenderPaths(index).filter(isBenchmarkPath).sort()).toEqual(index.benchmarks.map((entry) => benchmarkPath(entry.slug)).sort());
+    expect(sitemapPaths(index).some(isBenchmarkPath)).toBe(false);
+    expect(index.benchmarks.filter((entry) => entry.matchup).map((entry) => entry.slug).sort()).toEqual([...SLUGS].sort());
   });
 });
 
@@ -812,6 +837,7 @@ describe("sections-only run assembly", () => {
       benchmarks: [{
         id: "sections-only-alt",
         slug: "sections-only-alt",
+        post: "2026-08-29-sections-only-alt-a-vs-b",
         category: "Test",
         title: "Sections-only alternate",
         deck: "Primary has candidates, alternate has sections only",
@@ -858,6 +884,7 @@ describe("conditions", () => {
   const benchmark: Benchmark = {
     id: "rig",
     slug: "rig",
+    post: "2026-08-29-rig-a-vs-b",
     category: "Test",
     title: "Rig",
     deck: "Test",
@@ -899,7 +926,7 @@ describe("runs", () => {
 
   test("gives a benchmark with one run a single view", async () => {
     const catalog = await loadCatalog();
-    const lint = catalog.benchmarks.find((benchmark) => benchmark.slug === "eslint-vs-biome-javascript-lint")!;
+    const lint = catalog.benchmarks.find((benchmark) => benchmark.slug === "js-linter-tools")!;
     const views = runViews(lint);
 
     expect(views).toHaveLength(1);
@@ -942,5 +969,39 @@ describe("open graph cards", () => {
     expect(svg.startsWith("<svg")).toBe(true);
     expect(svg).toContain('width="1200"');
     expect(svg).toContain('height="630"');
+  });
+});
+
+describe("URLs", () => {
+  test("every moved URL lands on a page or card the build writes, in one hop, and no live page is moved away", async () => {
+    const index = toCatalogIndex(await loadCatalog());
+    const moved: Record<string, string> = JSON.parse(await Bun.file(new URL("../../infra/lib/moved.json", import.meta.url)).text());
+    const pages = new Set(prerenderPaths(index));
+    const cards = new Set(["/og/site.png", ...index.benchmarks.flatMap((entry) => [`/og/posts/${entry.post}.png`, `/og/benchmarks/${entry.slug}.png`])]);
+
+    for (const [from, to] of Object.entries(moved)) {
+      expect(pages.has(to) || cards.has(to)).toBe(true);
+      expect(pages.has(from)).toBe(false);
+      expect(moved[to]).toBeUndefined();
+    }
+    // Every post that used to sit at /benchmarks/<old slug>/ moves, except desktop-shells, whose old address is now its benchmark page.
+    expect(Object.keys(moved).filter((from) => /^\/benchmarks\/[^/]+\/$/.test(from))).toHaveLength(index.benchmarks.length - 1);
+  });
+
+  test("every internal link on every page points at a page the build writes", async () => {
+    const catalog = await loadCatalog();
+    const index = toCatalogIndex(catalog);
+    const pages = new Set(prerenderPaths(index));
+    const broken: string[] = [];
+
+    for (const path of prerenderPaths(index)) {
+      const slug = pageBenchmark(path, index)?.slug;
+      const html = render(path, index, slug ? catalog.benchmarks.find((benchmark) => benchmark.slug === slug) : undefined).html;
+      for (const [, href] of html.matchAll(/href="(\/[^"#?]*)/g)) {
+        const file = /\.[a-z0-9]+$/i.test(href!);
+        if (!file && !pages.has(href!)) broken.push(`${path} -> ${href}`);
+      }
+    }
+    expect(broken).toEqual([]);
   });
 });

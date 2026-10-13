@@ -276,7 +276,8 @@ code {
   color: var(--fg);
 }
 
-.primary-nav a[aria-current="page"] {
+.primary-nav a[aria-current="page"],
+.primary-nav a.active {
   color: var(--fg);
   font-weight: 600;
 }

@@ -89,6 +89,11 @@ export function parseBenchmark(benchmark: unknown): Benchmark {
     }
   }
 
+  // Pages are found by these two: a benchmark page by its slug, a post by its post (ADR 0004).
+  if (typeof benchmark.slug !== "string" || typeof benchmark.post !== "string") {
+    throw new Error(`Benchmark ${benchmark.id} has no slug or post.`);
+  }
+
   return benchmark as unknown as Benchmark;
 }
 
@@ -105,6 +110,7 @@ function toCatalogEntry(benchmark: Benchmark): CatalogEntry {
   return {
     id: benchmark.id,
     slug: benchmark.slug,
+    post: benchmark.post,
     category: benchmark.category,
     title: benchmark.title,
     deck: benchmark.deck,
@@ -123,7 +129,7 @@ export function parseCatalogIndex(value: unknown): CatalogIndex {
   }
 
   for (const entry of value.benchmarks) {
-    if (!isRecord(entry) || typeof entry.slug !== "string" || typeof entry.title !== "string" || typeof entry.category !== "string" || typeof entry.publishedAt !== "string") {
+    if (!isRecord(entry) || typeof entry.slug !== "string" || typeof entry.post !== "string" || typeof entry.title !== "string" || typeof entry.category !== "string" || typeof entry.publishedAt !== "string") {
       throw new Error("A benchmark entry is incomplete.");
     }
   }

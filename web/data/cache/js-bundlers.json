@@ -1,6 +1,7 @@
 {
   "id": "bundler-js-vite-esbuild-tsup-2026-08",
-  "slug": "vite-vs-esbuild-vs-tsup-library-build",
+  "slug": "js-bundlers",
+  "post": "2026-08-30-js-bundlers-vite-vs-esbuild-vs-tsup",
   "category": "Bundlers",
   "title": "Vite vs esbuild vs tsup",
   "deck": "Cold production builds of a TypeScript library — ESM, minified, no declarations.",

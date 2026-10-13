@@ -1,6 +1,7 @@
 {
   "id": "lint-js-eslint-biome-2026-08",
-  "slug": "eslint-vs-biome-javascript-lint",
+  "slug": "js-linter-tools",
+  "post": "2026-08-26-js-linter-tools-eslint-vs-biome",
   "category": "Code quality",
   "title": "ESLint vs Biome",
   "deck": "Four equivalent rule classes over nearly 100,000 lines of JavaScript.",

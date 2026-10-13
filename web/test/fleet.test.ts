@@ -9,7 +9,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { WinnerLine } from "../src/components/WinnerLine";
 import { render } from "../src/entry-server";
-import { matchupPath } from "../src/head";
+import { benchmarkPath, postPath } from "../src/head";
 import { candidateUniverse, readPick } from "../src/matchup";
 import { scorecard } from "../src/metrics";
 import { activeRun, changedCandidates, newestRun, rigLabel, runChoices, runViews, toggleLabels, versionedName } from "../src/runs";
@@ -17,7 +17,8 @@ import type { Benchmark, BenchmarkRun } from "../src/types";
 import { writePick, writeRun } from "../src/url-state";
 
 const CACHE = join(import.meta.dir, "..", "data", "cache");
-const SLUG = "maplibre-gl-js-vs-mapbox-gl-js";
+const SLUG = "web-map-renderers";
+const POST = "2026-09-02-web-map-renderers-mapbox-gl-js-vs-maplibre-gl-js";
 
 /**
  * Splits a cached benchmark back into the runner files sync read, so sync's builder can be checked against its own output.
@@ -41,6 +42,7 @@ function unbuild(benchmark: Benchmark): { entry: RegistryEntry; meta: RunnerBenc
     schemaVersion: 1,
     id: benchmark.id,
     slug: benchmark.slug,
+    post: benchmark.post,
     category: benchmark.category,
     title: benchmark.title,
     deck: benchmark.deck,
@@ -264,7 +266,7 @@ describe("pages with fleet runs", () => {
     const index = toCatalogIndex({ ...catalog, benchmarks: catalog.benchmarks.map((entry) => (entry.slug === SLUG ? benchmark : entry)) });
     // React separates adjacent text nodes with empty comments; the assertions read the text as a reader would.
     const html = (path: string) => render(path, index, benchmark).html.replaceAll("<!-- -->", "");
-    return { post: html(`/benchmarks/${SLUG}/`), matchup: html(matchupPath(SLUG)) };
+    return { post: html(postPath(POST)), matchup: html(benchmarkPath(SLUG)) };
   }
 
   /** The post's matchup button and the line beside it, and the rest of the post. */
@@ -280,7 +282,7 @@ describe("pages with fleet runs", () => {
     expect(rest).not.toContain("6.13.0");
     expect(rest).not.toContain("fleet");
     expect(rest).toContain("6.7.0");
-    expect(link).toContain(`href="${matchupPath(SLUG)}"`);
+    expect(link).toContain(`href="${benchmarkPath(SLUG)}"`);
     expect(link.replace(/<[^>]+>/g, "")).toBe("Build a matchupThe matchup opens on the fleet run of Oct 19, 2026, with MapLibre GL JS 6 v6.13.0.");
   });
 
@@ -296,7 +298,7 @@ describe("pages with fleet runs", () => {
   test("without a fleet run, the post's matchup button opens its run and adds nothing", async () => {
     const { link } = matchupLink((await pages([])).post);
 
-    expect(link).toContain(`href="${matchupPath(SLUG)}"`);
+    expect(link).toContain(`href="${benchmarkPath(SLUG)}"`);
     expect(link.replace(/<[^>]+>/g, "")).toBe("Build a matchup");
   });
 
@@ -309,8 +311,8 @@ describe("pages with fleet runs", () => {
     expect(matchup).toContain("6.13.0");
     expect(matchup.match(/class="run-toggle-btn/g)).toHaveLength(3);
     expect(matchup.match(/class="run-toggle-kind"/g)).toHaveLength(2);
-    expect(matchup).toContain(`href="/benchmarks/${SLUG}/"`);
-    expect(matchup).not.toContain(`/benchmarks/${SLUG}/?run=`);
+    expect(matchup).toContain(`href="${postPath(POST)}"`);
+    expect(matchup).not.toContain(`${postPath(POST)}?run=`);
   });
 
   test("the matchup's run toggle tells two fleet runs of one day apart", async () => {
@@ -329,7 +331,7 @@ describe("the matchup reads like a post without its prose", () => {
   const matchupOf = async (slug: string) => {
     const benchmark = await cached(slug);
     const catalog = await assembleCatalog();
-    return render(matchupPath(slug), toCatalogIndex(catalog), benchmark).html.replaceAll("<!-- -->", "");
+    return render(benchmarkPath(slug), toCatalogIndex(catalog), benchmark).html.replaceAll("<!-- -->", "");
   };
 
   test("each section's charts end in a winner, then the conditions, then the scorecard last", async () => {
@@ -365,7 +367,7 @@ describe("the matchup reads like a post without its prose", () => {
   });
 
   test("a benchmark without sections names its winner by time per pass and ends on a one-column scorecard", async () => {
-    const slug = "vite-vs-esbuild-vs-tsup-library-build";
+    const slug = "js-bundlers";
     const html = await matchupOf(slug);
     const best = [...(await cached(slug)).candidates].sort((a, b) => a.statistics.meanMs - b.statistics.meanMs)[0]!;
     const winner = text(html.match(/<p class="section-winner">(.*?)<\/p>/)![1]!);
