@@ -8,6 +8,10 @@ The benchmark catalog: one runner repository per benchmark, one site that render
 One published comparison of candidates on a fixed corpus and protocol, with its own page; its authored runs fix the candidates its verdict covers.
 _Avoid_: comparison, study, suite
 
+**Post**:
+A dated story about one benchmark, told against the runs and candidates it locks in. The home page lists every post on one timeline, newest first; a later story is a later post.
+_Avoid_: article, writeup, report
+
 **Candidate**:
 A pinned artifact under test: one product at one exact version in one configuration. Never a product as a whole, a company, or an organization.
 _Avoid_: engine, tool, contestant, competitor
@@ -21,11 +25,15 @@ A product's releases that share a major version (a minor below 1.0), represented
 _Avoid_: branch, track, channel
 
 **Verdict**:
-The one-sentence outcome of a benchmark or a section, ranked by the same statistic the page displays.
-_Avoid_: winner, result, conclusion
+The one-sentence outcome a post gives for a benchmark or a section, written by a person and ranked by the same statistic the page displays.
+_Avoid_: result, conclusion
+
+**Winner**:
+The candidate a matchup names for a section: the best mean among the candidates picked, computed and never written. Where a section's samples repeat one measurement, a lead inside the run's noise is a tie.
+_Avoid_: verdict, leader, champion
 
 **Matchup**:
-A reader-picked set of two or more candidates from one run of one benchmark, shown on one rig with the benchmark's charts and tables and no verdict.
+A reader-picked set of two or more candidates from one run of one benchmark, laid out like a post without its prose: each section's charts and winner, then the scorecard. It gives no verdict.
 _Avoid_: comparison, explorer, versus, head-to-head
 
 **Category**:

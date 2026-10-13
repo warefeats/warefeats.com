@@ -1229,15 +1229,13 @@ th.num {
 }
 
 .picker,
-.matchup-scorecard,
-.matchup-limits {
+.matchup-scorecard {
   padding-top: 2rem;
   border-top: 1px solid var(--fg);
 }
 
 .picker h2,
-.matchup-scorecard h2,
-.matchup-limits h2 {
+.matchup-scorecard h2 {
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   font-weight: 600;
@@ -1346,15 +1344,23 @@ th.num {
   font-size: var(--text-sm);
 }
 
-.matchup-limits ul {
-  max-width: 60ch;
-  margin-top: 0.75rem;
-  padding-left: 1.1rem;
-  color: var(--fg-muted);
+/* The winner a matchup names under each section, computed from the samples (ADR 0003). */
+.section-winner {
+  margin-top: 1.25rem;
+  max-width: 70ch;
 }
 
-.matchup-limits li + li {
-  margin-top: 0.5rem;
+.section-winner-label {
+  margin-right: 0.4rem;
+  color: var(--fast);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.section-winner-label.is-tie {
+  color: var(--fg-muted);
 }
 
 /* Products compared */

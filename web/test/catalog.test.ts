@@ -122,6 +122,8 @@ describe("scorecard", () => {
     const card = scorecard(sections, true);
     expect(card.columns.map((c) => [c.bestId, c.tied])).toEqual([[null, true], ["b", false]]);
     expect(scorecard(sections).columns.map((c) => [c.bestId, c.tied])).toEqual([["b", false], ["b", false]]);
+    expect(card.columns.map((c) => [c.leaderId, c.tiedIds])).toEqual([["b", ["a"]], ["b", []]]);
+    expect(scorecard(sections).columns.map((c) => [c.leaderId, c.tiedIds])).toEqual([["b", []], ["b", []]]);
   });
 });
 

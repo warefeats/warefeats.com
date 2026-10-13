@@ -196,6 +196,10 @@ export interface ScorecardColumn {
   bestId: string | null;
   /** The best value's lead over another candidate is inside the run's noise, so nothing is marked. */
   tied: boolean;
+  /** The candidate with the best displayed value, marked or not, or null when the column is empty. */
+  leaderId: string | null;
+  /** When the column is tied, the other candidates whose means sit inside the leader's noise, best first. */
+  tiedIds: string[];
 }
 
 export interface ScorecardRow {
@@ -258,8 +262,10 @@ export function scorecard(sections: BenchmarkSection[], repeats = false): Scorec
       }
     }
     const leader = bestId === null ? undefined : section.candidates.find((candidate) => candidate.id === bestId);
-    const tied = repeats && leader !== undefined && section.candidates.some((candidate) => candidate !== leader && insideNoise(leader, candidate));
-    return { id: section.id, title: section.title, unit: section.unit, lowerIsBetter: section.lowerIsBetter, bestId: tied ? null : bestId, tied };
+    const inside = repeats && leader !== undefined ? section.candidates.filter((candidate) => candidate !== leader && insideNoise(leader, candidate)) : [];
+    const tiedIds = inside.sort((a, b) => (section.lowerIsBetter ? a.statistics.meanMs - b.statistics.meanMs : b.statistics.meanMs - a.statistics.meanMs)).map((candidate) => candidate.id);
+    const tied = tiedIds.length > 0;
+    return { id: section.id, title: section.title, unit: section.unit, lowerIsBetter: section.lowerIsBetter, bestId: tied ? null : bestId, tied, leaderId: bestId, tiedIds };
   });
   return { columns, rows };
 }
