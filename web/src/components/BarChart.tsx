@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { axisTicks, formatValue, samplePosition, testWinner } from "../metrics";
+import { axisTicks, formatTick, formatValue, samplePosition, testWinner } from "../metrics";
 import type { Benchmark, BenchmarkTest } from "../types";
 
 interface BarChartProps {
@@ -22,6 +22,8 @@ export function BarChart({ benchmark, test, index }: BarChartProps) {
   const scaleMax = Math.ceil((max * 1.08) / step) * step;
   const ticks = axisTicks(0, scaleMax, 6).filter((tick) => tick <= scaleMax);
   const name = (id: string) => benchmark.candidates.find((candidate) => candidate.id === id)?.name ?? id;
+  // The track keeps room for its longest value label, so a label like "12,833,173.6 ops/s" ends inside the chart.
+  const valueChars = Math.max(...test.results.map((result) => formatValue(result.value, test.unit).length));
   const direction = test.lowerIsBetter ? "LOWER" : "HIGHER";
   const headingId = `${useId()}-title`;
 
@@ -34,7 +36,7 @@ export function BarChart({ benchmark, test, index }: BarChartProps) {
         {test.description} <span className="test-direction">({direction} {test.unit} = {test.lowerIsBetter ? "FASTER" : "BETTER"})</span>
       </p>
 
-      <figure className="bar-chart">
+      <figure className="bar-chart" style={{ "--value-chars": valueChars } as React.CSSProperties}>
         <figcaption className="bar-chart-head">{test.title} ({test.unit})</figcaption>
         <div className="bar-rows">
           {test.results.map((result) => {
@@ -64,7 +66,7 @@ export function BarChart({ benchmark, test, index }: BarChartProps) {
         <div className="bar-axis" aria-hidden="true">
           {ticks.map((tick) => (
             <span className="bar-tick num" style={{ left: `${samplePosition(tick, 0, scaleMax)}%` }} key={tick}>
-              {tick}
+              {formatTick(tick)}
             </span>
           ))}
         </div>

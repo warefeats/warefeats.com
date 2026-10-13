@@ -1543,11 +1543,19 @@ th.num {
   object-fit: contain;
 }
 
+/* The track and the axis reserve room for the chart's longest value label, measured in the label's own font (BarChart sets --value-chars). */
+.bar-track,
+.bar-axis {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-stretch: 90%;
+}
+
 .bar-track {
   position: relative;
   display: block;
   height: 1.25rem;
-  margin-right: 5rem;
+  margin-right: max(5rem, calc(var(--value-chars, 0) * 1ch + 0.5rem));
 }
 
 .bar {
@@ -1573,7 +1581,7 @@ th.num {
 .bar-axis {
   position: relative;
   height: 1.6rem;
-  margin: 0 5.75rem 0 10rem;
+  margin: 0 max(5.75rem, calc(var(--value-chars, 0) * 1ch + 1.25rem)) 0 10rem;
   border-top: 1px solid var(--rule);
 }
 
@@ -1606,11 +1614,11 @@ th.num {
   }
 
   .bar-track {
-    margin-right: 4.25rem;
+    margin-right: max(4.25rem, calc(var(--value-chars, 0) * 1ch + 0.5rem));
   }
 
   .bar-axis {
-    margin: 0 5rem 0 0;
+    margin: 0 max(5rem, calc(var(--value-chars, 0) * 1ch + 1.25rem)) 0 0;
   }
 
   .bar-axis:not(.box-axis) .bar-tick:nth-child(even) {

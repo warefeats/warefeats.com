@@ -183,8 +183,22 @@ export function formatVersion(version: string): string {
   return /^\d+(\.\d+)+([-+].*)?$/.test(version) ? `v${version}` : version;
 }
 
+/** Commas between thousands in a number already rounded for display, so grouping never changes the rounding. */
+function groupThousands(rounded: string): string {
+  const [whole, fraction] = rounded.split(".");
+  const grouped = whole!.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return fraction === undefined ? grouped : `${grouped}.${fraction}`;
+}
+
+/** A value in its unit: durations as formatDuration prints them, anything else to one decimal unless whole, grouped by thousands. */
 export function formatValue(value: number, unit: string): string {
-  return unit === "ms" ? formatDuration(value) : `${Number.isInteger(value) ? value : value.toFixed(1)} ${unit}`;
+  if (unit === "ms") return formatDuration(value);
+  return `${groupThousands(Number.isInteger(value) ? String(value) : value.toFixed(1))} ${unit}`;
+}
+
+/** An axis tick, grouped by thousands. */
+export function formatTick(value: number): string {
+  return groupThousands(String(value));
 }
 
 export interface ScorecardColumn {
