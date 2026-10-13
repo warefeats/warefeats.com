@@ -1,6 +1,12 @@
 import { useId } from "react";
-import { axisTicks, formatTick, formatValue, samplePosition, testWinner } from "../metrics";
+import { axisTicks, fittedTicks, formatValue, samplePosition, testWinner } from "../metrics";
 import type { Benchmark, BenchmarkTest } from "../types";
+
+/** Rem per character of the axis and value-label font: mono at --text-xs, 90% wide. */
+const CHAR_REM = 0.5;
+/** A test grid column is never narrower than 26rem, and a bar's track starts 11.5rem into its chart. */
+const NARROWEST_CHART_REM = 26;
+const TRACK_START_REM = 11.5;
 
 interface BarChartProps {
   benchmark: Benchmark;
@@ -20,10 +26,12 @@ export function BarChart({ benchmark, test, index }: BarChartProps) {
   const probe = axisTicks(0, max * 1.15, 5);
   const step = probe.length > 1 ? probe[1]! - probe[0]! : max || 1;
   const scaleMax = Math.ceil((max * 1.08) / step) * step;
-  const ticks = axisTicks(0, scaleMax, 6).filter((tick) => tick <= scaleMax);
   const name = (id: string) => benchmark.candidates.find((candidate) => candidate.id === id)?.name ?? id;
   // The track keeps room for its longest value label, so a label like "12,833,173.6 ops/s" ends inside the chart.
   const valueChars = Math.max(...test.results.map((result) => formatValue(result.value, test.unit).length));
+  // As many ticks as fit the narrowest axis this chart can get, so their labels never touch.
+  const axisRem = NARROWEST_CHART_REM - TRACK_START_REM - Math.max(5.75, valueChars * CHAR_REM + 1.25);
+  const { ticks, labels: tickText } = fittedTicks(scaleMax, axisRem, CHAR_REM);
   const direction = test.lowerIsBetter ? "LOWER" : "HIGHER";
   const headingId = `${useId()}-title`;
 
@@ -64,9 +72,9 @@ export function BarChart({ benchmark, test, index }: BarChartProps) {
           })}
         </div>
         <div className="bar-axis" aria-hidden="true">
-          {ticks.map((tick) => (
+          {ticks.map((tick, index) => (
             <span className="bar-tick num" style={{ left: `${samplePosition(tick, 0, scaleMax)}%` }} key={tick}>
-              {formatTick(tick)}
+              {tickText[index]}
             </span>
           ))}
         </div>
