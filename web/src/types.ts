@@ -28,8 +28,20 @@ export interface CatalogEntry {
   verdictHeadline: string;
   /** The hyperfine summary of a benchmark without sections: the winner against its closest rival. */
   lead?: CatalogLead;
+  /** The benchmark's later posts, each with its own page and its own place on the timeline (ADR 0005). */
+  posts?: CatalogPost[];
   /** Present when the benchmark has a matchup: the number of candidates a reader can pick from. */
   matchup?: { candidates: number };
+}
+
+/** A later post as the timeline lists it. */
+export interface CatalogPost {
+  slug: string;
+  title: string;
+  deck: string;
+  publishedAt: string;
+  /** The chip of the rig its run came from. */
+  chip: string;
 }
 
 export interface CatalogLead {
@@ -100,10 +112,32 @@ export interface Benchmark {
   sections?: BenchmarkSection[];
   /** The benchmark's other runs: authored runs first, then fleet runs, newest first. The page toggles among authored runs only. */
   runs?: BenchmarkRun[];
+  /** Posts written after the first, each telling one story from one run (ADR 0005). The first post is this benchmark's own prose. */
+  posts?: Post[];
   limitations: string[];
   /** Logo and trademark notices for the products under test, shown under the limitations. */
   trademarks?: string[];
   runnerUrl?: string;
+}
+
+/**
+ * A later post: a story told against one run of the benchmark, authored or fleet, and the candidates it locks in. Its
+ * prose replaces the benchmark's own on its page; its numbers are that run's, narrowed to those candidates (ADR 0005).
+ */
+export interface Post {
+  /** Its URL slug: its date, the benchmark's slug, and the products it compares (ADR 0004). */
+  slug: string;
+  publishedAt: string;
+  /** The id of the run it tells the story of. */
+  run: string;
+  /** The candidates it locks in, by id; every candidate in the run when absent. */
+  candidates?: string[];
+  title: string;
+  deck: string;
+  verdict: Benchmark["verdict"];
+  /** One verdict headline per section the post shows, by section id. */
+  sections?: Record<string, string>;
+  limitations: string[];
 }
 
 export interface BenchmarkRun {

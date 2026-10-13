@@ -56,7 +56,9 @@ export function devHead(root: string): Plugin {
           };
           const fonts = { mono500: await font("MartianMono-500.ttf"), mono700: await font("MartianMono-700.ttf"), sans500: await font("RedHatText-500.ttf") };
           const benchmarks = (await catalog()).benchmarks;
-          const benchmark = match[1] === "posts" ? benchmarks.find((entry) => entry.post === match[2]) : match[1] === "benchmarks" ? benchmarks.find((entry) => entry.slug === match[2]) : undefined;
+          const owner = match[1] === "posts" ? benchmarks.find((entry) => entry.post === match[2] || entry.posts?.some((later) => later.slug === match[2])) : undefined;
+          const later = owner?.posts?.find((post) => post.slug === match[2]);
+          const benchmark = owner ? (later ? (await import("./posts")).postView(owner, later) : owner) : match[1] === "benchmarks" ? benchmarks.find((entry) => entry.slug === match[2]) : undefined;
           const card = match[1] === "benchmarks" ? matchupCard : benchmarkCard;
           const svg = !match[1] && match[2] === "site" ? await siteCard(fonts) : benchmark ? await card(benchmark, fonts) : undefined;
 

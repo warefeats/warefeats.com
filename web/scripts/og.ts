@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { Resvg } from "@resvg/resvg-js";
 import { parseCatalog } from "../src/catalog";
 import { benchmarkCard, matchupCard, siteCard } from "../src/og";
+import { postView } from "../src/posts";
 import type { OgFonts } from "../src/og";
 
 const root = join(import.meta.dir, "..");
@@ -34,6 +35,10 @@ for (const benchmark of catalog.benchmarks) {
   await writeFile(join(out, "posts", `${benchmark.post}.png`), toPng(await benchmarkCard(benchmark, fonts)));
   await writeFile(join(out, "benchmarks", `${benchmark.slug}.png`), toPng(await matchupCard(benchmark, fonts)));
   cards += 2;
+  for (const later of benchmark.posts ?? []) {
+    await writeFile(join(out, "posts", `${later.slug}.png`), toPng(await benchmarkCard(postView(benchmark, later), fonts)));
+    cards += 1;
+  }
 }
 
 console.log(`Rendered ${cards} OG cards into dist/og`);

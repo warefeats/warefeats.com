@@ -13,33 +13,36 @@ import { REPO_URL } from "../components/SiteHeader";
 import { BoxPlot } from "../components/BoxPlot";
 import { CatalogSkeleton, ErrorState } from "../components/States";
 import { benchmarkPath } from "../head";
-import { candidateUniverse, MATCHUP_FIELD } from "../matchup";
+import { matchupField } from "../matchup";
 import { changedCandidates, rigLabel, runChoices, versionedName } from "../runs";
 import type { RunView } from "../runs";
 import { benchmarkTests, formatDate } from "../metrics";
 import { useRunSelection } from "../url-state";
 import type { Benchmark } from "../types";
+import { laterPost, postView } from "../posts";
 import { NotFound } from "./NotFound";
 
 /**
- * The way into a benchmark's matchup, for a run with enough candidates. The matchup opens on its newest run. When that is
- * a fleet run, the link goes there and names it, because the post never draws a fleet run (ADR 0002). Otherwise it
- * carries the run the reader is on whenever that isn't the newest, so the numbers don't change on the way.
+ * The way into a benchmark's matchup, when it has a field worth picking from. The matchup opens on its newest run. When
+ * that is a fleet run this post doesn't tell, the link goes there and names it, because the post draws only its own run
+ * (ADR 0002). Otherwise it carries the run the reader is on whenever that isn't the newest, so the numbers don't change
+ * on the way. `source` is the whole benchmark, since a later post's page holds only its own run (ADR 0005).
  */
-function MatchupLink({ benchmark, run }: { benchmark: Benchmark; run: RunView }) {
-  const opensOn = useMemo(() => runChoices(benchmark, "matchup").fallback, [benchmark]);
+function MatchupLink({ source, run }: { source: Benchmark; run: RunView }) {
+  const opensOn = useMemo(() => runChoices(source, "matchup").fallback, [source]);
 
-  if (candidateUniverse(run).length < MATCHUP_FIELD) {
+  if (matchupField(source) === undefined) {
     return null;
   }
 
+  const elsewhere = opensOn.fleet && opensOn.id !== run.id;
   return (
     <p className="matchup-link">
-      <Link className="button button-quiet" to={{ pathname: benchmarkPath(benchmark.slug), search: opensOn.fleet || run.id === opensOn.id ? "" : `?run=${encodeURIComponent(run.id)}` }}>
+      <Link className="button button-quiet" to={{ pathname: benchmarkPath(source.slug), search: opensOn.fleet || run.id === opensOn.id ? "" : `?run=${encodeURIComponent(run.id)}` }}>
         <ListChecks aria-hidden="true" />
         Build a matchup
       </Link>
-      {opensOn.fleet ? <FleetRunNote from={run} fleet={opensOn} /> : null}
+      {elsewhere ? <FleetRunNote from={run} fleet={opensOn} /> : null}
     </p>
   );
 }
@@ -58,7 +61,7 @@ function FleetRunNote({ from, fleet }: { from: RunView; fleet: RunView }) {
   );
 }
 
-function BenchmarkContent({ benchmark }: { benchmark: Benchmark }) {
+function BenchmarkContent({ benchmark, source }: { benchmark: Benchmark; source: Benchmark }) {
   const { runs, active, select } = useRunSelection(benchmark);
 
   if (active.sections?.length) {
@@ -70,7 +73,7 @@ function BenchmarkContent({ benchmark }: { benchmark: Benchmark }) {
           <h1>{benchmark.title}</h1>
           <p className="deck">{benchmark.deck}</p>
           <p className="byline">Published <time dateTime={benchmark.publishedAt} className="num">{formatDate(benchmark.publishedAt)}</time> on {active.environment.machine}, {active.environment.chip}</p>
-          <MatchupLink benchmark={benchmark} run={active} />
+          <MatchupLink source={source} run={active} />
         </header>
 
         {runs.length > 1 ? <RunToggle runs={runs} active={active.id} onSelect={select} /> : null}
@@ -122,7 +125,7 @@ function BenchmarkContent({ benchmark }: { benchmark: Benchmark }) {
         <h1>{benchmark.title}</h1>
         <p className="deck">{benchmark.deck}</p>
         <p className="byline">Published <time dateTime={benchmark.publishedAt} className="num">{formatDate(benchmark.publishedAt)}</time> on {benchmark.environment.machine}, {benchmark.environment.chip}</p>
-        <MatchupLink benchmark={benchmark} run={active} />
+        <MatchupLink source={source} run={active} />
       </header>
 
       <Candidates benchmark={benchmark} />
@@ -201,7 +204,7 @@ function BenchmarkContent({ benchmark }: { benchmark: Benchmark }) {
 export function PostPage() {
   const { post } = useParams();
   const { state } = useCatalog();
-  const slug = state.status === "ready" ? state.index.benchmarks.find((entry) => entry.post === post)?.slug : undefined;
+  const slug = state.status === "ready" ? state.index.benchmarks.find((entry) => entry.post === post || entry.posts?.some((later) => later.slug === post))?.slug : undefined;
   const load = useBenchmark(slug);
 
   if (load.status === "loading") {
@@ -216,5 +219,6 @@ export function PostPage() {
     return <NotFound />;
   }
 
-  return <BenchmarkContent benchmark={load.benchmark} />;
+  const later = laterPost(load.benchmark, post);
+  return <BenchmarkContent benchmark={later ? postView(load.benchmark, later) : load.benchmark} source={load.benchmark} />;
 }

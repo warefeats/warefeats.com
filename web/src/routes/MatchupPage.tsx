@@ -14,6 +14,7 @@ import { WinnerLine } from "../components/WinnerLine";
 import { BENCHMARKS_PATH, postPath } from "../head";
 import { applyPick, candidateUniverse, MATCHUP_FIELD, matchupHeading, pickFlat } from "../matchup";
 import { benchmarkTests, formatDate, scorecard } from "../metrics";
+import { postForRun } from "../posts";
 import { rigLabel } from "../runs";
 import { usePick, useRunSelection } from "../url-state";
 import type { Benchmark, BenchmarkSection } from "../types";
@@ -37,9 +38,11 @@ function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
   const picked = sectioned ? applyPick(active.sections ?? [], pick.ids) : undefined;
   const flat = sectioned ? undefined : pickFlat(benchmark, active, pick.ids);
   const card = picked ? scorecard(picked.sections, repeats) : undefined;
-  // The benchmark page shows authored runs only, so a fleet run sends the reader to the post's own run.
-  const post = runs[0]!;
-  const back = { pathname: published, search: active.fleet || active.id === post.id ? "" : `?run=${encodeURIComponent(active.id)}` };
+  // A later post that tells the run on screen is the post to read; otherwise the first post, on its own run when a
+  // fleet run is showing, since a post draws only the runs it was written against.
+  const primary = runs[0]!;
+  const covering = postForRun(benchmark, active.id);
+  const back = covering ? { pathname: postPath(covering.slug) } : { pathname: published, search: active.fleet || active.id === primary.id ? "" : `?run=${encodeURIComponent(active.id)}` };
 
   return (
     <article className="benchmark matchup">
@@ -54,7 +57,7 @@ function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
         <h1>{matchupHeading(pick, universe, benchmark.title)}</h1>
         <p className="deck">{pickable ? "Tick the candidates you care about and the charts, winners and table redraw for just them: same run, same rig, same samples." : "Every candidate on one rig, from the same samples."} Winners come from the numbers alone; the story is in the post.</p>
         {active.fleet ? (
-          <p className="byline">From the fleet run of <time dateTime={active.publishedAt} className="num">{formatDate(active.publishedAt)}</time> on {rigLabel(active)}: {active.environment.machine}, {active.environment.chip}. The post covers the run of <time dateTime={post.publishedAt} className="num">{formatDate(post.publishedAt)}</time>. <Link to={back}>Read the post</Link></p>
+          <p className="byline">From the fleet run of <time dateTime={active.publishedAt} className="num">{formatDate(active.publishedAt)}</time> on {rigLabel(active)}: {active.environment.machine}, {active.environment.chip}. {covering ? "A post tells this run's story. " : <>The post covers the run of <time dateTime={primary.publishedAt} className="num">{formatDate(primary.publishedAt)}</time>. </>}<Link to={back}>Read the post</Link></p>
         ) : (
           <p className="byline">From the run of <time dateTime={active.publishedAt} className="num">{formatDate(active.publishedAt)}</time> on {active.environment.machine}, {active.environment.chip}. <Link to={back}>Read the post</Link></p>
         )}

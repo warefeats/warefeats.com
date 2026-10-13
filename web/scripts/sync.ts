@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseCatalog } from "../src/catalog";
-import type { Benchmark, BenchmarkRun, BenchmarkSection, Candidate } from "../src/types";
+import type { Benchmark, BenchmarkRun, BenchmarkSection, Candidate, Post } from "../src/types";
 
 export interface RegistryEntry {
   slug: string;
@@ -35,6 +35,13 @@ export interface RunnerBenchmark {
   runs: string[];
   /** Fleet runs the site shows on the matchup, newest first. The runner keeps this list; the site shows exactly what it lists. */
   fleetRuns?: string[];
+  /** Posts written after the first, as files under posts/ (ADR 0005). */
+  posts?: string[];
+}
+
+/** A later post's file in its runner repository. */
+export interface PostFile extends Post {
+  schemaVersion: number;
 }
 
 export interface RunFile {
@@ -51,6 +58,8 @@ export interface RunFile {
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const RUN_PATH_PATTERN = /^runs\/[A-Za-z0-9._-]+\.json$/;
+const POST_PATH_PATTERN = /^posts\/[a-z0-9-]+\.json$/;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 /** The most fleet runs a benchmark may list. Retention is the runner's call; this bounds what a page carries. */
 export const FLEET_RUN_LIMIT = 4;
@@ -69,6 +78,38 @@ export function validateSlugs(slug: string, post: string, publishedAt: string): 
   const prefix = `${publishedAt}-${slug}-`;
   if (typeof post !== "string" || !post.startsWith(prefix) || !SLUG_PATTERN.test(post.slice(prefix.length))) {
     throw new Error(`Invalid post "${post}" for ${slug} — expected ${prefix}<products>, lowercase words joined by hyphens`);
+  }
+}
+
+/**
+ * Checks a later post against the runs it can tell: a dated slug, a run the benchmark has and no older than the post, at
+ * least two of that run's candidates, a verdict for one of them, and a headline for every section the post shows.
+ */
+export function validatePost(slug: string, post: Post, runs: RunFile[]): void {
+  const fail = (problem: string) => {
+    throw new Error(`Post ${post.slug} of ${slug} ${problem}`);
+  };
+  if (typeof post.publishedAt !== "string" || !DATE_PATTERN.test(post.publishedAt)) fail("needs a publishedAt date, YYYY-MM-DD");
+  validateSlugs(slug, post.slug, post.publishedAt);
+  for (const field of ["title", "deck"] as const) {
+    if (typeof post[field] !== "string" || post[field].length === 0) fail(`needs a ${field}`);
+  }
+  if (!Array.isArray(post.limitations)) fail("needs a limitations list");
+  const run = runs.find((candidate) => candidate.id === post.run);
+  if (!run) return fail(`names run ${post.run}, which the benchmark doesn't list`);
+  if (post.publishedAt < run.publishedAt) fail(`is dated before its run (${run.publishedAt})`);
+  const ran = new Set([...(run.candidates ?? []), ...(run.sections ?? []).flatMap((section) => section.candidates)].map((candidate) => candidate.id));
+  const kept = post.candidates ?? [...ran];
+  if (post.candidates !== undefined && (!Array.isArray(post.candidates) || post.candidates.some((id) => !ran.has(id)))) fail(`locks in a candidate run ${run.id} doesn't have`);
+  if (kept.length < 2) fail("needs at least two candidates");
+  if (!post.verdict || typeof post.verdict.headline !== "string" || !kept.includes(post.verdict.winnerId)) fail("needs a verdict whose winner is one of its candidates");
+  const shown = (run.sections ?? []).filter((section) => section.candidates.filter((candidate) => kept.includes(candidate.id)).length >= 2).map((section) => section.id);
+  const written = Object.keys(post.sections ?? {});
+  for (const id of shown) {
+    if (typeof post.sections?.[id] !== "string") fail(`needs a verdict headline for section ${id}`);
+  }
+  for (const id of written) {
+    if (!shown.includes(id)) fail(`has a headline for section ${id}, which it doesn't show`);
   }
 }
 
@@ -115,7 +156,7 @@ function toBenchmarkRun(run: RunFile, fleet: boolean): BenchmarkRun {
  * run, then the fleet runs in the runner's order. Run files may carry fields the site doesn't read (a fleet run's
  * provenance and lineup); only the page shape is kept.
  */
-export function buildBenchmark(entry: RegistryEntry, meta: RunnerBenchmark, runs: RunFile[], fleetRuns: RunFile[] = []): Benchmark {
+export function buildBenchmark(entry: RegistryEntry, meta: RunnerBenchmark, runs: RunFile[], fleetRuns: RunFile[] = [], posts: PostFile[] = []): Benchmark {
   const primary = runs[0];
   if (!primary) {
     throw new Error(`Benchmark ${entry.slug} has no runs`);
@@ -160,6 +201,18 @@ export function buildBenchmark(entry: RegistryEntry, meta: RunnerBenchmark, runs
     benchmark.runs = others;
   }
 
+  const slugs = new Set([meta.post]);
+  for (const post of posts) {
+    validatePost(meta.slug, post, [...runs, ...fleetRuns]);
+    if (slugs.has(post.slug)) {
+      throw new Error(`Benchmark ${meta.slug} has two posts with the slug ${post.slug}`);
+    }
+    slugs.add(post.slug);
+  }
+  if (posts.length > 0) {
+    benchmark.posts = posts.map(({ schemaVersion: _schemaVersion, ...post }) => post);
+  }
+
   return benchmark;
 }
 
@@ -200,7 +253,13 @@ async function sync(): Promise<void> {
       fleetRuns.push((await fetchRaw(entry.repo, entry.ref, runPath)) as RunFile);
     }
 
-    const benchmark = buildBenchmark(entry, meta, runs, fleetRuns);
+    const posts: PostFile[] = [];
+    for (const postPath of meta.posts ?? []) {
+      if (!POST_PATH_PATTERN.test(postPath)) throw new Error(`Invalid post path "${postPath}" — must match posts/<slug>.json`);
+      posts.push((await fetchRaw(entry.repo, entry.ref, postPath)) as PostFile);
+    }
+
+    const benchmark = buildBenchmark(entry, meta, runs, fleetRuns, posts);
 
     parseCatalog({ schemaVersion: 1, generatedAt: new Date().toISOString(), benchmarks: [benchmark], queue: [] });
 
