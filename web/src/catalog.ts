@@ -1,4 +1,5 @@
 import { matchupField } from "./matchup";
+import { runViews } from "./runs";
 import { summarize } from "./metrics";
 import type { Benchmark, BenchmarkCatalog, CatalogEntry, CatalogIndex } from "./types";
 
@@ -94,6 +95,12 @@ export function parseBenchmark(benchmark: unknown): Benchmark {
     throw new Error(`Benchmark ${benchmark.id} has no slug or post.`);
   }
 
+  if (benchmark.posts !== undefined) {
+    if (!Array.isArray(benchmark.posts) || benchmark.posts.some((post) => !isRecord(post) || typeof post.slug !== "string" || typeof post.run !== "string" || typeof post.title !== "string")) {
+      throw new Error(`Benchmark ${benchmark.id} has an invalid later post.`);
+    }
+  }
+
   return benchmark as unknown as Benchmark;
 }
 
@@ -120,6 +127,7 @@ function toCatalogEntry(benchmark: Benchmark): CatalogEntry {
     verdictHeadline: benchmark.verdict.headline,
     ...(lead ? { lead: { winner: { name: summary.winner.name, version: summary.winner.version }, other: { name: lead.other.name, version: lead.other.version }, ratio: lead.ratio, sigma: lead.sigma } } : {}),
     ...(field === undefined ? {} : { matchup: { candidates: field } }),
+    ...(benchmark.posts?.length ? { posts: benchmark.posts.map((post) => ({ slug: post.slug, title: post.title, deck: post.deck, publishedAt: post.publishedAt, chip: runViews(benchmark).find((run) => run.id === post.run)?.environment.chip ?? benchmark.environment.chip })) } : {}),
   };
 }
 

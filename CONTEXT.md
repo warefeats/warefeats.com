@@ -63,7 +63,7 @@ One execution of the protocol on one rig on one date, producing one run file.
 _Avoid_: execution, trial, session
 
 **Fleet run**:
-A run made without a person when a release line moves. It carries no verdict and appears only on the matchup.
+A run made without a person when a release line moves. It carries no verdict of its own and appears on the matchup; a later post may tell its story.
 _Avoid_: CI run, nightly
 
 **Warmup**:

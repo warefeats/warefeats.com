@@ -6,9 +6,22 @@ import { postPath } from "../head";
 import { formatDate } from "../metrics";
 import type { CatalogEntry } from "../types";
 
-/** Every post on one timeline, newest first, whatever its category. */
-function timeline(posts: CatalogEntry[]): CatalogEntry[] {
-  return [...posts].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+interface TimelineEntry {
+  slug: string;
+  title: string;
+  deck: string;
+  publishedAt: string;
+  category: string;
+  chip: string;
+}
+
+/** Every post on one timeline, newest first, whatever its category: each benchmark's first post and its later ones. */
+function timeline(benchmarks: CatalogEntry[]): TimelineEntry[] {
+  const posts = benchmarks.flatMap((entry): TimelineEntry[] => [
+    { slug: entry.post, title: entry.title, deck: entry.deck, publishedAt: entry.publishedAt, category: entry.category, chip: entry.chip },
+    ...(entry.posts ?? []).map((later) => ({ ...later, category: entry.category })),
+  ]);
+  return posts.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
 }
 
 export function Home() {
@@ -33,11 +46,11 @@ export function Home() {
           </div>
           <ol className="timeline-list">
             {timeline(state.index.benchmarks).map((post) => (
-              <li className="timeline-entry" key={post.id}>
+              <li className="timeline-entry" key={post.slug}>
                 <p className="timeline-meta">
                   <time dateTime={post.publishedAt} className="num">{formatDate(post.publishedAt)}</time> <span aria-hidden="true">·</span> {post.category} <span aria-hidden="true">·</span> {post.chip}
                 </p>
-                <h3 className="timeline-title"><Link to={postPath(post.post)}>{post.title}</Link></h3>
+                <h3 className="timeline-title"><Link to={postPath(post.slug)}>{post.title}</Link></h3>
                 <p className="timeline-deck">{post.deck}</p>
               </li>
             ))}

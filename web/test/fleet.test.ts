@@ -2,16 +2,17 @@ import { describe, expect, test } from "bun:test";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { assembleCatalog } from "../scripts/assemble";
-import { buildBenchmark, FLEET_RUN_LIMIT, validateRunLists } from "../scripts/sync";
-import type { RegistryEntry, RunFile, RunnerBenchmark } from "../scripts/sync";
+import { buildBenchmark, FLEET_RUN_LIMIT, validatePost, validateRunLists } from "../scripts/sync";
+import type { PostFile, RegistryEntry, RunFile, RunnerBenchmark } from "../scripts/sync";
 import { parseBenchmark, toCatalogIndex } from "../src/catalog";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { WinnerLine } from "../src/components/WinnerLine";
 import { render } from "../src/entry-server";
-import { benchmarkPath, postPath } from "../src/head";
+import { benchmarkPath, postPath, prerenderPaths, routeMeta, sitemapPaths } from "../src/head";
 import { candidateUniverse, readPick } from "../src/matchup";
 import { scorecard } from "../src/metrics";
+import { postView } from "../src/posts";
 import { activeRun, changedCandidates, newestRun, rigLabel, runChoices, runViews, toggleLabels, versionedName } from "../src/runs";
 import type { Benchmark, BenchmarkRun } from "../src/types";
 import { writePick, writeRun } from "../src/url-state";
@@ -376,5 +377,88 @@ describe("the matchup reads like a post without its prose", () => {
     expect(html.indexOf('class="section-winner"')).toBeLessThan(html.indexOf('id="scorecard-title"'));
     expect(text(html.slice(html.indexOf('id="scorecard-title"')))).toContain("Time per pass");
     expect(html).not.toContain("What this does not prove");
+  });
+});
+
+describe("later posts", () => {
+  const LATER = "2026-10-13-web-map-renderers-maplibre-gl-js-5-vs-6";
+  const later = (extra: Partial<PostFile> = {}): PostFile => ({
+    schemaVersion: 1,
+    slug: LATER,
+    publishedAt: "2026-10-13",
+    run: "2026-10-12-radeon-680m-win11-2",
+    candidates: ["maplibre-gl-5", "maplibre-gl-6"],
+    title: "MapLibre GL JS 6.13 vs 5",
+    deck: "The fork against itself, one major apart.",
+    verdict: { winnerId: "maplibre-gl-6", headline: "MapLibre GL JS 6.13 painted a warm frame faster than 5", summary: "A made-up post for the tests." },
+    sections: { startup: "Startup headline", "frame-time": "Frame headline", memory: "Memory headline" },
+    limitations: ["One rig."],
+    ...extra,
+  });
+  /** The cached MapLibre benchmark, its real fleet runs included, with the given later posts. */
+  async function withPosts(posts: PostFile[]): Promise<Benchmark> {
+    const { entry, meta, runs, fleet } = unbuild(await cached(SLUG));
+    return buildBenchmark(entry, { ...meta, posts: posts.map((post) => `posts/${post.slug}.json`) }, runs, fleet, posts);
+  }
+  async function site(benchmark: Benchmark) {
+    const catalog = await assembleCatalog();
+    const index = toCatalogIndex({ ...catalog, benchmarks: catalog.benchmarks.map((entry) => (entry.slug === SLUG ? benchmark : entry)) });
+    const html = (path: string) => render(path, index, benchmark).html.replaceAll("<!-- -->", "");
+    return { index, html };
+  }
+
+  test("sync keeps a valid later post and refuses one that breaks the rules", async () => {
+    const benchmark = await withPosts([later()]);
+    expect(benchmark.posts).toEqual([{ ...later(), schemaVersion: undefined }].map(({ schemaVersion: _, ...post }) => post));
+
+    const { runs, fleet } = unbuild(await cached(SLUG));
+    const all = [...runs, ...fleet];
+    const refuses = (extra: Partial<PostFile>, message: string) => expect(() => validatePost(SLUG, later(extra), all)).toThrow(message);
+    refuses({ slug: "2026-10-13-maplibre-gl-js-5-vs-6" }, "Invalid post");
+    refuses({ run: "2026-10-30-radeon-680m-win11" }, "doesn't list");
+    refuses({ candidates: ["maplibre-gl-5", "maplibre-gl-7"] }, "doesn't have");
+    refuses({ candidates: ["maplibre-gl-6"], verdict: { ...later().verdict } }, "at least two candidates");
+    refuses({ verdict: { ...later().verdict, winnerId: "mapbox-gl-1-13" } }, "verdict");
+    refuses({ sections: { startup: "Startup headline", memory: "Memory headline" } }, "section frame-time");
+    refuses({ sections: { ...later().sections, extra: "Extra" } }, "section extra");
+    refuses({ publishedAt: "2026-10-11", slug: "2026-10-11-web-map-renderers-maplibre-gl-js-5-vs-6" }, "before its run");
+    const { entry, meta } = unbuild(await cached(SLUG));
+    expect(() => buildBenchmark(entry, meta, runs, fleet, [later(), later()])).toThrow("two posts");
+  });
+
+  test("a later post's page draws its own run, narrowed to its candidates, under its own prose", async () => {
+    const benchmark = await withPosts([later()]);
+    const view = postView(benchmark, benchmark.posts![0]!);
+    expect(view.sections!.map((section) => section.candidates.map((candidate) => candidate.id))).toEqual([["maplibre-gl-5", "maplibre-gl-6"], ["maplibre-gl-5", "maplibre-gl-6"], ["maplibre-gl-5", "maplibre-gl-6"]]);
+    expect(view.sections!.map((section) => section.verdict.headline)).toEqual(["Startup headline", "Frame headline", "Memory headline"]);
+    expect(view.runs).toBeUndefined();
+
+    const { html } = await site(benchmark);
+    const page = html(postPath(LATER));
+    expect(page).toContain("<h1>MapLibre GL JS 6.13 vs 5</h1>");
+    expect(page).toContain("The fork against itself, one major apart.");
+    expect(page).toContain("Frame headline");
+    expect(page).not.toContain("Mapbox GL JS 1.13</");
+    expect(page).toContain(`href="${benchmarkPath(SLUG)}"`);
+    // The matchup opens on this post's own run, so the button names no other run.
+    expect(page).not.toContain("matchup-link-note");
+    // The first post still points at the fleet run it doesn't tell.
+    expect(html(postPath(POST))).toContain("The matchup opens on the fleet run of");
+  });
+
+  test("a later post sits on the timeline and in the sitemap, and the benchmark page sends its run's readers to it", async () => {
+    const benchmark = await withPosts([later()]);
+    const { index, html } = await site(benchmark);
+
+    expect(html("/").indexOf(`href="${postPath(LATER)}"`)).toBeGreaterThan(-1);
+    expect(html("/").indexOf(`href="${postPath(LATER)}"`)).toBeLessThan(html("/").indexOf(`href="${postPath(POST)}"`));
+    expect(sitemapPaths(index)).toContain(postPath(LATER));
+    expect(prerenderPaths(index)).toContain(postPath(LATER));
+    const meta = routeMeta(postPath(LATER), index);
+    expect([meta.status, meta.title, meta.image, meta.publishedAt]).toEqual([200, "MapLibre GL JS 6.13 vs 5 | warefeats", `https://warefeats.com/og/posts/${LATER}.png`, "2026-10-13"]);
+
+    const matchup = html(benchmarkPath(SLUG)).replace(/<[^>]+>/g, "").replaceAll("&#x27;", "'");
+    expect(matchup).toContain("A post tells this run's story.");
+    expect(html(benchmarkPath(SLUG))).toContain(`href="${postPath(LATER)}"`);
   });
 });

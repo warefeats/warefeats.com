@@ -1,4 +1,4 @@
-import type { CatalogEntry, CatalogIndex } from "./types";
+import type { CatalogEntry, CatalogIndex, CatalogPost } from "./types";
 
 export const SITE_NAME = "warefeats";
 export const SITE_ORIGIN = "https://warefeats.com";
@@ -55,7 +55,13 @@ export function pageBenchmark(path: string, index: CatalogIndex | undefined): Ca
     return index?.benchmarks.find((entry) => entry.slug === slug);
   }
   const post = /^\/posts\/([^/]+)\/$/.exec(pathname)?.[1];
-  return post ? index?.benchmarks.find((entry) => entry.post === post) : undefined;
+  return post ? index?.benchmarks.find((entry) => entry.post === post || entry.posts?.some((later) => later.slug === post)) : undefined;
+}
+
+/** A later post's index entry, when a path names one. */
+export function pageLaterPost(path: string, index: CatalogIndex | undefined): CatalogPost | undefined {
+  const post = /^\/posts\/([^/]+)\/$/.exec(normalizePath(path))?.[1];
+  return post ? index?.benchmarks.flatMap((entry) => entry.posts ?? []).find((later) => later.slug === post) : undefined;
 }
 
 export function routeMeta(path: string, index?: CatalogIndex): RouteMeta {
@@ -84,6 +90,11 @@ export function routeMeta(path: string, index?: CatalogIndex): RouteMeta {
     return { path: pathname, canonical: postPath(benchmark.post), title: matchupTitle(benchmark), description: clipDescription(`${benchmark.title}: the charts, a winner for each section, and the scorecard, without the prose.`), type: "website", status: 200, image: `${SITE_ORIGIN}/og/benchmarks/${benchmark.slug}.png` };
   }
 
+  const later = pageLaterPost(pathname, index);
+  if (benchmark && later) {
+    return { path: pathname, title: benchmarkTitle(later), description: later.deck.length <= DESCRIPTION_LIMIT ? later.deck : clipDescription(later.deck), type: "article", publishedAt: later.publishedAt, status: 200, image: `${SITE_ORIGIN}/og/posts/${later.slug}.png` };
+  }
+
   if (benchmark) {
     return { path: pathname, title: benchmarkTitle(benchmark), description: benchmarkDescription(benchmark), type: "article", publishedAt: benchmark.publishedAt, status: 200, image: `${SITE_ORIGIN}/og/posts/${benchmark.post}.png` };
   }
@@ -96,8 +107,8 @@ function matchupTitle(benchmark: CatalogEntry): string {
   return title.length <= TITLE_LIMIT ? title : `Matchup: ${benchmark.title}`;
 }
 
-/** The benchmark title, followed by the site name when both fit in a search result. */
-function benchmarkTitle(benchmark: CatalogEntry): string {
+/** A post's title, followed by the site name when both fit in a search result. */
+function benchmarkTitle(benchmark: Pick<CatalogEntry, "title">): string {
   const title = `${benchmark.title} | ${SITE_NAME}`;
   return title.length <= TITLE_LIMIT ? title : benchmark.title;
 }
@@ -177,7 +188,8 @@ export function prerenderPaths(index: CatalogIndex): string[] {
 
 /** The pages search engines should index. A benchmark page points its canonical URL at its post, so it stays out. */
 export function sitemapPaths(index: CatalogIndex): string[] {
-  return ["/", BENCHMARKS_PATH, "/methodology/", "/about/", ...index.benchmarks.map((benchmark) => postPath(benchmark.post))];
+  const posts = index.benchmarks.flatMap((benchmark) => [benchmark.post, ...(benchmark.posts ?? []).map((later) => later.slug)]);
+  return ["/", BENCHMARKS_PATH, "/methodology/", "/about/", ...posts.map(postPath)];
 }
 
 /** Every prerendered page by its canonical URL. */
