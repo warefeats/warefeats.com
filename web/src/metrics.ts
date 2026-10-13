@@ -201,6 +201,38 @@ export function formatTick(value: number): string {
   return groupThousands(String(value));
 }
 
+/** A tick shortened to thousands, millions or billions: 500K, 1.5M. */
+function compactTick(value: number): string {
+  for (const [size, suffix] of [[1e9, "B"], [1e6, "M"], [1e3, "K"]] as const) {
+    if (Math.abs(value) >= size) return `${Number((value / size).toFixed(1))}${suffix}`;
+  }
+  return String(value);
+}
+
+/** An axis's tick labels: grouped by thousands, or shortened (500K, 1.5M) once the axis reaches 100,000, so wide ticks don't collide. */
+export function tickLabels(ticks: number[]): string[] {
+  const compact = ticks.some((tick) => Math.abs(tick) >= 100_000);
+  return ticks.map((tick) => (compact ? compactTick(tick) : formatTick(tick)));
+}
+
+/**
+ * Ticks from zero to `max` whose labels fit an axis `axisRem` wide: the most ticks, from six down to two, that leave each
+ * label's neighbour room for the longest label plus a gap, at `charRem` per character.
+ */
+export function fittedTicks(max: number, axisRem: number, charRem: number): { ticks: number[]; labels: string[] } {
+  const first = axisTicks(0, max, 6).filter((tick) => tick <= max);
+  let fallback = { ticks: first, labels: tickLabels(first) };
+  for (const count of [6, 5, 4, 3, 2]) {
+    const ticks = axisTicks(0, max, count).filter((tick) => tick <= max);
+    if (ticks.length < 2) continue;
+    const labels = tickLabels(ticks);
+    const longest = Math.max(...labels.map((label) => label.length));
+    if (axisRem / (ticks.length - 1) >= longest * charRem + 0.75) return { ticks, labels };
+    fallback = { ticks, labels };
+  }
+  return fallback;
+}
+
 export interface ScorecardColumn {
   id: string;
   title: string;

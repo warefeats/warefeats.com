@@ -8,7 +8,7 @@ import { BarChart } from "../src/components/BarChart";
 import { Conditions } from "../src/components/Conditions";
 import { benchmarkSlug, headTags, isMatchupPath, matchupPath, normalizePath, prerenderPaths, robotsTxt, routeMeta, sitemapPaths, sitemapXml } from "../src/head";
 import { applyPick, candidateUniverse, matchupField, matchupHeading, pickerVersion, pickFlat, pickParam, readPick } from "../src/matchup";
-import { axisTicks, benchmarkTests, fiveNumber, formatTick, formatValue, formatVersion, reportText, samplePosition, scorecard, standardDeviation, summarize } from "../src/metrics";
+import { axisTicks, benchmarkTests, fiveNumber, formatTick, formatValue, formatVersion, fittedTicks, tickLabels, reportText, samplePosition, scorecard, standardDeviation, summarize } from "../src/metrics";
 import { render } from "../src/entry-server";
 import { runViews } from "../src/runs";
 import type { Benchmark, BenchmarkCatalog } from "../src/types";
@@ -82,6 +82,16 @@ describe("benchmark catalog", () => {
     expect(formatValue(11289.15, "rps")).toBe("11,289.1 rps");
     expect(formatValue(-1234.5, "MB")).toBe("-1,234.5 MB");
     expect([0, 500, 1000, 10000000, 0.5].map(formatTick)).toEqual(["0", "500", "1,000", "10,000,000", "0.5"]);
+    expect(tickLabels([0, 2500, 5000, 7500])).toEqual(["0", "2,500", "5,000", "7,500"]);
+    expect(tickLabels([0, 500000, 1000000, 1500000])).toEqual(["0", "500K", "1M", "1.5M"]);
+    expect(tickLabels([0, 5e6, 1e7, 1.5e7])).toEqual(["0", "5M", "10M", "15M"]);
+    // Six ticks on a wide axis; fewer once the labels would touch on a narrow one.
+    expect(fittedTicks(2500, 20, 0.5).labels).toEqual(["0", "500", "1,000", "1,500", "2,000", "2,500"]);
+    expect(fittedTicks(2500, 8, 0.5).labels).toEqual(["0", "1,000", "2,000"]);
+    expect(fittedTicks(1.5e6, 9, 0.5).labels).toEqual(["0", "500K", "1M", "1.5M"]);
+    expect(fittedTicks(1.5e6, 5, 0.5).labels).toEqual(["0", "1M"]);
+    // A chart of zeros keeps whatever ticks the axis had, never a second zero.
+    expect(fittedTicks(0, 8, 0.5).ticks).toEqual(axisTicks(0, 0, 6));
   });
 
   test("picks friendly axis ticks", () => {
