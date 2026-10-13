@@ -1,6 +1,6 @@
 import { useId } from "react";
 import type { KeyboardEvent } from "react";
-import { axisTicks, fiveNumber, formatDuration, samplePosition } from "../metrics";
+import { axisTicks, fiveNumber, formatDuration, formatTick, samplePosition } from "../metrics";
 import type { Benchmark } from "../types";
 
 interface BoxPlotProps {
@@ -121,7 +121,7 @@ export function BoxPlot({ benchmark, index }: BoxPlotProps) {
         <div className="bar-axis box-axis" aria-hidden="true">
           {ticks.map((tick) => (
             <span className="bar-tick num" style={{ left: `${pos(tick)}%` }} key={tick}>
-              {Number.isInteger(tick) ? `${tick} ${benchmark.unit}` : formatDuration(tick)}
+              {Number.isInteger(tick) ? `${formatTick(tick)} ${benchmark.unit}` : formatDuration(tick)}
             </span>
           ))}
         </div>

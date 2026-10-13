@@ -8,7 +8,7 @@ import { BarChart } from "../src/components/BarChart";
 import { Conditions } from "../src/components/Conditions";
 import { benchmarkSlug, headTags, isMatchupPath, matchupPath, normalizePath, prerenderPaths, robotsTxt, routeMeta, sitemapPaths, sitemapXml } from "../src/head";
 import { applyPick, candidateUniverse, matchupField, matchupHeading, pickerVersion, pickFlat, pickParam, readPick } from "../src/matchup";
-import { axisTicks, benchmarkTests, fiveNumber, formatVersion, reportText, samplePosition, scorecard, standardDeviation, summarize } from "../src/metrics";
+import { axisTicks, benchmarkTests, fiveNumber, formatTick, formatValue, formatVersion, reportText, samplePosition, scorecard, standardDeviation, summarize } from "../src/metrics";
 import { render } from "../src/entry-server";
 import { runViews } from "../src/runs";
 import type { Benchmark, BenchmarkCatalog } from "../src/types";
@@ -68,6 +68,20 @@ describe("benchmark catalog", () => {
   test("computes a sample standard deviation", () => {
     expect(standardDeviation([2, 4, 4, 4, 5, 5, 7, 9])).toBeCloseTo(2.138, 3);
     expect(standardDeviation([5])).toBe(0);
+  });
+
+  test("groups large values and ticks by thousands, and keeps durations as they were", () => {
+    expect(formatValue(12794200.66, "ops/s")).toBe("12,794,200.7 ops/s");
+    expect(formatValue(1093.94, "MB")).toBe("1,093.9 MB");
+    expect(formatValue(12600, "rps")).toBe("12,600 rps");
+    expect(formatValue(906.66, "MB")).toBe("906.7 MB");
+    expect(formatValue(192.62, "ms")).toBe("192.6 ms");
+    expect(formatValue(2500, "ms")).toBe("2.500 s");
+    // Grouping keeps toFixed's rounding: 0.15 and 11289.15 sit just below the half in binary.
+    expect(formatValue(0.15, "ms/tile")).toBe("0.1 ms/tile");
+    expect(formatValue(11289.15, "rps")).toBe("11,289.1 rps");
+    expect(formatValue(-1234.5, "MB")).toBe("-1,234.5 MB");
+    expect([0, 500, 1000, 10000000, 0.5].map(formatTick)).toEqual(["0", "500", "1,000", "10,000,000", "0.5"]);
   });
 
   test("picks friendly axis ticks", () => {
