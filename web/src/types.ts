@@ -32,6 +32,8 @@ export interface CatalogEntry {
   posts?: CatalogPost[];
   /** Present when the benchmark has a matchup: the number of candidates a reader can pick from. */
   matchup?: { candidates: number };
+  /** The post the benchmark's page is named for and points its canonical URL at: the newest telling its run's whole lineup, else the first (ADR 0006). */
+  page?: { post: string; title: string };
 }
 
 /** A later post as the timeline lists it. */

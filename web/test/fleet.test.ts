@@ -9,10 +9,10 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { WinnerLine } from "../src/components/WinnerLine";
 import { render } from "../src/entry-server";
-import { benchmarkPath, postPath, prerenderPaths, routeMeta, sitemapPaths } from "../src/head";
+import { BENCHMARKS_PATH, benchmarkPath, postPath, prerenderPaths, routeMeta, sitemapPaths } from "../src/head";
 import { candidateUniverse, readPick } from "../src/matchup";
 import { formatValue, scorecard } from "../src/metrics";
-import { postView } from "../src/posts";
+import { namingPost, postView } from "../src/posts";
 import { activeRun, changedCandidates, newestRun, rigLabel, runChoices, runViews, toggleLabels, versionedName } from "../src/runs";
 import type { Benchmark, BenchmarkRun } from "../src/types";
 import { writePick, writeRun } from "../src/url-state";
@@ -472,5 +472,24 @@ describe("later posts", () => {
     const matchup = html(benchmarkPath(SLUG)).replace(/<[^>]+>/g, "").replaceAll("&#x27;", "'");
     expect(matchup).toContain("A post tells this run's story.");
     expect(html(benchmarkPath(SLUG))).toContain(`href="${postPath(LATER)}"`);
+  });
+
+  test("the newest post that tells its run's whole lineup names the benchmark page; a narrower one leaves the first post's name", async () => {
+    const narrow = await withPosts([later()]);
+    expect(namingPost(narrow).post).toBe(POST);
+    const narrowSite = await site(narrow);
+    expect(narrowSite.html(benchmarkPath(SLUG))).toContain("<h1>MapLibre GL JS vs Mapbox GL JS</h1>");
+    expect(routeMeta(benchmarkPath(SLUG), narrowSite.index).canonical).toBe(postPath(POST));
+
+    const whole = await withPosts([later({ candidates: ["mapbox-gl-1-13", "maplibre-gl-5", "maplibre-gl-6"] })]);
+    expect([namingPost(whole).post, namingPost(whole).title]).toEqual([LATER, "MapLibre GL JS 6.13 vs 5"]);
+    const { index, html } = await site(whole);
+    expect(html(BENCHMARKS_PATH)).toContain(`<a href="${benchmarkPath(SLUG)}" data-discover="true">MapLibre GL JS 6.13 vs 5</a>`);
+    expect(html(benchmarkPath(SLUG))).toContain("<h1>MapLibre GL JS 6.13 vs 5</h1>");
+    const meta = routeMeta(benchmarkPath(SLUG), index);
+    expect([meta.title, meta.canonical]).toEqual(["Matchup: MapLibre GL JS 6.13 vs 5 | warefeats", postPath(LATER)]);
+    // The first post keeps its own title on its page and on the timeline.
+    expect(html(postPath(POST))).toContain("<h1>MapLibre GL JS vs Mapbox GL JS</h1>");
+    expect(html("/")).toContain(">MapLibre GL JS vs Mapbox GL JS</a>");
   });
 });

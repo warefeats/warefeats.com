@@ -1,4 +1,5 @@
 import { matchupField } from "./matchup";
+import { namingPost } from "./posts";
 import { runViews } from "./runs";
 import { summarize } from "./metrics";
 import type { Benchmark, BenchmarkCatalog, CatalogEntry, CatalogIndex } from "./types";
@@ -113,6 +114,7 @@ function toCatalogEntry(benchmark: Benchmark): CatalogEntry {
   const summary = summarize(benchmark);
   const lead = summary.comparisons[0];
   const field = matchupField(benchmark);
+  const named = namingPost(benchmark);
 
   return {
     id: benchmark.id,
@@ -125,6 +127,7 @@ function toCatalogEntry(benchmark: Benchmark): CatalogEntry {
     chip: benchmark.environment.chip,
     runs: benchmark.protocol.runs,
     verdictHeadline: benchmark.verdict.headline,
+    page: { post: named.post, title: named.title },
     ...(lead ? { lead: { winner: { name: summary.winner.name, version: summary.winner.version }, other: { name: lead.other.name, version: lead.other.version }, ratio: lead.ratio, sigma: lead.sigma } } : {}),
     ...(field === undefined ? {} : { matchup: { candidates: field } }),
     ...(benchmark.posts?.length ? { posts: benchmark.posts.map((post) => ({ slug: post.slug, title: post.title, deck: post.deck, publishedAt: post.publishedAt, chip: runViews(benchmark).find((run) => run.id === post.run)?.environment.chip ?? benchmark.environment.chip })) } : {}),

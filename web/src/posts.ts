@@ -1,5 +1,36 @@
-import { runViews } from "./runs";
+import { runCandidates, runViews } from "./runs";
+import type { RunView } from "./runs";
 import type { Benchmark, BenchmarkSection, Post } from "./types";
+
+/** The post a benchmark's page is named for, with the run it tells. */
+export interface NamingPost {
+  post: string;
+  title: string;
+  publishedAt: string;
+  run: RunView;
+}
+
+/**
+ * The post that names a benchmark's page: the newest one that tells the whole lineup of its run, since that lineup is
+ * the one the matchup opens on, or the first post when no later post does. A post that locks in fewer candidates than
+ * its run measured tells a narrower story and names nothing (ADR 0006).
+ */
+export function namingPost(benchmark: Benchmark): NamingPost {
+  const views = runViews(benchmark);
+  let named: NamingPost = { post: benchmark.post, title: benchmark.title, publishedAt: benchmark.publishedAt, run: views[0]! };
+  for (const post of benchmark.posts ?? []) {
+    const run = views.find((view) => view.id === post.run);
+    if (!run || post.publishedAt < named.publishedAt) {
+      continue;
+    }
+    const locked = post.candidates;
+    if (locked !== undefined && ![...runCandidates(run).keys()].every((id) => locked.includes(id))) {
+      continue;
+    }
+    named = { post: post.slug, title: post.title, publishedAt: post.publishedAt, run };
+  }
+  return named;
+}
 
 /** The later post a slug names on a benchmark, or undefined for its first post, which is the benchmark's own prose. */
 export function laterPost(benchmark: Benchmark, slug: string | undefined): Post | undefined {
