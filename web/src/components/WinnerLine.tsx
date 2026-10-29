@@ -1,5 +1,4 @@
 import { Fragment } from "react";
-import { formatValue } from "../metrics";
 import type { Scorecard } from "../metrics";
 
 /**
@@ -13,7 +12,7 @@ export function WinnerLine({ card, index }: { card: Scorecard; index: number }) 
   const names = new Map(card.rows.map((row) => [row.candidateId, row]));
   const named = (id: string) => {
     const row = names.get(id)!;
-    return <><strong>{row.name}</strong> ({formatValue(row.cells[index]!, column.unit)})</>;
+    return <><strong>{row.name}</strong> ({column.format.format(row.cells[index]!)} {column.format.unit})</>;
   };
 
   if (!column.tied) {

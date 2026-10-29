@@ -13,7 +13,7 @@ import { CatalogSkeleton, ErrorState } from "../components/States";
 import { WinnerLine } from "../components/WinnerLine";
 import { BENCHMARKS_PATH, postPath } from "../head";
 import { applyPick, candidateUniverse, MATCHUP_FIELD, matchupHeading, pickFlat } from "../matchup";
-import { benchmarkTests, formatDate, scorecard } from "../metrics";
+import { benchmarkTests, formatDate, scorecard, sectionTests } from "../metrics";
 import { namingPost, postForRun } from "../posts";
 import { rigLabel } from "../runs";
 import { usePick, useRunSelection } from "../url-state";
@@ -21,10 +21,10 @@ import type { Benchmark, BenchmarkSection } from "../types";
 import { NotFound } from "./NotFound";
 
 /**
- * A benchmark's page: a reader-picked view of one of its runs, laid out like the post without its prose. Each section's
- * charts and the winner computed from its samples, then the conditions and the scorecard, with nothing after it (ADR
- * 0003). It offers every run, fleet runs included, and opens on the newest; a change of pick pins the run in the URL
- * (ADR 0002). It lives at the benchmark's category, /benchmarks/<slug>/ (ADR 0004).
+ * A benchmark's page: a reader-picked view of one of its runs, laid out like the post without its prose. Each section
+ * opens with the winner computed from its samples, then its charts (ADR 0007), then the conditions and the scorecard,
+ * with nothing after it (ADR 0003). It offers every run, fleet runs included, and opens on the newest; a change of pick
+ * pins the run in the URL (ADR 0002). It lives at the benchmark's category, /benchmarks/<slug>/ (ADR 0004).
  */
 function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
   const { runs, active, select } = useRunSelection(benchmark, "matchup");
@@ -71,14 +71,12 @@ function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
           {picked.sections.map((section, index) => (
             <section className="benchmark-section" key={section.id} aria-labelledby={`section-${section.id}`}>
               <h2 id={`section-${section.id}`}>{section.title}</h2>
-              {section.tests?.length ? (
-                <div className="test-grid">
-                  {section.tests.map((test, testIndex) => (
-                    <BarChart benchmark={{ ...benchmark, candidates: section.candidates }} test={test} index={testIndex} key={test.id} />
-                  ))}
-                </div>
-              ) : null}
               <WinnerLine card={card} index={index} />
+              <div className="test-stack">
+                {sectionTests(section).map((test, testIndex) => (
+                  <BarChart benchmark={{ ...benchmark, candidates: section.candidates }} test={test} index={testIndex} key={test.id} />
+                ))}
+              </div>
             </section>
           ))}
 
@@ -119,16 +117,16 @@ function FlatTests({ benchmark, repeats }: { benchmark: Benchmark; repeats: bool
     <>
       <section className="tests" aria-labelledby="tests-title">
         <h2 id="tests-title">Tests</h2>
+        <WinnerLine card={card} index={0} />
         {tests.length ? (
-          <div className="test-grid">
+          <div className="test-stack">
             {tests.map((test, index) => <BarChart benchmark={benchmark} test={test} index={index} key={test.id} />)}
           </div>
         ) : (
-          <div className="test-single">
+          <div className="test-stack">
             <BoxPlot benchmark={benchmark} index={0} />
           </div>
         )}
-        <WinnerLine card={card} index={0} />
         <details className="report-details">
           <summary>Full report, as hyperfine prints it</summary>
           <div className="report-grid">

@@ -33,7 +33,7 @@ The candidate a matchup names for a section: the best mean among the candidates 
 _Avoid_: verdict, leader, champion
 
 **Matchup**:
-A reader-picked set of two or more candidates from one run of one benchmark, laid out like a post without its prose: each section's charts and winner, then the scorecard. It gives no verdict.
+A reader-picked set of two or more candidates from one run of one benchmark, laid out like a post without its prose: each section's winner, then its charts, then the scorecard. It gives no verdict.
 _Avoid_: comparison, explorer, versus, head-to-head
 
 **Category**:

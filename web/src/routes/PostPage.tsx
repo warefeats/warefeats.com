@@ -16,7 +16,7 @@ import { benchmarkPath } from "../head";
 import { matchupField } from "../matchup";
 import { changedCandidates, rigLabel, runChoices, versionedName } from "../runs";
 import type { RunView } from "../runs";
-import { benchmarkTests, formatDate } from "../metrics";
+import { benchmarkTests, formatDate, sectionTests } from "../metrics";
 import { useRunSelection } from "../url-state";
 import type { Benchmark } from "../types";
 import { laterPost, postView } from "../posts";
@@ -72,26 +72,26 @@ function BenchmarkContent({ benchmark, source }: { benchmark: Benchmark; source:
           <p className="crumbs"><Link to="/">Posts</Link> <span aria-hidden="true">/</span> {benchmark.category}</p>
           <h1>{benchmark.title}</h1>
           <p className="deck">{benchmark.deck}</p>
-          <p className="byline">Published <time dateTime={benchmark.publishedAt} className="num">{formatDate(benchmark.publishedAt)}</time> on {active.environment.machine}, {active.environment.chip}</p>
+          <p className="post-verdict">{benchmark.verdict.headline}.</p>
+          <p className="byline">Published <time dateTime={benchmark.publishedAt} className="num">{formatDate(benchmark.publishedAt)}</time> on {active.environment.machine}, {active.environment.chip}. <span className="num">{active.protocol.runs}</span> measured passes after <span className="num">{active.protocol.warmups}</span> warmups.</p>
           <MatchupLink source={source} run={active} />
         </header>
 
         {runs.length > 1 ? <RunToggle runs={runs} active={active.id} onSelect={select} /> : null}
 
         {displaySections.map((section) => {
-          const sectionTests = section.tests ?? [];
+          const tests = sectionTests(section);
           return (
             <section className="benchmark-section" key={section.id} aria-labelledby={`section-${section.id}`}>
               <h2 id={`section-${section.id}`}>{section.title}</h2>
               <p className="deck">{section.deck}</p>
-              {sectionTests.length ? (
-                <div className="test-grid">
-                  {sectionTests.map((test, index) => (
-                    <BarChart benchmark={{ ...benchmark, candidates: section.candidates }} test={test} index={index} key={test.id} />
-                  ))}
-                </div>
-              ) : null}
               <p className="section-verdict">{section.verdict.headline}</p>
+              <div className="test-stack">
+                {tests.map((test, index) => (
+                  <BarChart benchmark={{ ...benchmark, candidates: section.candidates }} test={test} index={index} key={test.id} />
+                ))}
+              </div>
+              {section.verdict.summary ? <p className="section-summary">{section.verdict.summary}</p> : null}
             </section>
           );
         })}
@@ -124,7 +124,8 @@ function BenchmarkContent({ benchmark, source }: { benchmark: Benchmark; source:
         <p className="crumbs"><Link to="/">Posts</Link> <span aria-hidden="true">/</span> {benchmark.category}</p>
         <h1>{benchmark.title}</h1>
         <p className="deck">{benchmark.deck}</p>
-        <p className="byline">Published <time dateTime={benchmark.publishedAt} className="num">{formatDate(benchmark.publishedAt)}</time> on {benchmark.environment.machine}, {benchmark.environment.chip}</p>
+        <p className="post-verdict">{benchmark.verdict.headline}.</p>
+        <p className="byline">Published <time dateTime={benchmark.publishedAt} className="num">{formatDate(benchmark.publishedAt)}</time> on {benchmark.environment.machine}, {benchmark.environment.chip}. <span className="num">{benchmark.protocol.runs}</span> measured passes after <span className="num">{benchmark.protocol.warmups}</span> warmups.</p>
         <MatchupLink source={source} run={active} />
       </header>
 
@@ -133,13 +134,13 @@ function BenchmarkContent({ benchmark, source }: { benchmark: Benchmark; source:
       <section className="tests" aria-labelledby="tests-title">
         <h2 id="tests-title">Tests</h2>
         {tests.length ? (
-          <div className="test-grid">
+          <div className="test-stack">
             {tests.map((test, index) => (
               <BarChart benchmark={benchmark} test={test} index={index} key={test.id} />
             ))}
           </div>
         ) : (
-          <div className="test-single">
+          <div className="test-stack">
             <BoxPlot benchmark={benchmark} index={0} />
           </div>
         )}

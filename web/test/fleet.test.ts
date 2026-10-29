@@ -11,7 +11,7 @@ import { WinnerLine } from "../src/components/WinnerLine";
 import { render } from "../src/entry-server";
 import { BENCHMARKS_PATH, benchmarkPath, postPath, prerenderPaths, routeMeta, sitemapPaths } from "../src/head";
 import { candidateUniverse, readPick } from "../src/matchup";
-import { formatValue, scorecard } from "../src/metrics";
+import { scorecard } from "../src/metrics";
 import { namingPost, postView } from "../src/posts";
 import { activeRun, changedCandidates, newestRun, rigLabel, runChoices, runViews, toggleLabels, versionedName } from "../src/runs";
 import type { Benchmark, BenchmarkRun } from "../src/types";
@@ -339,7 +339,7 @@ describe("the matchup reads like a post without its prose", () => {
     return render(benchmarkPath(slug), toCatalogIndex(catalog), benchmark).html.replaceAll("<!-- -->", "");
   };
 
-  test("each section's charts end in a winner, then the conditions, then the scorecard last", async () => {
+  test("each section opens with its winner, then its charts, then the conditions, then the scorecard last", async () => {
     const html = await matchupOf(SLUG);
     const at = (needle: string) => {
       const index = html.indexOf(needle);
@@ -353,11 +353,18 @@ describe("the matchup reads like a post without its prose", () => {
     expect([...order].sort((a, b) => a - b)).toEqual(order);
 
     const winners = [...html.matchAll(/<p class="section-winner">(.*?)<\/p>/g)].map((match) => text(match[1]!));
-    expect(winners).toEqual(["Winner Mapbox GL JS 1.13 (192.7 ms)", "Winner MapLibre GL JS 5 (3.1 ms)", "Winner MapLibre GL JS 5 (918.6 MB)"]);
+    expect(winners).toEqual(["Winner Mapbox GL JS 1.13 (193 ms)", "Winner MapLibre GL JS 5 (3.06 ms)", "Winner MapLibre GL JS 5 (919 MB)"]);
     expect(html.lastIndexOf('class="section-winner"')).toBeLessThan(at('id="scorecard-title"'));
+    const anchors = ['id="section-startup"', 'id="section-frame-time"', 'id="section-memory"', "Test conditions"];
+    for (let index = 0; index < anchors.length - 1; index++) {
+      const section = html.slice(at(anchors[index]!), at(anchors[index + 1]!));
+      expect(section.indexOf('class="section-winner"')).toBeGreaterThan(-1);
+      expect(section.indexOf('class="section-winner"')).toBeLessThan(section.indexOf('class="test"'));
+    }
 
     const benchmark = await cached(SLUG);
     expect(html).not.toContain(benchmark.sections![0]!.deck);
+    expect(html).not.toContain(benchmark.sections![0]!.verdict.summary);
     expect(html).not.toContain("What this does not prove");
     expect(html).not.toContain(benchmark.limitations[0]!);
   });
@@ -371,7 +378,7 @@ describe("the matchup reads like a post without its prose", () => {
     const card = scorecard([{ ...frame, candidates: frame.candidates.map((candidate) => (candidate.id === "maplibre-gl-6" ? six : candidate)) }], true);
 
     expect(card.columns[0]!.tied).toBe(true);
-    expect(text(renderToStaticMarkup(createElement(WinnerLine, { card, index: 0 })))).toBe(`Tie MapLibre GL JS 6 (${formatValue(six.statistics.meanMs, "ms")}) and MapLibre GL JS 5 (${formatValue(five.statistics.meanMs, "ms")}), inside this run's noise`);
+    expect(text(renderToStaticMarkup(createElement(WinnerLine, { card, index: 0 })))).toBe("Tie MapLibre GL JS 6 (3.05 ms) and MapLibre GL JS 5 (3.06 ms), inside this run's noise");
   });
 
   test("a benchmark without sections names its winner by time per pass and ends on a one-column scorecard", async () => {
@@ -381,6 +388,7 @@ describe("the matchup reads like a post without its prose", () => {
     const winner = text(html.match(/<p class="section-winner">(.*?)<\/p>/)![1]!);
 
     expect(winner.startsWith(`Winner ${best.name} (`)).toBe(true);
+    expect(html.indexOf('class="section-winner"')).toBeLessThan(html.indexOf('class="test"'));
     expect(html.indexOf('class="section-winner"')).toBeLessThan(html.indexOf('id="scorecard-title"'));
     expect(text(html.slice(html.indexOf('id="scorecard-title"')))).toContain("Time per pass");
     expect(html).not.toContain("What this does not prove");

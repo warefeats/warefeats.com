@@ -18,13 +18,13 @@ export function Methodology() {
       <p>Each candidate gets unmeasured warmup passes first, so the filesystem cache is hot for everyone. Then every measured pass starts a fresh process. Startup cost counts. Nobody gets an in-process cache the other tool can't have.</p>
 
       <h2>Every sample is published</h2>
-      <p>A result is not one number. The report shows the mean with its standard deviation, the range, and the median. Figure 1 plots every pass on one shared axis, so the gap between tools is something you can see, not something I summarized. The ratio in the summary is the slower mean over the faster mean, with the uncertainty propagated the way <a href="https://github.com/sharkdp/hyperfine" target="_blank" rel="noreferrer">hyperfine</a> does it.</p>
+      <p>A result is not one number. A benchmark without sections shows every candidate's mean with its standard deviation, the range and the median, and plots every pass on one shared axis, so the gap between tools is something you can see, not something I summarized; the ratio in its summary is the slower mean over the faster mean, with the uncertainty propagated the way <a href="https://github.com/sharkdp/hyperfine" target="_blank" rel="noreferrer">hyperfine</a> does it. A benchmark with sections charts one value per candidate for each test, in one scale and one precision per chart, and ranks each section in its scorecard by the mean of that section's samples. Every sample behind those means is in the <a href="/data/benchmarks.json">catalog JSON</a>, linked from every page's footer.</p>
 
       <h2>The rig is named</h2>
       <p>Machine, chip, cores, memory, OS, runtime: printed next to every result. Numbers from different rigs never share a chart.</p>
 
       <h2>Limits are stated</h2>
-      <p>Each page ends with what the run does not prove. Lint throughput says nothing about rule coverage, editor integration, or migration cost, and the page says so.</p>
+      <p>Each post ends with what the run does not prove. Lint throughput says nothing about rule coverage, editor integration, or migration cost, and the post says so. A benchmark's own page, the matchup, ends on its scorecard and gives no verdict; its byline links the post for the limits.</p>
 
       <h2>Reproduce it</h2>
       <p>Every published benchmark links its runner, and all of them live under the <a href="https://github.com/warefeats" target="_blank" rel="noreferrer">warefeats organization</a> alongside the site that renders this catalog. Run it on your machine. If your numbers disagree with mine, open an issue with your rig and your samples.</p>

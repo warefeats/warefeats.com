@@ -55,7 +55,6 @@ export function BoxPlot({ benchmark, index }: BoxPlotProps) {
   const range = { min: 0, max: Math.ceil((slowest * 1.08) / step) * step };
   const ticks = axisTicks(0, range.max, 6).filter((tick) => tick <= range.max);
   const runs = benchmark.protocol.runs;
-  const direction = benchmark.lowerIsBetter ? "LOWER" : "HIGHER";
   const pos = (value: number) => samplePosition(value, range.min, range.max);
 
   return (
@@ -64,11 +63,11 @@ export function BoxPlot({ benchmark, index }: BoxPlotProps) {
         <span className="test-index">Test {index + 1}</span> Time per pass
       </h3>
       <p className="test-description">
-        {runs} measured passes over the corpus. Box is the middle half of the runs, line is the median, whiskers reach the fastest and slowest pass, dots are every run. <span className="test-direction">({direction} {benchmark.unit} = {benchmark.lowerIsBetter ? "FASTER" : "BETTER"})</span>
+        {runs} measured passes over the corpus. Box is the middle half of the runs, line is the median, whiskers reach the fastest and slowest pass, dots are every run.
       </p>
 
       <figure className="bar-chart box-plot" aria-labelledby={`${id}-title`}>
-        <figcaption className="bar-chart-head">Time per pass ({benchmark.unit})</figcaption>
+        <figcaption className="bar-chart-head">Time per pass ({benchmark.unit}, {benchmark.lowerIsBetter ? "lower is better" : "higher is better"})</figcaption>
         <div className="box-rows">
           {benchmark.candidates.map((candidate) => {
             const isWinner = candidate.id === benchmark.verdict.winnerId;
