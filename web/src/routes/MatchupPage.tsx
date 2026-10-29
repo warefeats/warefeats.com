@@ -14,7 +14,7 @@ import { WinnerLine } from "../components/WinnerLine";
 import { BENCHMARKS_PATH, postPath } from "../head";
 import { applyPick, candidateUniverse, MATCHUP_FIELD, matchupHeading, pickFlat } from "../matchup";
 import { benchmarkTests, formatDate, scorecard } from "../metrics";
-import { postForRun } from "../posts";
+import { namingPost, postForRun } from "../posts";
 import { rigLabel } from "../runs";
 import { usePick, useRunSelection } from "../url-state";
 import type { Benchmark, BenchmarkSection } from "../types";
@@ -42,6 +42,7 @@ function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
   // fleet run is showing, since a post draws only the runs it was written against.
   const primary = runs[0]!;
   const covering = postForRun(benchmark, active.id);
+  const named = namingPost(benchmark);
   const back = covering ? { pathname: postPath(covering.slug) } : { pathname: published, search: active.fleet || active.id === primary.id ? "" : `?run=${encodeURIComponent(active.id)}` };
 
   return (
@@ -54,7 +55,7 @@ function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
       {pickable ? <CandidatePicker universe={universe} picked={pick.ids} onToggle={toggle} onReset={reset} note={pick.ignored ? "That link named fewer than two candidates from this run, so you're seeing all of them." : undefined} /> : null}
 
       <header className="benchmark-head">
-        <h1>{matchupHeading(pick, universe, benchmark.title)}</h1>
+        <h1>{matchupHeading(pick, universe, named.title)}</h1>
         <p className="deck">{pickable ? "Tick the candidates you care about and the charts, winners and table redraw for just them: same run, same rig, same samples." : "Every candidate on one rig, from the same samples."} Winners come from the numbers alone; the story is in the post.</p>
         {active.fleet ? (
           <p className="byline">From the fleet run of <time dateTime={active.publishedAt} className="num">{formatDate(active.publishedAt)}</time> on {rigLabel(active)}: {active.environment.machine}, {active.environment.chip}. {covering ? "A post tells this run's story. " : <>The post covers the run of <time dateTime={primary.publishedAt} className="num">{formatDate(primary.publishedAt)}</time>. </>}<Link to={back}>Read the post</Link></p>

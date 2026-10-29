@@ -51,7 +51,7 @@ export function rigLabel(run: RunView): string {
 }
 
 /** Each candidate a run measured, once, by id: its own candidates first, then any its sections add. */
-function runCandidates(run: RunView): Map<string, Candidate> {
+export function runCandidates(run: RunView): Map<string, Candidate> {
   const seen = new Map<string, Candidate>();
   for (const candidate of [...run.candidates, ...(run.sections ?? []).flatMap((section) => section.candidates)]) {
     if (!seen.has(candidate.id)) {

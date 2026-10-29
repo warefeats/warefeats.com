@@ -4,12 +4,17 @@ import { CatalogSkeleton, EmptyState, ErrorState } from "../components/States";
 import { benchmarkPath } from "../head";
 import type { CatalogEntry } from "../types";
 
-/** Every benchmark page, by category and then title. */
-function byCategory(benchmarks: CatalogEntry[]): CatalogEntry[] {
-  return [...benchmarks].sort((a, b) => a.category.localeCompare(b.category) || a.title.localeCompare(b.title));
+/** What a benchmark's page is called: its newest post's title when that post tells the whole lineup, else the first post's (ADR 0006). */
+function pageName(benchmark: CatalogEntry): string {
+  return (benchmark.page ?? benchmark).title;
 }
 
-/** The index of benchmark pages: one per benchmark, named for its category of tools (ADR 0004). */
+/** Every benchmark page, by category and then name. */
+function byCategory(benchmarks: CatalogEntry[]): CatalogEntry[] {
+  return [...benchmarks].sort((a, b) => a.category.localeCompare(b.category) || pageName(a).localeCompare(pageName(b)));
+}
+
+/** The index of benchmark pages: one per benchmark, at its category of tools (ADR 0004), named by its newest post (ADR 0006). */
 export function Benchmarks() {
   const { state, reload } = useCatalog();
 
@@ -30,7 +35,7 @@ export function Benchmarks() {
             {byCategory(state.index.benchmarks).map((benchmark) => (
               <li className="timeline-entry" key={benchmark.id}>
                 <p className="timeline-meta">{benchmark.category} <span aria-hidden="true">·</span> {benchmark.chip}</p>
-                <h2 className="timeline-title"><Link to={benchmarkPath(benchmark.slug)}>{benchmark.title}</Link></h2>
+                <h2 className="timeline-title"><Link to={benchmarkPath(benchmark.slug)}>{pageName(benchmark)}</Link></h2>
               </li>
             ))}
           </ol>

@@ -86,8 +86,10 @@ export function routeMeta(path: string, index?: CatalogIndex): RouteMeta {
   const benchmark = pageBenchmark(pathname, index);
 
   if (benchmark && isBenchmarkPath(pathname)) {
-    // A benchmark page redraws numbers its post publishes, so search engines index the post (ADR 0001, ADR 0004).
-    return { path: pathname, canonical: postPath(benchmark.post), title: matchupTitle(benchmark), description: clipDescription(`${benchmark.title}: the charts, a winner for each section, and the scorecard, without the prose.`), type: "website", status: 200, image: `${SITE_ORIGIN}/og/benchmarks/${benchmark.slug}.png` };
+    // A benchmark page redraws numbers its post publishes, so search engines index the post (ADR 0001, ADR 0004): the
+    // newest post that tells the lineup the page opens on, which also names the page (ADR 0006).
+    const page = benchmark.page ?? { post: benchmark.post, title: benchmark.title };
+    return { path: pathname, canonical: postPath(page.post), title: matchupTitle(page.title), description: clipDescription(`${page.title}: the charts, a winner for each section, and the scorecard, without the prose.`), type: "website", status: 200, image: `${SITE_ORIGIN}/og/benchmarks/${benchmark.slug}.png` };
   }
 
   const later = pageLaterPost(pathname, index);
@@ -102,9 +104,9 @@ export function routeMeta(path: string, index?: CatalogIndex): RouteMeta {
   return { path: pathname, title: `Not found | ${SITE_NAME}`, description: DEFAULT_DESCRIPTION, type: "website", status: 404, image: SITE_CARD };
 }
 
-function matchupTitle(benchmark: CatalogEntry): string {
-  const title = `Matchup: ${benchmark.title} | ${SITE_NAME}`;
-  return title.length <= TITLE_LIMIT ? title : `Matchup: ${benchmark.title}`;
+function matchupTitle(name: string): string {
+  const title = `Matchup: ${name} | ${SITE_NAME}`;
+  return title.length <= TITLE_LIMIT ? title : `Matchup: ${name}`;
 }
 
 /** A post's title, followed by the site name when both fit in a search result. */

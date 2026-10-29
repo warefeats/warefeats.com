@@ -2,6 +2,7 @@ import satori from "satori";
 import type { SatoriOptions } from "satori";
 import { largestField, matchupField } from "./matchup";
 import { formatDate, formatRatio, summarize } from "./metrics";
+import { namingPost } from "./posts";
 import type { Benchmark } from "./types";
 
 export const OG_WIDTH = 1200;
@@ -83,11 +84,12 @@ export async function benchmarkCard(benchmark: Benchmark, fonts: OgFonts): Promi
 
 /** The matchup card: an invitation to pick, since a matchup carries no verdict to show. */
 export async function matchupCard(benchmark: Benchmark, fonts: OgFonts): Promise<string> {
-  const foot = `${benchmark.environment.machine} · ${benchmark.environment.chip} · ${formatDate(benchmark.publishedAt)}`;
+  const named = namingPost(benchmark);
+  const foot = `${named.run.environment.machine} · ${named.run.environment.chip} · ${formatDate(named.publishedAt)}`;
   return satori(
     frame(
       foot,
-      h("div", row({ fontFamily: sans, fontSize: 30, fontWeight: 500, color: MUTED, marginBottom: 18 }), benchmark.title),
+      h("div", row({ fontFamily: sans, fontSize: 30, fontWeight: 500, color: MUTED, marginBottom: 18 }), named.title),
       h("div", row({ fontFamily: mono, fontSize: 104, fontWeight: 700, color: RED, letterSpacing: -4, lineHeight: 1.1, marginLeft: -4 }), matchupField(benchmark) === undefined ? "The numbers" : "Pick your matchup"),
       h("div", row({ fontFamily: mono, fontSize: 38, fontWeight: 500, marginTop: 18 }), `${largestField(benchmark)} candidates · one rig · winners from the samples`),
     ) as unknown as React.ReactNode,
