@@ -582,7 +582,8 @@ describe("home", () => {
     const index = toCatalogIndex(await loadCatalog());
     const html = render("/", index).html.replaceAll("<!-- -->", "");
     const titles = [...html.matchAll(/class="timeline-title"><a [^>]*>([^<]+)<\/a>/g)].map((match) => match[1]);
-    const newestFirst = [...index.benchmarks].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt)).map((post) => post.title.replaceAll("&", "&amp;"));
+    const posts = index.benchmarks.flatMap((entry) => [{ title: entry.title, publishedAt: entry.publishedAt }, ...(entry.posts ?? [])]);
+    const newestFirst = posts.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt)).map((post) => post.title.replaceAll("&", "&amp;"));
 
     expect(titles).toEqual(newestFirst);
     expect(new Set(index.benchmarks.map((post) => post.category)).size).toBeGreaterThan(1);
@@ -604,7 +605,11 @@ describe("routes", () => {
     expect(paths).toContain("/posts/2026-08-26-js-linter-tools-eslint-vs-biome/");
     expect(paths).toContain("/benchmarks/js-linter-tools/");
     expect(paths).toContain("/benchmarks/http-caching-proxies/");
-    expect(paths).toHaveLength(4 + 2 * catalog.benchmarks.length);
+    const later = catalog.benchmarks.flatMap((entry) => entry.posts ?? []);
+    for (const post of later) {
+      expect(paths).toContain(postPath(post.slug));
+    }
+    expect(paths).toHaveLength(4 + 2 * catalog.benchmarks.length + later.length);
   });
 
   test("names a post by its date, its category and its products, and a benchmark page by its category alone", async () => {

@@ -23,9 +23,9 @@ const POST = "2026-09-02-web-map-renderers-mapbox-gl-js-vs-maplibre-gl-js";
 
 /**
  * Splits a cached benchmark back into the runner files sync read, so sync's builder can be checked against its own output.
- * `runs` holds the authored runs and `fleet` the fleet runs, so a test can build on the authored runs alone.
+ * `runs` holds the authored runs, `fleet` the fleet runs and `posts` the later posts, so a test can build on the authored runs alone.
  */
-function unbuild(benchmark: Benchmark): { entry: RegistryEntry; meta: RunnerBenchmark; runs: RunFile[]; fleet: RunFile[] } {
+function unbuild(benchmark: Benchmark): { entry: RegistryEntry; meta: RunnerBenchmark; runs: RunFile[]; fleet: RunFile[]; posts: PostFile[] } {
   const runFile = (run: Pick<BenchmarkRun, "id" | "label" | "publishedAt" | "environment" | "protocol" | "candidates" | "sections">): RunFile => ({
     schemaVersion: 1,
     id: run.id,
@@ -39,6 +39,7 @@ function unbuild(benchmark: Benchmark): { entry: RegistryEntry; meta: RunnerBenc
   const primary = runFile({ id: benchmark.run!.id, label: benchmark.run!.label, publishedAt: benchmark.publishedAt, environment: benchmark.environment, protocol: benchmark.protocol, candidates: benchmark.candidates, ...(benchmark.sections ? { sections: benchmark.sections } : {}) });
   const runs = [primary, ...(benchmark.runs ?? []).filter((run) => !run.fleet).map(runFile)];
   const fleet = (benchmark.runs ?? []).filter((run) => run.fleet).map(runFile);
+  const posts = (benchmark.posts ?? []).map((post): PostFile => ({ schemaVersion: 1, ...post }));
   const meta: RunnerBenchmark = {
     schemaVersion: 1,
     id: benchmark.id,
@@ -57,8 +58,9 @@ function unbuild(benchmark: Benchmark): { entry: RegistryEntry; meta: RunnerBenc
     ...(benchmark.trademarks ? { trademarks: benchmark.trademarks } : {}),
     runs: runs.map((run) => `runs/${run.id}.json`),
     ...(fleet.length ? { fleetRuns: fleet.map((run) => `runs/${run.id}.json`) } : {}),
+    ...(posts.length ? { posts: posts.map((post) => `posts/${post.slug}.json`) } : {}),
   };
-  return { entry: { slug: benchmark.slug, repo: benchmark.runnerUrl!.replace("https://github.com/", ""), ref: "0".repeat(40) }, meta, runs, fleet };
+  return { entry: { slug: benchmark.slug, repo: benchmark.runnerUrl!.replace("https://github.com/", ""), ref: "0".repeat(40) }, meta, runs, fleet, posts };
 }
 
 async function cached(slug: string): Promise<Benchmark> {
@@ -106,11 +108,11 @@ describe("sync with fleet runs", () => {
 
     for (const file of files) {
       const text = await readFile(join(CACHE, file), "utf8");
-      const { entry, meta, runs, fleet } = unbuild(JSON.parse(text));
-      expect(JSON.stringify(buildBenchmark(entry, meta, runs, fleet), null, 2) + "\n").toBe(text);
+      const { entry, meta, runs, fleet, posts } = unbuild(JSON.parse(text));
+      expect(JSON.stringify(buildBenchmark(entry, meta, runs, fleet, posts), null, 2) + "\n").toBe(text);
       if (fleet.length === 0) {
-        expect(JSON.stringify(buildBenchmark(entry, meta, runs), null, 2) + "\n").toBe(text);
-        expect(JSON.stringify(buildBenchmark(entry, { ...meta, fleetRuns: [] }, runs, []), null, 2) + "\n").toBe(text);
+        expect(JSON.stringify(buildBenchmark(entry, meta, runs, undefined, posts), null, 2) + "\n").toBe(text);
+        expect(JSON.stringify(buildBenchmark(entry, { ...meta, fleetRuns: [] }, runs, [], posts), null, 2) + "\n").toBe(text);
       }
     }
   });
