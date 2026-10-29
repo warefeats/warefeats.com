@@ -960,6 +960,30 @@ describe("charts and versions", () => {
   });
 });
 
+describe("a post reads takeaway, then evidence", () => {
+  const at = (html: string, needle: string) => {
+    const index = html.indexOf(needle);
+    expect(index).toBeGreaterThan(-1);
+    return index;
+  };
+
+  test("the verdict leads the page and each section, the protocol sits in the byline, and the charts stack one per row", async () => {
+    const catalog = await loadCatalog();
+    const benchmark = catalog.benchmarks.find((entry) => entry.slug === "web-map-renderers")!;
+    const html = render(postPath(benchmark.post), toCatalogIndex(catalog), benchmark).html.replaceAll("<!-- -->", "");
+
+    expect(at(html, 'class="post-verdict"')).toBeLessThan(at(html, 'id="section-startup"'));
+    expect(html).toContain(`<p class="post-verdict">${benchmark.verdict.headline.replaceAll("'", "&#x27;")}.</p>`);
+    expect(html).toContain('<span class="num">15</span> measured passes after <span class="num">2</span> warmups.');
+
+    const startup = html.slice(at(html, 'id="section-startup"'), at(html, 'id="section-frame-time"'));
+    expect(at(startup, 'class="section-verdict"')).toBeLessThan(at(startup, 'class="test"'));
+    expect(startup.match(/<section class="test"/g)).toHaveLength(benchmark.sections![0]!.tests!.length);
+    expect(startup.match(/class="test-stack"/g)).toHaveLength(1);
+    expect(html).not.toContain("test-grid");
+  });
+});
+
 describe("open graph cards", () => {
   test("renders the benchmark card with the ratio", async () => {
     const { benchmarkCard } = await import("../src/og");

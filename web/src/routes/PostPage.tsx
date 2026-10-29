@@ -72,7 +72,8 @@ function BenchmarkContent({ benchmark, source }: { benchmark: Benchmark; source:
           <p className="crumbs"><Link to="/">Posts</Link> <span aria-hidden="true">/</span> {benchmark.category}</p>
           <h1>{benchmark.title}</h1>
           <p className="deck">{benchmark.deck}</p>
-          <p className="byline">Published <time dateTime={benchmark.publishedAt} className="num">{formatDate(benchmark.publishedAt)}</time> on {active.environment.machine}, {active.environment.chip}</p>
+          <p className="post-verdict">{benchmark.verdict.headline}.</p>
+          <p className="byline">Published <time dateTime={benchmark.publishedAt} className="num">{formatDate(benchmark.publishedAt)}</time> on {active.environment.machine}, {active.environment.chip}. <span className="num">{active.protocol.runs}</span> measured passes after <span className="num">{active.protocol.warmups}</span> warmups.</p>
           <MatchupLink source={source} run={active} />
         </header>
 
@@ -84,6 +85,7 @@ function BenchmarkContent({ benchmark, source }: { benchmark: Benchmark; source:
             <section className="benchmark-section" key={section.id} aria-labelledby={`section-${section.id}`}>
               <h2 id={`section-${section.id}`}>{section.title}</h2>
               <p className="deck">{section.deck}</p>
+              <p className="section-verdict">{section.verdict.headline}</p>
               {sectionTests.length ? (
                 <div className="test-stack">
                   {sectionTests.map((test, index) => (
@@ -91,7 +93,6 @@ function BenchmarkContent({ benchmark, source }: { benchmark: Benchmark; source:
                   ))}
                 </div>
               ) : null}
-              <p className="section-verdict">{section.verdict.headline}</p>
             </section>
           );
         })}
@@ -124,7 +125,8 @@ function BenchmarkContent({ benchmark, source }: { benchmark: Benchmark; source:
         <p className="crumbs"><Link to="/">Posts</Link> <span aria-hidden="true">/</span> {benchmark.category}</p>
         <h1>{benchmark.title}</h1>
         <p className="deck">{benchmark.deck}</p>
-        <p className="byline">Published <time dateTime={benchmark.publishedAt} className="num">{formatDate(benchmark.publishedAt)}</time> on {benchmark.environment.machine}, {benchmark.environment.chip}</p>
+        <p className="post-verdict">{benchmark.verdict.headline}.</p>
+        <p className="byline">Published <time dateTime={benchmark.publishedAt} className="num">{formatDate(benchmark.publishedAt)}</time> on {benchmark.environment.machine}, {benchmark.environment.chip}. <span className="num">{benchmark.protocol.runs}</span> measured passes after <span className="num">{benchmark.protocol.warmups}</span> warmups.</p>
         <MatchupLink source={source} run={active} />
       </header>
 

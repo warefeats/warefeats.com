@@ -648,6 +648,14 @@ code {
   max-width: 56ch;
 }
 
+/* The post's verdict, said under the deck: the takeaway before any chart. */
+.post-verdict {
+  margin-top: 1rem;
+  max-width: 60ch;
+  font-size: var(--text-lg);
+  font-weight: 500;
+}
+
 .byline {
   margin-top: 0.75rem;
   font-size: var(--text-sm);
@@ -1146,12 +1154,13 @@ th.num {
   min-width: 40rem;
 }
 
+/* The method under the table: the sentence above it carries the point, the caption says what the numbers are. */
 .scorecard caption {
-  padding: 0 0 0.6rem;
+  padding: 0.6rem 0 0;
   color: var(--fg-muted);
   font-size: var(--text-sm);
   text-align: left;
-  caption-side: top;
+  caption-side: bottom;
 }
 
 .scorecard th .unit {
