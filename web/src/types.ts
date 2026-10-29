@@ -108,7 +108,7 @@ export interface Benchmark {
   };
   ruleMap?: RuleMapping[];
   candidates: Candidate[];
-  /** Individual tests, each charted on its own. Absent entries derive four from the timing statistics. */
+  /** Individual tests, each charted on its own. Absent, a benchmark without sections plots its passes as a box plot, and a section without tests charts its means (sectionTests). */
   tests?: BenchmarkTest[];
   /** Titled sub-benchmarks, each with its own candidates and charts. When present, top-level candidates may be empty. */
   sections?: BenchmarkSection[];
@@ -169,19 +169,32 @@ export interface BenchmarkSection {
   tests?: BenchmarkTest[];
 }
 
-/** One charted test in the barefeats sense: a title, what was measured, and one value per candidate. */
+/**
+ * How a test's `value` summarizes each candidate's samples. "other": a value the site cannot recompute from the per-pass
+ * numbers, such as a median pooled over every request of every pass, a percentile of the per-pass numbers, or a ratio;
+ * the test's description says what it is.
+ */
+export type TestStatistic = "mean" | "median" | "min" | "max" | "other";
+
+/** One charted test in the barefeats sense: a title, what was measured, one value per candidate, and the passes behind it where the runner published them. */
 export interface BenchmarkTest {
   id: string;
   title: string;
   description: string;
   unit: string;
   lowerIsBetter: boolean;
+  statistic?: TestStatistic;
   results: TestResult[];
 }
 
 export interface TestResult {
   candidateId: string;
   value: number;
+  /**
+   * One measurement of this candidate on this test per measured pass, in the test's unit, in pass order (CONTEXT.md's
+   * Sample). The site derives n, min, max and the spread; a single measurement is a one-element array.
+   */
+  samples?: number[];
 }
 
 /** One matched intent; every other key is a candidate id mapped to that candidate's rule name. */

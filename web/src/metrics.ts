@@ -1,4 +1,4 @@
-import type { Benchmark, BenchmarkSection, BenchmarkTest, Candidate } from "./types";
+import type { Benchmark, BenchmarkSection, BenchmarkTest, Candidate, TestResult, TestStatistic } from "./types";
 
 export function formatDuration(value: number, unit = "ms"): string {
   if (unit === "ms" && value >= 1000) {
@@ -151,24 +151,19 @@ export function benchmarkTests(benchmark: Benchmark): BenchmarkTest[] {
 /**
  * The charts a section shows: its tests, or, when the runner declared none, one chart of the statistic the scorecard
  * ranks the section by, the mean of each candidate's samples, so every section's verdict has its evidence under it. The
- * derived chart marks its best bar by value, while a scorecard column on a `repeats` benchmark may leave a lead inside
- * the noise unmarked; no such benchmark has a test-less section yet.
+ * derived chart carries those samples, so it draws their spread; its noise rule follows the benchmark's `sectionSamples`
+ * declaration, the scorecard's own gate (ADR 0008).
  */
 export function sectionTests(section: BenchmarkSection): BenchmarkTest[] {
   if (section.tests?.length) return section.tests;
-  const counts = section.candidates.map((candidate) => candidate.samplesMs.length);
-  const low = Math.min(...counts);
-  const high = Math.max(...counts);
-  const description = high <= 1
-    ? "One measurement per candidate: the value the scorecard ranks this section by."
-    : `Mean of ${low === high ? low : `${low} to ${high}`} samples per candidate: the statistic the scorecard ranks this section by.`;
   return [{
     id: `${section.id}-mean`,
     title: section.title,
-    description,
+    description: "The mean of each candidate's samples: the statistic the scorecard ranks this section by.",
     unit: section.unit,
     lowerIsBetter: section.lowerIsBetter,
-    results: section.candidates.map((candidate) => ({ candidateId: candidate.id, value: candidate.statistics.meanMs })),
+    statistic: "mean",
+    results: section.candidates.map((candidate) => ({ candidateId: candidate.id, value: candidate.statistics.meanMs, samples: candidate.samplesMs })),
   }];
 }
 
@@ -197,9 +192,65 @@ export function fiveNumber(samples: number[]): FiveNumber {
   return { min: at(0), q1: at(0.25), median: at(0.5), q3: at(0.75), max: at(1) };
 }
 
-export function testWinner(test: BenchmarkTest): string | undefined {
+export interface TestVerdict {
+  /** The candidate with the best value, or undefined when the test has no results. */
+  leaderId?: string;
+  /** The candidates whose means sit inside the leader's noise, best first; when any, nothing is marked. */
+  tiedIds: string[];
+}
+
+/**
+ * The chart's mark: the best value, unless each value is a mean of two or more passes and the leader's sits inside
+ * another candidate's noise, when nothing is marked and the others are named (ADR 0008). `noise` is the page's gate: a
+ * declared test's samples are per pass by contract, a derived chart's only where the benchmark says so.
+ */
+export function testVerdict(test: BenchmarkTest, noise = true): TestVerdict {
   const sorted = [...test.results].sort((a, b) => (test.lowerIsBetter ? a.value - b.value : b.value - a.value));
-  return sorted[0]?.candidateId;
+  const leader = sorted[0];
+  if (!leader) return { tiedIds: [] };
+  const passes = (result: TestResult) => ({ mean: result.value, samples: result.samples ?? [] });
+  const measured = noise && test.statistic === "mean" && sorted.every((result) => (result.samples?.length ?? 0) >= 2);
+  const tiedIds = measured ? sorted.slice(1).filter((other) => insideNoiseOf(passes(leader), passes(other))).map((other) => other.candidateId) : [];
+  return { leaderId: leader.candidateId, tiedIds };
+}
+
+/** The candidate a chart marks, or undefined when its lead sits inside another's noise. */
+export function testWinner(test: BenchmarkTest, noise = true): string | undefined {
+  const verdict = testVerdict(test, noise);
+  return verdict.tiedIds.length ? undefined : verdict.leaderId;
+}
+
+/** The spread of a result's passes, or undefined with fewer than two: one measurement has no spread to draw. */
+export function sampleSpread(samples: number[] | undefined): { min: number; max: number; n: number } | undefined {
+  if (!samples || samples.length < 2) return undefined;
+  return { min: Math.min(...samples), max: Math.max(...samples), n: samples.length };
+}
+
+/** The words for a whisker's ends: time runs from the fastest pass to the slowest, anything else from the lowest to the highest. */
+export function spreadWords(unit: string): [string, string] {
+  return unit === "ms" || unit === "s" ? ["fastest", "slowest"] : ["lowest", "highest"];
+}
+
+const STATISTIC_WORDS: Record<Exclude<TestStatistic, "other">, string> = { mean: "Mean", median: "Median", min: "Minimum", max: "Maximum" };
+
+/**
+ * The method under a chart: what each value summarizes, what the whisker spans, and the candidates inside the leader's
+ * noise. Undefined when no result carries samples; "One measurement per candidate." when every sampled result is a
+ * single reading; a range of counts when they differ.
+ */
+export function testMethod(test: BenchmarkTest, inside: string[] = []): string | undefined {
+  const counts = test.results.flatMap((result) => (result.samples?.length ? [result.samples.length] : []));
+  if (counts.length === 0) return undefined;
+  const low = Math.min(...counts);
+  const high = Math.max(...counts);
+  if (high <= 1) return "One measurement per candidate.";
+  const passes = `${low === high ? low : `${low} to ${high}`} passes per candidate`;
+  const [fast, slow] = spreadWords(test.unit);
+  const statistic = test.statistic;
+  const lead = statistic !== undefined && statistic !== "other" ? `${STATISTIC_WORDS[statistic]} of ${passes}` : passes;
+  const span = statistic !== undefined && statistic !== "other" ? `the ${fast} and ${slow} pass` : "the per-pass values";
+  const tie = inside.length ? `; the lead over ${new Intl.ListFormat("en-US").format(inside)} is inside the noise` : "";
+  return `${lead}; the whisker spans ${span}${tie}.`;
 }
 
 /** "v1.16.0" for a release number; anything else, like "stable" or a commit, as written. */
@@ -330,11 +381,16 @@ export interface Scorecard {
  * 95% interval. Only meaningful when each sample repeats one measurement; false when either has fewer than two.
  */
 export function insideNoise(a: Candidate, b: Candidate): boolean {
-  const n = a.samplesMs.length;
-  const m = b.samplesMs.length;
+  return insideNoiseOf({ mean: a.statistics.meanMs, samples: a.samplesMs }, { mean: b.statistics.meanMs, samples: b.samplesMs });
+}
+
+/** The same test on a mean and the passes behind it, as a test result carries them. */
+export function insideNoiseOf(a: { mean: number; samples: number[] }, b: { mean: number; samples: number[] }): boolean {
+  const n = a.samples.length;
+  const m = b.samples.length;
   if (n < 2 || m < 2) return false;
-  const noise = 2 * Math.sqrt(standardDeviation(a.samplesMs) ** 2 / n + standardDeviation(b.samplesMs) ** 2 / m);
-  return Math.abs(a.statistics.meanMs - b.statistics.meanMs) <= noise;
+  const noise = 2 * Math.sqrt(standardDeviation(a.samples) ** 2 / n + standardDeviation(b.samples) ** 2 / m);
+  return Math.abs(a.mean - b.mean) <= noise;
 }
 
 /**

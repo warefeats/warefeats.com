@@ -8,6 +8,48 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+const TEST_STATISTICS = new Set<string>(["mean", "median", "min", "max", "other"]);
+
+/** The ids of a candidate list whose shape has already been checked. */
+function candidateIds(candidates: unknown[]): Set<string> {
+  return new Set(candidates.flatMap((candidate) => (isRecord(candidate) && typeof candidate.id === "string" ? [candidate.id] : [])));
+}
+
+/**
+ * Checks a list of tests: each a record with an id and a results array; each result naming one of the given candidates
+ * once, with a finite value; samples, when present, a non-empty array of finite numbers; the statistic one the contract
+ * names. Shape only: whether a value is its statistic of its samples is sync's check, too costly for every page load.
+ */
+function parseTests(tests: unknown, ids: Set<string>, where: string): void {
+  if (!Array.isArray(tests)) {
+    throw new Error(`The tests of ${where} are invalid.`);
+  }
+  for (const test of tests) {
+    if (!isRecord(test) || typeof test.id !== "string" || !Array.isArray(test.results)) {
+      throw new Error(`A test in ${where} is invalid.`);
+    }
+    if (test.statistic !== undefined && (typeof test.statistic !== "string" || !TEST_STATISTICS.has(test.statistic))) {
+      throw new Error(`Test ${test.id} in ${where} has an invalid statistic.`);
+    }
+    const seen = new Set<string>();
+    for (const result of test.results) {
+      if (!isRecord(result) || typeof result.candidateId !== "string" || typeof result.value !== "number" || !Number.isFinite(result.value)) {
+        throw new Error(`Test ${test.id} in ${where} has an invalid result.`);
+      }
+      if (!ids.has(result.candidateId)) {
+        throw new Error(`Test ${test.id} in ${where} has a result for ${result.candidateId}, which is not one of its candidates.`);
+      }
+      if (seen.has(result.candidateId)) {
+        throw new Error(`Test ${test.id} in ${where} has two results for ${result.candidateId}.`);
+      }
+      seen.add(result.candidateId);
+      if (result.samples !== undefined && (!Array.isArray(result.samples) || result.samples.length === 0 || result.samples.some((sample) => typeof sample !== "number" || !Number.isFinite(sample)))) {
+        throw new Error(`Test ${test.id} in ${where} has invalid samples for ${result.candidateId}: expected a non-empty array of finite numbers.`);
+      }
+    }
+  }
+}
+
 export function parseCatalog(value: unknown): BenchmarkCatalog {
   if (!isRecord(value) || value.schemaVersion !== 1 || !Array.isArray(value.benchmarks) || !Array.isArray(value.queue)) {
     throw new Error("The benchmark catalog has an unsupported shape.");
@@ -51,6 +93,10 @@ export function parseBenchmark(benchmark: unknown): Benchmark {
     }
   }
 
+  if (benchmark.tests !== undefined) {
+    parseTests(benchmark.tests, candidateIds(benchmark.candidates), `benchmark ${benchmark.id}`);
+  }
+
   if (hasSections) {
     for (const section of benchmark.sections as unknown[]) {
       if (!isRecord(section) || typeof section.id !== "string" || !Array.isArray(section.candidates)) {
@@ -67,6 +113,9 @@ export function parseBenchmark(benchmark: unknown): Benchmark {
           throw new Error(`Candidate ${candidate.id} in section ${section.id} of ${benchmark.id} has ${(candidate.samplesMs as number[]).length} samples but only 1 distinct value — samples look replicated, not independently measured.`);
         }
       }
+      if (section.tests !== undefined) {
+        parseTests(section.tests, candidateIds(section.candidates), `section ${section.id} of ${benchmark.id}`);
+      }
     }
   }
 
@@ -82,6 +131,9 @@ export function parseBenchmark(benchmark: unknown): Benchmark {
         for (const section of run.sections as unknown[]) {
           if (!isRecord(section) || typeof section.id !== "string" || !Array.isArray(section.candidates) || section.candidates.length < 2) {
             throw new Error(`A run in ${benchmark.id} has an invalid section.`);
+          }
+          if (section.tests !== undefined) {
+            parseTests(section.tests, candidateIds(section.candidates), `section ${section.id} of run ${run.id} in ${benchmark.id}`);
           }
         }
       }

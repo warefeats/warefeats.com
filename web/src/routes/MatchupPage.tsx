@@ -74,7 +74,7 @@ function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
               <WinnerLine card={card} index={index} />
               <div className="test-stack">
                 {sectionTests(section).map((test, testIndex) => (
-                  <BarChart benchmark={{ ...benchmark, candidates: section.candidates }} test={test} index={testIndex} key={test.id} />
+                  <BarChart benchmark={{ ...benchmark, candidates: section.candidates }} test={test} index={testIndex} noise={Boolean(section.tests?.length) || repeats} key={test.id} />
                 ))}
               </div>
             </section>

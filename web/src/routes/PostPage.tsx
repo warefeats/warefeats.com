@@ -88,7 +88,7 @@ function BenchmarkContent({ benchmark, source }: { benchmark: Benchmark; source:
               <p className="section-verdict">{section.verdict.headline}</p>
               <div className="test-stack">
                 {tests.map((test, index) => (
-                  <BarChart benchmark={{ ...benchmark, candidates: section.candidates }} test={test} index={index} key={test.id} />
+                  <BarChart benchmark={{ ...benchmark, candidates: section.candidates }} test={test} index={index} noise={Boolean(section.tests?.length) || benchmark.sectionSamples === "repeats"} key={test.id} />
                 ))}
               </div>
               {section.verdict.summary ? <p className="section-summary">{section.verdict.summary}</p> : null}

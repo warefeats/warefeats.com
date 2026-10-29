@@ -1,7 +1,8 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseCatalog } from "../src/catalog";
-import type { Benchmark, BenchmarkRun, BenchmarkSection, Candidate, Post } from "../src/types";
+import { fiveNumber } from "../src/metrics";
+import type { Benchmark, BenchmarkRun, BenchmarkSection, BenchmarkTest, Candidate, Post, TestStatistic } from "../src/types";
 
 export interface RegistryEntry {
   slug: string;
@@ -138,6 +139,39 @@ export function validateRunLists(slug: string, meta: Pick<RunnerBenchmark, "runs
   }
 }
 
+/** A statistic as the site computes it; the median interpolates (fiveNumber), so an even count averages the middle two. */
+function statisticOf(statistic: Exclude<TestStatistic, "other">, samples: number[]): number {
+  switch (statistic) {
+    case "mean":
+      return samples.reduce((sum, value) => sum + value, 0) / samples.length;
+    case "median":
+      return fiveNumber(samples).median;
+    case "min":
+      return Math.min(...samples);
+    case "max":
+      return Math.max(...samples);
+  }
+}
+
+/**
+ * Checks each sampled result against its statistic: the value must be that statistic of its samples within the value's
+ * own rounding, half a unit of its last decimal, so a runner's rounding passes and a wrong array fails. An "other" value
+ * isn't computable from the samples, so it isn't checked.
+ */
+export function checkSamples(tests: BenchmarkTest[], where: string): void {
+  for (const test of tests) {
+    if (test.statistic === undefined || test.statistic === "other") continue;
+    for (const result of test.results) {
+      if (!result.samples?.length) continue;
+      const computed = statisticOf(test.statistic, result.samples);
+      const decimals = (String(result.value).split(".")[1] ?? "").length;
+      if (Math.abs(computed - result.value) > 0.5 * 10 ** -decimals + 1e-9) {
+        throw new Error(`Test ${test.id} in ${where}: ${result.candidateId}'s value ${result.value} is not the ${test.statistic} of its ${result.samples.length} samples (${computed})`);
+      }
+    }
+  }
+}
+
 function toBenchmarkRun(run: RunFile, fleet: boolean): BenchmarkRun {
   return {
     id: run.id,
@@ -171,6 +205,12 @@ export function buildBenchmark(entry: RegistryEntry, meta: RunnerBenchmark, runs
   }
 
   validateSlugs(meta.slug, meta.post, primary.publishedAt);
+
+  for (const run of [...runs, ...fleetRuns]) {
+    for (const section of run.sections ?? []) {
+      checkSamples(section.tests ?? [], `section ${section.id} of run ${run.id} in ${entry.slug}`);
+    }
+  }
 
   const benchmark: Benchmark = {
     id: meta.id,

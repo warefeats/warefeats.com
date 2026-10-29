@@ -1506,6 +1506,14 @@ th.num {
   font-size: var(--text-sm);
 }
 
+/* The method under the chart, as the scorecard's caption sits under its table: the statistic, the passes, what the whisker spans. */
+.test-method {
+  margin-top: 0.5rem;
+  max-width: 70ch;
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+
 .bar-chart {
   margin: 0.9rem 0 0;
   border: 1px solid var(--rule-strong);
@@ -1575,6 +1583,24 @@ th.num {
   position: absolute;
   inset: 0 auto 0 0;
   background: var(--brand-ink);
+}
+
+/* The spread of a bar's passes: a whisker from the fastest to the slowest pass with a cap at each end, knocked out of the bar by a page-colored ring (the Mark halo) so the part that crosses the bar stays visible. */
+.bar-whisker {
+  position: absolute;
+  top: 50%;
+  height: 1px;
+  background: var(--brand-ink);
+  box-shadow: 0 0 0 1px var(--bg);
+}
+
+.bar-cap {
+  position: absolute;
+  top: calc(50% - 0.45rem);
+  width: 1px;
+  height: 0.9rem;
+  background: var(--brand-ink);
+  box-shadow: 0 0 0 1px var(--bg);
 }
 
 .bar-value {

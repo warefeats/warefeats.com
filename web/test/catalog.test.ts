@@ -8,10 +8,10 @@ import { BarChart } from "../src/components/BarChart";
 import { Conditions } from "../src/components/Conditions";
 import { benchmarkPath, BENCHMARKS_PATH, headTags, isBenchmarkPath, normalizePath, pageBenchmark, postPath, prerenderPaths, robotsTxt, routeMeta, sitemapPaths, sitemapXml } from "../src/head";
 import { applyPick, candidateUniverse, matchupField, matchupHeading, pickerVersion, pickFlat, pickParam, readPick } from "../src/matchup";
-import { axisTicks, benchmarkTests, columnFormat, fiveNumber, formatTick, formatVersion, fittedTicks, tickLabels, reportText, samplePosition, scorecard, sectionTests, standardDeviation, summarize } from "../src/metrics";
+import { axisTicks, benchmarkTests, columnFormat, fiveNumber, formatTick, formatVersion, fittedTicks, tickLabels, reportText, samplePosition, scorecard, sectionTests, standardDeviation, summarize, testMethod, testVerdict, testWinner } from "../src/metrics";
 import { render } from "../src/entry-server";
 import { runViews } from "../src/runs";
-import type { Benchmark, BenchmarkCatalog } from "../src/types";
+import type { Benchmark, BenchmarkCatalog, BenchmarkTest, TestStatistic } from "../src/types";
 
 let _catalog: BenchmarkCatalog | undefined;
 async function loadCatalog() {
@@ -324,6 +324,68 @@ describe("catalog validation", () => {
       }],
     });
     expect(catalog.benchmarks[0]!.sections!.length).toBe(1);
+  });
+
+  /** A candidate of the fixtures below, one sample each. */
+  const cand = (id: string, value: number) => ({ id, name: id.toUpperCase(), version: "1.0", statistics: { medianMs: value, meanMs: value, minMs: value, maxMs: value }, samplesMs: [value] });
+  const environment = { machine: "Test", chip: "Test", cores: "1", memory: "1 GB", os: "Test", arch: "arm64", runtime: "Docker" };
+  const protocol = { warmups: 3, runs: 20, processModel: "container", cacheState: "warm", output: "TTFB" };
+  /** The sectioned fixture above with tests spliced into its section and extra fields spread on the benchmark. */
+  const sectioned = (tests: unknown[], extra: Record<string, unknown> = {}) => ({
+    schemaVersion: 1,
+    generatedAt: "2026-08-29T00:00:00Z",
+    queue: [],
+    benchmarks: [{
+      id: "test-sections", slug: "test-sections", post: "2026-08-29-test-sections-a-vs-b", category: "Test", title: "Sections test", deck: "A test", publishedAt: "2026-08-29", unit: "ms", lowerIsBetter: true,
+      verdict: { winnerId: "mixed", headline: "Mixed", summary: "No single winner" },
+      environment, protocol, candidates: [],
+      sections: [{ id: "s1", title: "Section 1", deck: "First section", unit: "ms", lowerIsBetter: true, verdict: { winnerId: "a", headline: "A wins", summary: "A faster" }, candidates: [cand("a", 1), cand("b", 2)], tests }],
+      limitations: ["Test only"],
+      ...extra,
+    }],
+  });
+  /** The flat fixture below with extra fields spread on the benchmark. */
+  const flat = (extra: Record<string, unknown>) => ({
+    schemaVersion: 1,
+    generatedAt: "2026-08-30T00:00:00Z",
+    queue: [],
+    benchmarks: [{
+      id: "flat", slug: "flat", post: "2026-08-29-flat-a-vs-b", category: "Test", title: "Flat", deck: "Test", publishedAt: "2026-08-30", unit: "ms", lowerIsBetter: true,
+      verdict: { winnerId: "a", headline: "A", summary: "A" },
+      environment, protocol, candidates: [cand("a", 1), cand("b", 2)], limitations: [],
+      ...extra,
+    }],
+  });
+  const sampled = { id: "t", title: "T", description: "t", unit: "ms", lowerIsBetter: true, statistic: "median", results: [{ candidateId: "a", value: 2, samples: [1, 2, 3] }, { candidateId: "b", value: 4 }] };
+  const withResults = (results: unknown[], statistic: unknown = "median") => ({ ...sampled, statistic, results });
+  const run = (tests: unknown[]) => ({ id: "cloud", label: "Cloud", environment, protocol, publishedAt: "2026-08-30", sections: [{ id: "s1", candidates: [cand("a", 1), cand("b", 2)], tests }] });
+
+  test("accepts a test whose results carry samples and a statistic, on a section, on a run's section and on a flat benchmark", () => {
+    expect(parseCatalog(sectioned([sampled])).benchmarks[0]!.sections![0]!.tests![0]!.results[0]!.samples).toEqual([1, 2, 3]);
+    expect(() => parseCatalog(sectioned([], { runs: [run([sampled])] }))).not.toThrow();
+    expect(() => parseCatalog(flat({ tests: [sampled] }))).not.toThrow();
+    expect(() => parseCatalog(sectioned([withResults([{ candidateId: "a", value: 1 }], "other")]))).not.toThrow();
+  });
+
+  test("rejects a test result that names a candidate the section lacks, lacks a finite value, or repeats a candidate", () => {
+    expect(() => parseCatalog(sectioned([withResults([{ candidateId: "c", value: 3 }])]))).toThrow("not one of its candidates");
+    expect(() => parseCatalog(sectioned([withResults([{ candidateId: "a", value: "2" }])]))).toThrow("invalid result");
+    expect(() => parseCatalog(sectioned([withResults([{ candidateId: "a", value: Infinity }])]))).toThrow("invalid result");
+    expect(() => parseCatalog(sectioned([withResults([{ candidateId: "a", value: 1 }, { candidateId: "a", value: 2 }])]))).toThrow("two results for a");
+    expect(() => parseCatalog(sectioned([{ id: "t", results: "none" }]))).toThrow("A test in section s1 of test-sections is invalid");
+  });
+
+  test("rejects a statistic the contract doesn't name and samples that are empty or not all finite numbers", () => {
+    expect(() => parseCatalog(sectioned([withResults([{ candidateId: "a", value: 1 }], "p99")]))).toThrow("invalid statistic");
+    expect(() => parseCatalog(sectioned([withResults([{ candidateId: "a", value: 1, samples: [] }])]))).toThrow("invalid samples");
+    expect(() => parseCatalog(sectioned([withResults([{ candidateId: "a", value: 1, samples: [1, "2"] }])]))).toThrow("invalid samples");
+    expect(() => parseCatalog(sectioned([withResults([{ candidateId: "a", value: 1, samples: [1, NaN] }])]))).toThrow("invalid samples");
+  });
+
+  test("checks a run's section tests and a flat benchmark's own tests the same way", () => {
+    const bad = withResults([{ candidateId: "c", value: 3 }]);
+    expect(() => parseCatalog(sectioned([], { runs: [run([bad])] }))).toThrow("section s1 of run cloud in test-sections has a result for c");
+    expect(() => parseCatalog(flat({ tests: [bad] }))).toThrow("benchmark flat has a result for c");
   });
 
   test("rejects a candidate with replicated samples when protocol.runs > 1", () => {
@@ -965,6 +1027,61 @@ describe("charts and versions", () => {
     for (const id of ids) expect(html).toContain(`aria-labelledby="${id}"`);
   });
 
+  test("draws the spread of a test's passes as a whisker, says the method under the chart, and tables the passes", () => {
+    const benchmark = { candidates: [{ id: "a", name: "A" }, { id: "b", name: "B" }] } as unknown as Benchmark;
+    const test: BenchmarkTest = { id: "t", title: "T", description: "t", unit: "ms", lowerIsBetter: true, statistic: "median", results: [{ candidateId: "a", value: 2, samples: [1, 2, 3] }, { candidateId: "b", value: 4, samples: [4] }] };
+    const html = renderToStaticMarkup(createElement(BarChart, { benchmark, test, index: 0 }));
+    expect(html.match(/class="bar-whisker"/g)).toHaveLength(1);
+    expect(html.match(/class="bar-cap"/g)).toHaveLength(2);
+    expect(html).toContain('<p class="test-method">Median of 1 to 3 passes per candidate; the whisker spans the fastest and slowest pass.</p>');
+    expect(html).toContain('<th scope="col">Value (ms)</th><th scope="col">Fastest pass (ms)</th><th scope="col">Slowest pass (ms)</th><th scope="col">Passes</th>');
+    expect(html).toContain('<th scope="row">A</th><td>2.00</td><td>1.00</td><td>3.00</td><td>3</td>');
+    expect(html).toContain('<th scope="row">B</th><td>4.00</td><td></td><td></td><td>1</td>');
+    // The axis clears the slowest pass: a whisker never reaches the chart's right edge.
+    const caps = [...html.matchAll(/class="bar-cap" style="left:([\d.]+)%"/g)].map((m) => Number(m[1]));
+    expect(Math.max(...caps)).toBeLessThan(100);
+
+    const bare = renderToStaticMarkup(createElement(BarChart, { benchmark, test: { ...test, results: test.results.map(({ samples: _samples, ...result }) => result) }, index: 0 }));
+    expect(bare).not.toContain("bar-whisker");
+    expect(bare).not.toContain("test-method");
+    expect(bare).toContain('<th scope="col">Value (ms)</th></tr></thead>');
+  });
+
+  test("words the method by statistic, count and unit", () => {
+    const fixture = (statistic: TestStatistic | undefined, unit: string, ...counts: number[]): BenchmarkTest => ({
+      id: "t", title: "T", description: "t", unit, lowerIsBetter: true, ...(statistic ? { statistic } : {}),
+      results: counts.map((count, i) => ({ candidateId: String(i), value: 1, samples: Array.from({ length: count }, (_, k) => k + 1) })),
+    });
+    expect(testMethod(fixture("mean", "ms", 20, 20))).toBe("Mean of 20 passes per candidate; the whisker spans the fastest and slowest pass.");
+    expect(testMethod(fixture("median", "ms", 8, 10))).toBe("Median of 8 to 10 passes per candidate; the whisker spans the fastest and slowest pass.");
+    expect(testMethod(fixture("other", "ms", 8, 8))).toBe("8 passes per candidate; the whisker spans the per-pass values.");
+    expect(testMethod(fixture(undefined, "ms", 5, 5))).toBe("5 passes per candidate; the whisker spans the per-pass values.");
+    expect(testMethod(fixture("mean", "MB", 3, 3))).toBe("Mean of 3 passes per candidate; the whisker spans the lowest and highest pass.");
+    expect(testMethod(fixture("mean", "ms", 1, 1))).toBe("One measurement per candidate.");
+    expect(testMethod(fixture("mean", "ms", 3, 3), ["B", "A"])).toBe("Mean of 3 passes per candidate; the whisker spans the fastest and slowest pass; the lead over B and A is inside the noise.");
+    expect(testMethod({ id: "t", title: "T", description: "t", unit: "ms", lowerIsBetter: true, results: [{ candidateId: "a", value: 1 }] })).toBeUndefined();
+  });
+
+  test("a chart leaves its mark off when the lead sits inside another candidate's noise, and says so", () => {
+    const benchmark = { candidates: [{ id: "a", name: "A" }, { id: "b", name: "B" }, { id: "c", name: "C" }] } as unknown as Benchmark;
+    const sampled = (candidateId: string, samples: number[]) => ({ candidateId, value: Number((samples.reduce((sum, value) => sum + value, 0) / samples.length).toFixed(3)), samples });
+    // The scorecard's own example: 3.16 against 3.14 with a spread of 0.16 sits inside twice the standard error of the difference.
+    const close: BenchmarkTest = { id: "frame", title: "Frame", description: "f", unit: "ms", lowerIsBetter: true, statistic: "mean", results: [sampled("a", [3.0, 3.16, 3.32]), sampled("b", [2.98, 3.14, 3.3]), sampled("c", [6.4, 6.5, 6.6])] };
+    expect(testVerdict(close)).toEqual({ leaderId: "b", tiedIds: ["a"] });
+    expect(testVerdict(close, false)).toEqual({ leaderId: "b", tiedIds: [] });
+    expect(testWinner(close)).toBeUndefined();
+    expect(testWinner(close, false)).toBe("b");
+    const html = renderToStaticMarkup(createElement(BarChart, { benchmark, test: close, index: 0 }));
+    expect(html).not.toContain("is-best");
+    expect(html).toContain("; the lead over A is inside the noise.</p>");
+
+    const far: BenchmarkTest = { ...close, results: [sampled("a", [3.04, 3.05, 3.06]), sampled("b", [2.89, 2.9, 2.91])] };
+    expect(renderToStaticMarkup(createElement(BarChart, { benchmark, test: far, index: 0 })).match(/is-best/g)).toHaveLength(1);
+    // Only a mean of two or more passes per candidate can be inside the noise.
+    expect(testVerdict({ ...close, statistic: "median" }).tiedIds).toEqual([]);
+    expect(testVerdict({ ...close, results: [...close.results.slice(0, 2), { candidateId: "c", value: 6.5, samples: [6.5] }] }).tiedIds).toEqual([]);
+  });
+
   test("a section without tests charts the means its scorecard column shows", async () => {
     const catalog = await loadCatalog();
     const maps = catalog.benchmarks.find((entry) => entry.slug === "web-map-renderers")!;
@@ -974,10 +1091,9 @@ describe("charts and versions", () => {
     const small = kv.sections!.find((section) => section.id === "small-value-throughput")!;
     const derived = sectionTests(small);
     expect(derived).toHaveLength(1);
-    expect(derived[0]).toMatchObject({ id: "small-value-throughput-mean", title: "Small value throughput", unit: "ms", lowerIsBetter: true });
-    expect(derived[0]!.description).toContain("10 samples per candidate");
-    expect(derived[0]!.results).toEqual(small.candidates.map((candidate) => ({ candidateId: candidate.id, value: candidate.statistics.meanMs })));
-    expect(sectionTests(kv.sections!.find((section) => section.id === "memory-efficiency")!)[0]!.description).toContain("One measurement per candidate");
+    expect(derived[0]).toMatchObject({ id: "small-value-throughput-mean", title: "Small value throughput", unit: "ms", lowerIsBetter: true, statistic: "mean" });
+    expect(derived[0]!.description).not.toMatch(/\d/);
+    expect(derived[0]!.results).toEqual(small.candidates.map((candidate) => ({ candidateId: candidate.id, value: candidate.statistics.meanMs, samples: candidate.samplesMs })));
 
     // Two pipeline tests plus three derived charts, on the post, its later post and the matchup alike.
     const index = toCatalogIndex(catalog);
@@ -985,6 +1101,14 @@ describe("charts and versions", () => {
     expect(charts(postPath(kv.post))).toBe(5);
     expect(charts(postPath(kv.posts![0]!.slug))).toBe(5);
     expect(charts(benchmarkPath(kv.slug))).toBe(5);
+
+    // The derived charts draw the spread of their samples and say the method; the pipeline tests carry no samples yet.
+    const page = render(postPath(kv.post), index, kv).html;
+    expect(page.match(/class="bar-whisker"/g)).toHaveLength(6);
+    expect(page.match(/<p class="test-method">Mean of 10 passes per candidate; the whisker spans the fastest and slowest pass\.<\/p>/g)).toHaveLength(2);
+    expect(page.match(/<p class="test-method">One measurement per candidate\.<\/p>/g)).toHaveLength(1);
+    // Without a repeats declaration the derived charts mark by value, as the scorecard does.
+    expect(page.match(/is-best/g)).toHaveLength(5);
   });
 
   test("prefixes v only on release numbers", () => {
