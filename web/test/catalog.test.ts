@@ -8,7 +8,7 @@ import { BarChart } from "../src/components/BarChart";
 import { Conditions } from "../src/components/Conditions";
 import { benchmarkPath, BENCHMARKS_PATH, headTags, isBenchmarkPath, normalizePath, pageBenchmark, postPath, prerenderPaths, robotsTxt, routeMeta, sitemapPaths, sitemapXml } from "../src/head";
 import { applyPick, candidateUniverse, matchupField, matchupHeading, pickerVersion, pickFlat, pickParam, readPick } from "../src/matchup";
-import { axisTicks, benchmarkTests, fiveNumber, formatTick, formatValue, formatVersion, fittedTicks, tickLabels, reportText, samplePosition, scorecard, standardDeviation, summarize } from "../src/metrics";
+import { axisTicks, benchmarkTests, columnFormat, fiveNumber, formatTick, formatVersion, fittedTicks, tickLabels, reportText, samplePosition, scorecard, standardDeviation, summarize } from "../src/metrics";
 import { render } from "../src/entry-server";
 import { runViews } from "../src/runs";
 import type { Benchmark, BenchmarkCatalog } from "../src/types";
@@ -70,17 +70,28 @@ describe("benchmark catalog", () => {
     expect(standardDeviation([5])).toBe(0);
   });
 
-  test("groups large values and ticks by thousands, and keeps durations as they were", () => {
-    expect(formatValue(12794200.66, "ops/s")).toBe("12,794,200.7 ops/s");
-    expect(formatValue(1093.94, "MB")).toBe("1,093.9 MB");
-    expect(formatValue(12600, "rps")).toBe("12,600 rps");
-    expect(formatValue(906.66, "MB")).toBe("906.7 MB");
-    expect(formatValue(192.62, "ms")).toBe("192.6 ms");
-    expect(formatValue(2500, "ms")).toBe("2.500 s");
-    // Grouping keeps toFixed's rounding: 0.15 and 11289.15 sit just below the half in binary.
-    expect(formatValue(0.15, "ms/tile")).toBe("0.1 ms/tile");
-    expect(formatValue(11289.15, "rps")).toBe("11,289.1 rps");
-    expect(formatValue(-1234.5, "MB")).toBe("-1,234.5 MB");
+  test("gives a column one scale and one precision, and groups values and ticks by thousands", () => {
+    const col = (values: number[], unit: string) => {
+      const column = columnFormat(values, unit);
+      return [column.unit, column.decimals, values.map(column.format)];
+    };
+    // A prefix only once the largest value reaches 100,000, chosen so the smallest value stays at or above one.
+    expect(col([174330.225, 173395.015, 1196729.845], "ops/s")).toEqual(["K ops/s", 0, ["174", "173", "1,197"]]);
+    expect(col([1451611.165, 1344832.645, 12833173.64], "ops/s")).toEqual(["M ops/s", 2, ["1.45", "1.34", "12.83"]]);
+    expect(col([300, 1200000], "ops/s")).toEqual(["ops/s", 0, ["300", "1,200,000"]]);
+    expect(col([12600, 11289.15], "rps")).toEqual(["rps", 0, ["12,600", "11,289"]]);
+    // Seconds only when every value is a second or more.
+    expect(col([1244.646, 2719.083, 2712.632], "ms")).toEqual(["s", 2, ["1.24", "2.72", "2.71"]]);
+    expect(col([133, 142, 147, 149, 508, 3709, 3686], "ms")).toEqual(["ms", 0, ["133", "142", "147", "149", "508", "3,709", "3,686"]]);
+    // Three significant figures for the smallest value, the same decimals for the rest, two after the point at most.
+    expect(col([192.674, 334.755, 351.055], "ms")).toEqual(["ms", 0, ["193", "335", "351"]]);
+    expect(col([13.559, 12.9, 121.2], "ms")).toEqual(["ms", 1, ["13.6", "12.9", "121.2"]]);
+    expect(col([6.532, 3.058, 3.185], "ms")).toEqual(["ms", 2, ["6.53", "3.06", "3.19"]]);
+    expect(col([0.022, 0.03], "ms")).toEqual(["ms", 2, ["0.02", "0.03"]]);
+    // A third decimal only when two would print a value as nothing.
+    expect(col([0.004, 0.2], "%")).toEqual(["%", 3, ["0.004", "0.200"]]);
+    expect(col([0, 0, 0], "%")).toEqual(["%", 0, ["0", "0", "0"]]);
+    expect(col([-1234.4, 500], "MB")).toEqual(["MB", 0, ["-1,234", "500"]]);
     expect([0, 500, 1000, 10000000, 0.5].map(formatTick)).toEqual(["0", "500", "1,000", "10,000,000", "0.5"]);
     expect(tickLabels([0, 2500, 5000, 7500])).toEqual(["0", "2,500", "5,000", "7,500"]);
     expect(tickLabels([0, 500000, 1000000, 1500000])).toEqual(["0", "500K", "1M", "1.5M"]);
@@ -90,6 +101,9 @@ describe("benchmark catalog", () => {
     expect(fittedTicks(2500, 8, 0.5).labels).toEqual(["0", "1,000", "2,000"]);
     expect(fittedTicks(1.5e6, 9, 0.5).labels).toEqual(["0", "500K", "1M", "1.5M"]);
     expect(fittedTicks(1.5e6, 5, 0.5).labels).toEqual(["0", "1M"]);
+    // Ticks print in the chart's scale, the one its values print in.
+    expect(fittedTicks(1500, 20, 0.5, 1000).labels).toEqual(["0", "0.5", "1", "1.5"]);
+    expect(fittedTicks(1.5e6, 20, 0.5, 1000).labels).toEqual(["0", "500", "1,000", "1,500"]);
     // A chart of zeros keeps whatever ticks the axis had, never a second zero.
     expect(fittedTicks(0, 8, 0.5).ticks).toEqual(axisTicks(0, 0, 6));
   });
@@ -117,6 +131,7 @@ describe("scorecard", () => {
     expect(card.rows.map((r) => r.candidateId)).toEqual(["a", "b", "c"]);
     expect(card.rows.map((r) => r.cells)).toEqual([[10, 200], [20, 300], [null, 50]]);
     expect(card.rows[2]!.name).toBe("C");
+    expect(card.columns.map((c) => c.format.unit)).toEqual(["ms", "req/s"]);
   });
 
   test("marks the best displayed value, not the verdict's pick, so the mark matches the number", () => {
@@ -984,6 +999,17 @@ describe("a post reads takeaway, then evidence", () => {
     // The section's summary closes it, after the last chart.
     expect(startup.indexOf('class="section-summary"')).toBeGreaterThan(startup.lastIndexOf('<section class="test"'));
     expect(startup).toContain(`<p class="section-summary">${benchmark.sections![0]!.verdict.summary.replaceAll("'", "&#x27;")}</p>`);
+  });
+
+  test("a chart and a scorecard column each print one scale and one precision, with the unit in the header", async () => {
+    const catalog = await loadCatalog();
+    const benchmark = catalog.benchmarks.find((entry) => entry.slug === "kv-stores")!;
+    const html = render(postPath(benchmark.post), toCatalogIndex(catalog), benchmark).html.replaceAll("<!-- -->", "");
+
+    expect(html).toContain('<figcaption class="bar-chart-head">Pipeline depth 30 (M ops/s)</figcaption>');
+    expect(html).toContain(">12.83</span>");
+    expect(html).not.toContain("ops/s</span>");
+    expect(html).toContain("(M ops/s, higher is better)");
   });
 });
 

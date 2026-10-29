@@ -190,10 +190,47 @@ function groupThousands(rounded: string): string {
   return fraction === undefined ? grouped : `${grouped}.${fraction}`;
 }
 
-/** A value in its unit: durations as formatDuration prints them, anything else to one decimal unless whole, grouped by thousands. */
-export function formatValue(value: number, unit: string): string {
-  if (unit === "ms") return formatDuration(value);
-  return `${groupThousands(Number.isInteger(value) ? String(value) : value.toFixed(1))} ${unit}`;
+export interface ColumnFormat {
+  /** What the column's header carries: the unit, "s" for a column of whole seconds, "K ops/s" once scaled. */
+  unit: string;
+  /** What a value is divided by before it prints: 1, or 1000 for s or K, 1e6 for M, 1e9 for B. */
+  scale: number;
+  decimals: number;
+  /** A value of the column as a bare number: scaled, to the column's decimals, grouped by thousands. */
+  format: (value: number) => string;
+}
+
+/**
+ * One precision for a column of values in one unit, a chart's bars or a scorecard column, so a reader compares digits
+ * and never units. Milliseconds become seconds only when every value is a second or more. Any other unit takes the
+ * largest of K, M and B that keeps the column's smallest value at or above one, once its largest reaches 100,000, where
+ * the axis ticks shorten too. The decimals give the column's smallest value three significant figures, at most two of
+ * them after the point, or three when two would print a value as nothing.
+ */
+export function columnFormat(values: number[], unit: string): ColumnFormat {
+  const magnitudes = values.map(Math.abs).filter((value) => value > 0);
+  const min = magnitudes.length ? Math.min(...magnitudes) : 0;
+  const max = magnitudes.length ? Math.max(...magnitudes) : 0;
+  let scale = 1;
+  let shown = unit;
+  if (unit === "ms") {
+    if (min >= 1000) {
+      scale = 1000;
+      shown = "s";
+    }
+  } else if (max >= 100_000) {
+    for (const [size, prefix] of [[1e9, "B"], [1e6, "M"], [1e3, "K"]] as const) {
+      if (min >= size) {
+        scale = size;
+        shown = `${prefix} ${unit}`;
+        break;
+      }
+    }
+  }
+  const smallest = min / scale;
+  let decimals = smallest > 0 ? Math.min(2, Math.max(0, 2 - Math.floor(Math.log10(smallest)))) : 0;
+  if (decimals === 2 && smallest < 0.005) decimals = 3;
+  return { unit: shown, scale, decimals, format: (value) => groupThousands((value / scale).toFixed(decimals)) };
 }
 
 /** An axis tick, grouped by thousands. */
@@ -217,15 +254,17 @@ export function tickLabels(ticks: number[]): string[] {
 
 /**
  * Ticks from zero to `max` whose labels fit an axis `axisRem` wide: the most ticks, from six down to two, that leave each
- * label's neighbour room for the longest label plus a gap, at `charRem` per character.
+ * label's neighbour room for the longest label plus a gap, at `charRem` per character. Labels print in the chart's
+ * `scale`, the one its values print in.
  */
-export function fittedTicks(max: number, axisRem: number, charRem: number): { ticks: number[]; labels: string[] } {
+export function fittedTicks(max: number, axisRem: number, charRem: number, scale = 1): { ticks: number[]; labels: string[] } {
+  const label = (ticks: number[]) => tickLabels(ticks.map((tick) => Number((tick / scale).toFixed(6))));
   const first = axisTicks(0, max, 6).filter((tick) => tick <= max);
-  let fallback = { ticks: first, labels: tickLabels(first) };
+  let fallback = { ticks: first, labels: label(first) };
   for (const count of [6, 5, 4, 3, 2]) {
     const ticks = axisTicks(0, max, count).filter((tick) => tick <= max);
     if (ticks.length < 2) continue;
-    const labels = tickLabels(ticks);
+    const labels = label(ticks);
     const longest = Math.max(...labels.map((label) => label.length));
     if (axisRem / (ticks.length - 1) >= longest * charRem + 0.75) return { ticks, labels };
     fallback = { ticks, labels };
@@ -246,6 +285,8 @@ export interface ScorecardColumn {
   leaderId: string | null;
   /** When the column is tied, the other candidates whose means sit inside the leader's noise, best first. */
   tiedIds: string[];
+  /** One scale and one precision for the column's cells, so the table and the winner line print the same digits. */
+  format: ColumnFormat;
 }
 
 export interface ScorecardRow {
@@ -311,7 +352,8 @@ export function scorecard(sections: BenchmarkSection[], repeats = false): Scorec
     const inside = repeats && leader !== undefined ? section.candidates.filter((candidate) => candidate !== leader && insideNoise(leader, candidate)) : [];
     const tiedIds = inside.sort((a, b) => (section.lowerIsBetter ? a.statistics.meanMs - b.statistics.meanMs : b.statistics.meanMs - a.statistics.meanMs)).map((candidate) => candidate.id);
     const tied = tiedIds.length > 0;
-    return { id: section.id, title: section.title, unit: section.unit, lowerIsBetter: section.lowerIsBetter, bestId: tied ? null : bestId, tied, leaderId: bestId, tiedIds };
+    const format = columnFormat(rows.map((row) => row.cells[index]).filter((cell): cell is number => cell !== null && cell !== undefined), section.unit);
+    return { id: section.id, title: section.title, unit: section.unit, lowerIsBetter: section.lowerIsBetter, bestId: tied ? null : bestId, tied, leaderId: bestId, tiedIds, format };
   });
   return { columns, rows };
 }

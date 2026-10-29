@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { axisTicks, fittedTicks, formatValue, samplePosition, testWinner } from "../metrics";
+import { axisTicks, columnFormat, fittedTicks, samplePosition, testWinner } from "../metrics";
 import type { Benchmark, BenchmarkTest } from "../types";
 
 /** Rem per character of the axis and value-label font: mono at --text-xs, 90% wide. */
@@ -32,11 +32,13 @@ export function BarChart({ benchmark, test, index }: BarChartProps) {
   const step = probe.length > 1 ? probe[1]! - probe[0]! : max || 1;
   const scaleMax = Math.ceil((max * 1.08) / step) * step;
   const name = (id: string) => benchmark.candidates.find((candidate) => candidate.id === id)?.name ?? id;
-  // The track keeps room for its longest value label, so a label like "12,833,173.6 ops/s" ends inside the chart.
-  const valueChars = Math.max(...test.results.map((result) => formatValue(result.value, test.unit).length));
+  // One scale and one precision for every value in the chart; the title band carries the unit.
+  const column = columnFormat(test.results.map((result) => result.value), test.unit);
+  // The track keeps room for its longest value label, so a label like "1,200,000" ends inside the chart.
+  const valueChars = Math.max(...test.results.map((result) => column.format(result.value).length));
   // As many ticks as fit the narrowest axis this chart can get, so their labels never touch.
   const axisRem = NARROWEST_CHART_REM - TRACK_START_REM - Math.max(5.75, valueChars * CHAR_REM + 1.25);
-  const { ticks, labels: tickText } = fittedTicks(scaleMax, axisRem, CHAR_REM);
+  const { ticks, labels: tickText } = fittedTicks(scaleMax, axisRem, CHAR_REM, column.scale);
   const direction = test.lowerIsBetter ? "LOWER" : "HIGHER";
   const headingId = `${useId()}-title`;
 
@@ -50,7 +52,7 @@ export function BarChart({ benchmark, test, index }: BarChartProps) {
       </p>
 
       <figure className="bar-chart" style={{ "--value-chars": valueChars } as React.CSSProperties}>
-        <figcaption className="bar-chart-head">{test.title} ({test.unit})</figcaption>
+        <figcaption className="bar-chart-head">{test.title} ({column.unit})</figcaption>
         <div className="bar-rows">
           {test.results.map((result) => {
             const width = samplePosition(result.value, 0, scaleMax);
@@ -70,7 +72,7 @@ export function BarChart({ benchmark, test, index }: BarChartProps) {
                 </span>
                 <span className="bar-track">
                   <span className="bar" style={{ width: `${width}%` }} />
-                  <span className="bar-value num" style={{ left: `${width}%` }}>{formatValue(result.value, test.unit)}</span>
+                  <span className="bar-value num" style={{ left: `${width}%` }}>{column.format(result.value)}</span>
                 </span>
               </div>
             );
@@ -84,12 +86,12 @@ export function BarChart({ benchmark, test, index }: BarChartProps) {
           ))}
         </div>
         <table className="sr-only">
-          <caption>{test.title} in {test.unit}</caption>
+          <caption>{test.title} in {column.unit}</caption>
           <tbody>
             {test.results.map((result) => (
               <tr key={result.candidateId}>
                 <th scope="row">{name(result.candidateId)}</th>
-                <td>{formatValue(result.value, test.unit)}</td>
+                <td>{column.format(result.value)} {column.unit}</td>
               </tr>
             ))}
           </tbody>
