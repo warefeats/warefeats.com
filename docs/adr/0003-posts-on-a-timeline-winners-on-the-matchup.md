@@ -1,6 +1,6 @@
 # Posts sit on a timeline; the matchup names winners
 
-Amended by ADR 0007: the winner line now opens each section, above its charts.
+Amended by ADR 0007: the winner line now opens each section, above its charts. Amended by ADR 0008: a chart marks its winner from its own passes where the test carries them.
 
 A post tells one story against the runs and candidates it locks in, and the home page lists every post on one timeline, newest first. A later story is a later post, never an edit to an earlier one. Today each benchmark has one post, its page; a second post about the same benchmark needs posts as entries of their own, which comes with the first such post.
 

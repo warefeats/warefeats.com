@@ -30,6 +30,14 @@ Runner repos:
 
 A fleet run publishes the same way, except that the runner lists it in `benchmark.json`'s `fleetRuns` (newest first, at most four) instead of `runs`. The matchup shows fleet runs; the benchmark page never does (`docs/adr/0002-fleet-runs-feed-the-matchup-not-the-post.md`).
 
+### The run file
+
+A runner's `runs/<id>.json` is `schemaVersion: 1`, `id`, `label`, `publishedAt`, `environment`, `protocol`, and either `candidates[]` (a flat benchmark: each candidate's `statistics` and `samplesMs`, one value per measured pass) or `sections[]`, each with `id`, `title`, `deck`, `unit`, `lowerIsBetter`, `verdict`, its own `candidates[]` and `tests[]`.
+
+A test is `id`, `title`, `description`, `unit`, `lowerIsBetter`, `results[]` of `{ candidateId, value, samples? }`, and an optional `statistic`, one of `mean`, `median`, `min`, `max` or `other`, saying how `value` summarizes each candidate's samples. `samples` is one measurement of that candidate on that test per measured pass, in the test's unit, in pass order (CONTEXT.md's Sample); the site derives the count, the range and the spread from it and never reads them from the file; a single reading is a one-element array; a test with no per-pass values on disk carries no samples. `other` covers a value the site cannot recompute from the per-pass numbers, such as a median pooled over every request of every pass, a percentile of the per-pass numbers, or a ratio, and the description says what it is. `bun run sync` recomputes `mean`, `median` (linear interpolation, so an even count averages the middle two), `min` and `max` from the samples and refuses a value more than half a unit of its last printed decimal away.
+
+`benchmark.json`'s `sectionSamples: "repeats"` declares that every section's candidate `samplesMs` repeat one measurement per pass, which lets the scorecard, the matchup's winner line and a derived chart call a lead inside the noise a tie.
+
 ## Local development
 
 Run `bun install`, then `bun run --cwd web dev` for the site (`bun run --cwd web preview` serves the prerendered `web/dist`). Run `bun run check`, `bun run test`, and `bun run build` before pushing.

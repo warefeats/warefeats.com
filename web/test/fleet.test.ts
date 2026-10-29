@@ -14,7 +14,7 @@ import { candidateUniverse, readPick } from "../src/matchup";
 import { scorecard } from "../src/metrics";
 import { namingPost, postView } from "../src/posts";
 import { activeRun, changedCandidates, newestRun, rigLabel, runChoices, runViews, toggleLabels, versionedName } from "../src/runs";
-import type { Benchmark, BenchmarkRun } from "../src/types";
+import type { Benchmark, BenchmarkRun, TestStatistic } from "../src/types";
 import { writePick, writeRun } from "../src/url-state";
 
 const CACHE = join(import.meta.dir, "..", "data", "cache");
@@ -151,6 +151,27 @@ describe("sync with fleet runs", () => {
     const built = await withFleet(["2026-10-12"]);
     expect(parseBenchmark(built).runs![0]!.fleet).toBe(true);
     expect(() => parseBenchmark({ ...built, runs: [{ ...built.runs![0]!, fleet: "yes" }] })).toThrow("invalid fleet flag");
+  });
+
+  test("checks a sampled value against its samples within the value's own rounding", async () => {
+    const { entry, meta, runs } = unbuild(await cached("desktop-shells"));
+    // Tauri's 1 KB idiomatic round trip, 0.206 ms: three decimals, so half a thousandth of slack.
+    expect(runs[0]!.sections![0]!.tests![0]!.results[0]!.value).toBe(0.206);
+    const build = (statistic: TestStatistic, samples: number[]) => {
+      const primary = structuredClone(runs[0]!);
+      const test = primary.sections![0]!.tests![0]!;
+      test.statistic = statistic;
+      test.results[0]!.samples = samples;
+      return buildBenchmark(entry, meta, [primary, ...runs.slice(1)]);
+    };
+    expect(() => build("mean", [0.2, 0.2124])).not.toThrow();
+    expect(() => build("mean", [0.2, 0.3])).toThrow("is not the mean");
+    expect(() => build("other", [0.2, 0.3])).not.toThrow();
+    expect(() => build("median", [0.1, 0.206, 0.9])).not.toThrow();
+    expect(() => build("median", [0.1, 0.3, 0.9])).toThrow("is not the median");
+    expect(() => build("min", [0.206, 0.5])).not.toThrow();
+    expect(() => build("max", [0.1, 0.206])).not.toThrow();
+    expect(() => build("max", [0.1, 0.3])).toThrow("is not the max");
   });
 });
 
