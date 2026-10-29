@@ -1473,6 +1473,12 @@ th.num {
   font-size: var(--text-lg);
 }
 
+/* The section's authored summary closes it, under the charts: how the samples were taken, or the author's note on them. */
+.section-summary {
+  max-width: 60ch;
+  margin-top: 1.5rem;
+}
+
 /* Tests stack one per row, each the full column wide and each introduced by its own title and description, so text always sits between two charts. */
 .test-stack {
   display: grid;

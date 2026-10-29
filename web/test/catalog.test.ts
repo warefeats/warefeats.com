@@ -981,6 +981,9 @@ describe("a post reads takeaway, then evidence", () => {
     expect(startup.match(/<section class="test"/g)).toHaveLength(benchmark.sections![0]!.tests!.length);
     expect(startup.match(/class="test-stack"/g)).toHaveLength(1);
     expect(html).not.toContain("test-grid");
+    // The section's summary closes it, after the last chart.
+    expect(startup.indexOf('class="section-summary"')).toBeGreaterThan(startup.lastIndexOf('<section class="test"'));
+    expect(startup).toContain(`<p class="section-summary">${benchmark.sections![0]!.verdict.summary.replaceAll("'", "&#x27;")}</p>`);
   });
 });
 

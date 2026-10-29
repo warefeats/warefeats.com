@@ -364,6 +364,7 @@ describe("the matchup reads like a post without its prose", () => {
 
     const benchmark = await cached(SLUG);
     expect(html).not.toContain(benchmark.sections![0]!.deck);
+    expect(html).not.toContain(benchmark.sections![0]!.verdict.summary);
     expect(html).not.toContain("What this does not prove");
     expect(html).not.toContain(benchmark.limitations[0]!);
   });

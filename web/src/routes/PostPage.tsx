@@ -93,6 +93,7 @@ function BenchmarkContent({ benchmark, source }: { benchmark: Benchmark; source:
                   ))}
                 </div>
               ) : null}
+              {section.verdict.summary ? <p className="section-summary">{section.verdict.summary}</p> : null}
             </section>
           );
         })}
