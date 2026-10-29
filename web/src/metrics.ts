@@ -148,6 +148,30 @@ export function benchmarkTests(benchmark: Benchmark): BenchmarkTest[] {
   return benchmark.tests ?? [];
 }
 
+/**
+ * The charts a section shows: its tests, or, when the runner declared none, one chart of the statistic the scorecard
+ * ranks the section by, the mean of each candidate's samples, so every section's verdict has its evidence under it. The
+ * derived chart marks its best bar by value, while a scorecard column on a `repeats` benchmark may leave a lead inside
+ * the noise unmarked; no such benchmark has a test-less section yet.
+ */
+export function sectionTests(section: BenchmarkSection): BenchmarkTest[] {
+  if (section.tests?.length) return section.tests;
+  const counts = section.candidates.map((candidate) => candidate.samplesMs.length);
+  const low = Math.min(...counts);
+  const high = Math.max(...counts);
+  const description = high <= 1
+    ? "One measurement per candidate: the value the scorecard ranks this section by."
+    : `Mean of ${low === high ? low : `${low} to ${high}`} samples per candidate: the statistic the scorecard ranks this section by.`;
+  return [{
+    id: `${section.id}-mean`,
+    title: section.title,
+    description,
+    unit: section.unit,
+    lowerIsBetter: section.lowerIsBetter,
+    results: section.candidates.map((candidate) => ({ candidateId: candidate.id, value: candidate.statistics.meanMs })),
+  }];
+}
+
 export interface FiveNumber {
   min: number;
   q1: number;

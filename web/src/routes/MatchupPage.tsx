@@ -13,7 +13,7 @@ import { CatalogSkeleton, ErrorState } from "../components/States";
 import { WinnerLine } from "../components/WinnerLine";
 import { BENCHMARKS_PATH, postPath } from "../head";
 import { applyPick, candidateUniverse, MATCHUP_FIELD, matchupHeading, pickFlat } from "../matchup";
-import { benchmarkTests, formatDate, scorecard } from "../metrics";
+import { benchmarkTests, formatDate, scorecard, sectionTests } from "../metrics";
 import { namingPost, postForRun } from "../posts";
 import { rigLabel } from "../runs";
 import { usePick, useRunSelection } from "../url-state";
@@ -72,13 +72,11 @@ function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
             <section className="benchmark-section" key={section.id} aria-labelledby={`section-${section.id}`}>
               <h2 id={`section-${section.id}`}>{section.title}</h2>
               <WinnerLine card={card} index={index} />
-              {section.tests?.length ? (
-                <div className="test-stack">
-                  {section.tests.map((test, testIndex) => (
-                    <BarChart benchmark={{ ...benchmark, candidates: section.candidates }} test={test} index={testIndex} key={test.id} />
-                  ))}
-                </div>
-              ) : null}
+              <div className="test-stack">
+                {sectionTests(section).map((test, testIndex) => (
+                  <BarChart benchmark={{ ...benchmark, candidates: section.candidates }} test={test} index={testIndex} key={test.id} />
+                ))}
+              </div>
             </section>
           ))}
 

@@ -16,7 +16,7 @@ import { benchmarkPath } from "../head";
 import { matchupField } from "../matchup";
 import { changedCandidates, rigLabel, runChoices, versionedName } from "../runs";
 import type { RunView } from "../runs";
-import { benchmarkTests, formatDate } from "../metrics";
+import { benchmarkTests, formatDate, sectionTests } from "../metrics";
 import { useRunSelection } from "../url-state";
 import type { Benchmark } from "../types";
 import { laterPost, postView } from "../posts";
@@ -80,19 +80,17 @@ function BenchmarkContent({ benchmark, source }: { benchmark: Benchmark; source:
         {runs.length > 1 ? <RunToggle runs={runs} active={active.id} onSelect={select} /> : null}
 
         {displaySections.map((section) => {
-          const sectionTests = section.tests ?? [];
+          const tests = sectionTests(section);
           return (
             <section className="benchmark-section" key={section.id} aria-labelledby={`section-${section.id}`}>
               <h2 id={`section-${section.id}`}>{section.title}</h2>
               <p className="deck">{section.deck}</p>
               <p className="section-verdict">{section.verdict.headline}</p>
-              {sectionTests.length ? (
-                <div className="test-stack">
-                  {sectionTests.map((test, index) => (
-                    <BarChart benchmark={{ ...benchmark, candidates: section.candidates }} test={test} index={index} key={test.id} />
-                  ))}
-                </div>
-              ) : null}
+              <div className="test-stack">
+                {tests.map((test, index) => (
+                  <BarChart benchmark={{ ...benchmark, candidates: section.candidates }} test={test} index={index} key={test.id} />
+                ))}
+              </div>
               {section.verdict.summary ? <p className="section-summary">{section.verdict.summary}</p> : null}
             </section>
           );

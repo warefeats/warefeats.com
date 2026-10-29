@@ -8,7 +8,7 @@ import { BarChart } from "../src/components/BarChart";
 import { Conditions } from "../src/components/Conditions";
 import { benchmarkPath, BENCHMARKS_PATH, headTags, isBenchmarkPath, normalizePath, pageBenchmark, postPath, prerenderPaths, robotsTxt, routeMeta, sitemapPaths, sitemapXml } from "../src/head";
 import { applyPick, candidateUniverse, matchupField, matchupHeading, pickerVersion, pickFlat, pickParam, readPick } from "../src/matchup";
-import { axisTicks, benchmarkTests, columnFormat, fiveNumber, formatTick, formatVersion, fittedTicks, tickLabels, reportText, samplePosition, scorecard, standardDeviation, summarize } from "../src/metrics";
+import { axisTicks, benchmarkTests, columnFormat, fiveNumber, formatTick, formatVersion, fittedTicks, tickLabels, reportText, samplePosition, scorecard, sectionTests, standardDeviation, summarize } from "../src/metrics";
 import { render } from "../src/entry-server";
 import { runViews } from "../src/runs";
 import type { Benchmark, BenchmarkCatalog } from "../src/types";
@@ -963,6 +963,28 @@ describe("charts and versions", () => {
     expect(ids).toHaveLength(2);
     expect(new Set(ids).size).toBe(2);
     for (const id of ids) expect(html).toContain(`aria-labelledby="${id}"`);
+  });
+
+  test("a section without tests charts the means its scorecard column shows", async () => {
+    const catalog = await loadCatalog();
+    const maps = catalog.benchmarks.find((entry) => entry.slug === "web-map-renderers")!;
+    expect(sectionTests(maps.sections![0]!)).toBe(maps.sections![0]!.tests!);
+
+    const kv = catalog.benchmarks.find((entry) => entry.slug === "kv-stores")!;
+    const small = kv.sections!.find((section) => section.id === "small-value-throughput")!;
+    const derived = sectionTests(small);
+    expect(derived).toHaveLength(1);
+    expect(derived[0]).toMatchObject({ id: "small-value-throughput-mean", title: "Small value throughput", unit: "ms", lowerIsBetter: true });
+    expect(derived[0]!.description).toContain("10 samples per candidate");
+    expect(derived[0]!.results).toEqual(small.candidates.map((candidate) => ({ candidateId: candidate.id, value: candidate.statistics.meanMs })));
+    expect(sectionTests(kv.sections!.find((section) => section.id === "memory-efficiency")!)[0]!.description).toContain("One measurement per candidate");
+
+    // Two pipeline tests plus three derived charts, on the post, its later post and the matchup alike.
+    const index = toCatalogIndex(catalog);
+    const charts = (path: string) => render(path, index, kv).html.match(/<figure class="bar-chart"/g)?.length;
+    expect(charts(postPath(kv.post))).toBe(5);
+    expect(charts(postPath(kv.posts![0]!.slug))).toBe(5);
+    expect(charts(benchmarkPath(kv.slug))).toBe(5);
   });
 
   test("prefixes v only on release numbers", () => {
