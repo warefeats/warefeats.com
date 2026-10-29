@@ -13,7 +13,7 @@
   },
   "kv-stores": {
     "repo": "warefeats/kv-stores",
-    "ref": "e9251986590634f5d5fff9510ac5b52012584b1c"
+    "ref": "fb700e2fbc51e8d10dbf46190757280e2d66bdd5"
   },
   "vector-tile-servers": {
     "repo": "warefeats/vector-tile-servers",
