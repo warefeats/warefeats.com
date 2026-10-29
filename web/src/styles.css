@@ -1352,9 +1352,9 @@ th.num {
   font-size: var(--text-sm);
 }
 
-/* The winner a matchup names under each section, computed from the samples (ADR 0003). */
+/* The winner a matchup names at the top of each section, computed from the samples (ADR 0003, ADR 0007). */
 .section-winner {
-  margin-top: 1.25rem;
+  margin-top: 1rem;
   max-width: 70ch;
 }
 

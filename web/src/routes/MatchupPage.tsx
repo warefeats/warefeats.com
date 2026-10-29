@@ -21,10 +21,10 @@ import type { Benchmark, BenchmarkSection } from "../types";
 import { NotFound } from "./NotFound";
 
 /**
- * A benchmark's page: a reader-picked view of one of its runs, laid out like the post without its prose. Each section's
- * charts and the winner computed from its samples, then the conditions and the scorecard, with nothing after it (ADR
- * 0003). It offers every run, fleet runs included, and opens on the newest; a change of pick pins the run in the URL
- * (ADR 0002). It lives at the benchmark's category, /benchmarks/<slug>/ (ADR 0004).
+ * A benchmark's page: a reader-picked view of one of its runs, laid out like the post without its prose. Each section
+ * opens with the winner computed from its samples, then its charts (ADR 0007), then the conditions and the scorecard,
+ * with nothing after it (ADR 0003). It offers every run, fleet runs included, and opens on the newest; a change of pick
+ * pins the run in the URL (ADR 0002). It lives at the benchmark's category, /benchmarks/<slug>/ (ADR 0004).
  */
 function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
   const { runs, active, select } = useRunSelection(benchmark, "matchup");
@@ -71,6 +71,7 @@ function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
           {picked.sections.map((section, index) => (
             <section className="benchmark-section" key={section.id} aria-labelledby={`section-${section.id}`}>
               <h2 id={`section-${section.id}`}>{section.title}</h2>
+              <WinnerLine card={card} index={index} />
               {section.tests?.length ? (
                 <div className="test-stack">
                   {section.tests.map((test, testIndex) => (
@@ -78,7 +79,6 @@ function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
                   ))}
                 </div>
               ) : null}
-              <WinnerLine card={card} index={index} />
             </section>
           ))}
 
@@ -119,6 +119,7 @@ function FlatTests({ benchmark, repeats }: { benchmark: Benchmark; repeats: bool
     <>
       <section className="tests" aria-labelledby="tests-title">
         <h2 id="tests-title">Tests</h2>
+        <WinnerLine card={card} index={0} />
         {tests.length ? (
           <div className="test-stack">
             {tests.map((test, index) => <BarChart benchmark={benchmark} test={test} index={index} key={test.id} />)}
@@ -128,7 +129,6 @@ function FlatTests({ benchmark, repeats }: { benchmark: Benchmark; repeats: bool
             <BoxPlot benchmark={benchmark} index={0} />
           </div>
         )}
-        <WinnerLine card={card} index={0} />
         <details className="report-details">
           <summary>Full report, as hyperfine prints it</summary>
           <div className="report-grid">

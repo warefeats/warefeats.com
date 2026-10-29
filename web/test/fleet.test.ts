@@ -339,7 +339,7 @@ describe("the matchup reads like a post without its prose", () => {
     return render(benchmarkPath(slug), toCatalogIndex(catalog), benchmark).html.replaceAll("<!-- -->", "");
   };
 
-  test("each section's charts end in a winner, then the conditions, then the scorecard last", async () => {
+  test("each section opens with its winner, then its charts, then the conditions, then the scorecard last", async () => {
     const html = await matchupOf(SLUG);
     const at = (needle: string) => {
       const index = html.indexOf(needle);
@@ -355,6 +355,12 @@ describe("the matchup reads like a post without its prose", () => {
     const winners = [...html.matchAll(/<p class="section-winner">(.*?)<\/p>/g)].map((match) => text(match[1]!));
     expect(winners).toEqual(["Winner Mapbox GL JS 1.13 (192.7 ms)", "Winner MapLibre GL JS 5 (3.1 ms)", "Winner MapLibre GL JS 5 (918.6 MB)"]);
     expect(html.lastIndexOf('class="section-winner"')).toBeLessThan(at('id="scorecard-title"'));
+    const anchors = ['id="section-startup"', 'id="section-frame-time"', 'id="section-memory"', "Test conditions"];
+    for (let index = 0; index < anchors.length - 1; index++) {
+      const section = html.slice(at(anchors[index]!), at(anchors[index + 1]!));
+      expect(section.indexOf('class="section-winner"')).toBeGreaterThan(-1);
+      expect(section.indexOf('class="section-winner"')).toBeLessThan(section.indexOf('class="test"'));
+    }
 
     const benchmark = await cached(SLUG);
     expect(html).not.toContain(benchmark.sections![0]!.deck);
@@ -381,6 +387,7 @@ describe("the matchup reads like a post without its prose", () => {
     const winner = text(html.match(/<p class="section-winner">(.*?)<\/p>/)![1]!);
 
     expect(winner.startsWith(`Winner ${best.name} (`)).toBe(true);
+    expect(html.indexOf('class="section-winner"')).toBeLessThan(html.indexOf('class="test"'));
     expect(html.indexOf('class="section-winner"')).toBeLessThan(html.indexOf('id="scorecard-title"'));
     expect(text(html.slice(html.indexOf('id="scorecard-title"')))).toContain("Time per pass");
     expect(html).not.toContain("What this does not prove");
