@@ -160,6 +160,8 @@ describe("sync with fleet runs", () => {
     const build = (statistic: TestStatistic, samples: number[]) => {
       const primary = structuredClone(runs[0]!);
       const test = primary.sections![0]!.tests![0]!;
+      // Only the first result carries the samples under test; the others' published samples are dropped so they can't fail first.
+      for (const result of test.results) delete result.samples;
       test.statistic = statistic;
       test.results[0]!.samples = samples;
       return buildBenchmark(entry, meta, [primary, ...runs.slice(1)]);

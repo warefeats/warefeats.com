@@ -5,7 +5,7 @@
   },
   "http-caching-proxies": {
     "repo": "warefeats/http-caching-proxies",
-    "ref": "e8289e1438918c01723284c9784f25bc1ddef684"
+    "ref": "94e8e6f9d046d749fb9f2b9b772273dcd3b7e23d"
   },
   "js-bundlers": {
     "repo": "warefeats/js-bundlers",
@@ -13,22 +13,22 @@
   },
   "kv-stores": {
     "repo": "warefeats/kv-stores",
-    "ref": "fe931d6b08a4ee694f76c5dbccdf105426e1d883"
+    "ref": "0361f6e68357adc5abff3cd441399f9f5b1a85a3"
   },
   "vector-tile-servers": {
     "repo": "warefeats/vector-tile-servers",
-    "ref": "e366a9fefbc0ded21f1197c2da3230b644b04bb8"
+    "ref": "da89e1ffb7c505f492dfce12a65ba5c43e5816f5"
   },
   "web-map-renderers": {
     "repo": "warefeats/web-map-renderers",
-    "ref": "afafc5a8896629dfc393f6e38dc313d3fce444e3"
+    "ref": "ab3753b72e98abada55eb124db8dddfc727a817c"
   },
   "archive-tile-servers": {
     "repo": "warefeats/archive-tile-servers",
-    "ref": "0a31add712c662b8a95a2106a0a8ba1ee5166429"
+    "ref": "abcdbc43dca0a215decd59eb6b3d8e7aa81a36d3"
   },
   "desktop-shells": {
     "repo": "warefeats/desktop-shells",
-    "ref": "235f6b407c4a849690bb56976d76f7b222169d6c"
+    "ref": "068a4c59bf31f3f443882be9dc9eec0ee2748b00"
   }
 }

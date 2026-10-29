@@ -1102,13 +1102,18 @@ describe("charts and versions", () => {
     expect(charts(postPath(kv.posts![0]!.slug))).toBe(5);
     expect(charts(benchmarkPath(kv.slug))).toBe(5);
 
-    // The derived charts draw the spread of their samples and say the method; the pipeline tests carry no samples yet.
+    // Every chart draws the spread of its samples and says the method: the derived means, the pipeline medians, the one memory reading.
     const page = render(postPath(kv.post), index, kv).html;
-    expect(page.match(/class="bar-whisker"/g)).toHaveLength(6);
+    expect(page.match(/class="bar-whisker"/g)).toHaveLength(12);
     expect(page.match(/<p class="test-method">Mean of 10 passes per candidate; the whisker spans the fastest and slowest pass\.<\/p>/g)).toHaveLength(2);
+    expect(page.match(/<p class="test-method">Median of 10 passes per candidate; the whisker spans the lowest and highest pass\.<\/p>/g)).toHaveLength(2);
     expect(page.match(/<p class="test-method">One measurement per candidate\.<\/p>/g)).toHaveLength(1);
-    // Without a repeats declaration the derived charts mark by value, as the scorecard does.
+    // kv-stores declares repeats, so the derived charts apply the noise rule; on this run every lead clears it.
     expect(page.match(/is-best/g)).toHaveLength(5);
+    // On the 2026-10-29 run Dragonfly's lead over KiviDB on both latency sections sits inside the noise: no mark, and the line says so.
+    const later = render(postPath(kv.posts![0]!.slug), index, kv).html.replaceAll("<!-- -->", "");
+    expect(later.match(/is-best/g)).toHaveLength(3);
+    expect(later.match(/the lead over KiviDB is inside the noise\.<\/p>/g)).toHaveLength(2);
   });
 
   test("prefixes v only on release numbers", () => {
