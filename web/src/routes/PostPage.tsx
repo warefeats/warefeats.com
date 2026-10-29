@@ -85,7 +85,7 @@ function BenchmarkContent({ benchmark, source }: { benchmark: Benchmark; source:
               <h2 id={`section-${section.id}`}>{section.title}</h2>
               <p className="deck">{section.deck}</p>
               {sectionTests.length ? (
-                <div className="test-grid">
+                <div className="test-stack">
                   {sectionTests.map((test, index) => (
                     <BarChart benchmark={{ ...benchmark, candidates: section.candidates }} test={test} index={index} key={test.id} />
                   ))}
@@ -133,13 +133,13 @@ function BenchmarkContent({ benchmark, source }: { benchmark: Benchmark; source:
       <section className="tests" aria-labelledby="tests-title">
         <h2 id="tests-title">Tests</h2>
         {tests.length ? (
-          <div className="test-grid">
+          <div className="test-stack">
             {tests.map((test, index) => (
               <BarChart benchmark={benchmark} test={test} index={index} key={test.id} />
             ))}
           </div>
         ) : (
-          <div className="test-single">
+          <div className="test-stack">
             <BoxPlot benchmark={benchmark} index={0} />
           </div>
         )}

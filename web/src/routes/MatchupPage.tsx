@@ -72,7 +72,7 @@ function MatchupContent({ benchmark }: { benchmark: Benchmark }) {
             <section className="benchmark-section" key={section.id} aria-labelledby={`section-${section.id}`}>
               <h2 id={`section-${section.id}`}>{section.title}</h2>
               {section.tests?.length ? (
-                <div className="test-grid">
+                <div className="test-stack">
                   {section.tests.map((test, testIndex) => (
                     <BarChart benchmark={{ ...benchmark, candidates: section.candidates }} test={test} index={testIndex} key={test.id} />
                   ))}
@@ -120,11 +120,11 @@ function FlatTests({ benchmark, repeats }: { benchmark: Benchmark; repeats: bool
       <section className="tests" aria-labelledby="tests-title">
         <h2 id="tests-title">Tests</h2>
         {tests.length ? (
-          <div className="test-grid">
+          <div className="test-stack">
             {tests.map((test, index) => <BarChart benchmark={benchmark} test={test} index={index} key={test.id} />)}
           </div>
         ) : (
-          <div className="test-single">
+          <div className="test-stack">
             <BoxPlot benchmark={benchmark} index={0} />
           </div>
         )}

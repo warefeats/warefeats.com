@@ -4,8 +4,13 @@ import type { Benchmark, BenchmarkTest } from "../types";
 
 /** Rem per character of the axis and value-label font: mono at --text-xs, 90% wide. */
 const CHAR_REM = 0.5;
-/** A test grid column is never narrower than 26rem, and a bar's track starts 11.5rem into its chart. */
-const NARROWEST_CHART_REM = 26;
+/**
+ * Charts stack one per row, so the narrowest a chart gets above the 40rem phone breakpoint is the page column there:
+ * 40rem less 2 × clamp(1rem, 4vw, 2.5rem) of padding is 36.8rem, less the chart's own borders. Under 40rem the label
+ * column goes and even ticks hide, which is what keeps tick labels apart on phones.
+ */
+const NARROWEST_CHART_REM = 36.5;
+/** A bar's track starts 11.5rem into its chart: 0.75rem of padding, the 10rem label column, 0.75rem of gap. */
 const TRACK_START_REM = 11.5;
 
 interface BarChartProps {

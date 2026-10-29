@@ -684,6 +684,7 @@ code {
 
 .tests h2,
 .products h2,
+.benchmark-section h2,
 .learned h2 {
   font-family: var(--font-mono);
   font-size: var(--text-sm);
@@ -807,11 +808,6 @@ code {
 /* Sample plot */
 
 /* Box plot: one row per product inside the same box as a bar chart */
-
-.test-single {
-  max-width: 60rem;
-  margin-top: 1.5rem;
-}
 
 .box-rows {
   display: grid;
@@ -1456,15 +1452,22 @@ th.num {
 
 /* Tests: one boxed bar chart each, the barefeats way */
 
-.tests {
+.tests,
+.benchmark-section {
   padding-top: 2rem;
   border-top: 1px solid var(--fg);
 }
 
-.test-grid {
+.section-verdict {
+  max-width: 60ch;
+  margin-top: 1rem;
+  font-size: var(--text-lg);
+}
+
+/* Tests stack one per row, each the full column wide and each introduced by its own title and description, so text always sits between two charts. */
+.test-stack {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
-  gap: 2.5rem 3rem;
+  gap: 2.5rem;
   margin-top: 1.5rem;
 }
 
@@ -1557,7 +1560,7 @@ th.num {
 .bar-track {
   position: relative;
   display: block;
-  height: 1.25rem;
+  height: 1.5rem;
   margin-right: max(5rem, calc(var(--value-chars, 0) * 1ch + 0.5rem));
 }
 
