@@ -39,7 +39,6 @@ export function BarChart({ benchmark, test, index }: BarChartProps) {
   // As many ticks as fit the narrowest axis this chart can get, so their labels never touch.
   const axisRem = NARROWEST_CHART_REM - TRACK_START_REM - Math.max(5.75, valueChars * CHAR_REM + 1.25);
   const { ticks, labels: tickText } = fittedTicks(scaleMax, axisRem, CHAR_REM, column.scale);
-  const direction = test.lowerIsBetter ? "LOWER" : "HIGHER";
   const headingId = `${useId()}-title`;
 
   return (
@@ -47,12 +46,10 @@ export function BarChart({ benchmark, test, index }: BarChartProps) {
       <h3 id={headingId} className="test-title">
         <span className="test-index">Test {index + 1}</span> {test.title}
       </h3>
-      <p className="test-description">
-        {test.description} <span className="test-direction">({direction} {test.unit} = {test.lowerIsBetter ? "FASTER" : "BETTER"})</span>
-      </p>
+      <p className="test-description">{test.description}</p>
 
       <figure className="bar-chart" style={{ "--value-chars": valueChars } as React.CSSProperties}>
-        <figcaption className="bar-chart-head">{test.title} ({column.unit})</figcaption>
+        <figcaption className="bar-chart-head">{test.title} ({column.unit}, {test.lowerIsBetter ? "lower is better" : "higher is better"})</figcaption>
         <div className="bar-rows">
           {test.results.map((result) => {
             const width = samplePosition(result.value, 0, scaleMax);

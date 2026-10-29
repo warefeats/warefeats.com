@@ -996,6 +996,9 @@ describe("a post reads takeaway, then evidence", () => {
     expect(startup.match(/<section class="test"/g)).toHaveLength(benchmark.sections![0]!.tests!.length);
     expect(startup.match(/class="test-stack"/g)).toHaveLength(1);
     expect(html).not.toContain("test-grid");
+    // The chart's title band says the unit and the direction once; no caps tag on the description.
+    expect(html).toContain("(ms, lower is better)</figcaption>");
+    expect(html).not.toContain("= FASTER");
     // The section's summary closes it, after the last chart.
     expect(startup.indexOf('class="section-summary"')).toBeGreaterThan(startup.lastIndexOf('<section class="test"'));
     expect(startup).toContain(`<p class="section-summary">${benchmark.sections![0]!.verdict.summary.replaceAll("'", "&#x27;")}</p>`);
@@ -1006,7 +1009,7 @@ describe("a post reads takeaway, then evidence", () => {
     const benchmark = catalog.benchmarks.find((entry) => entry.slug === "kv-stores")!;
     const html = render(postPath(benchmark.post), toCatalogIndex(catalog), benchmark).html.replaceAll("<!-- -->", "");
 
-    expect(html).toContain('<figcaption class="bar-chart-head">Pipeline depth 30 (M ops/s)</figcaption>');
+    expect(html).toContain('<figcaption class="bar-chart-head">Pipeline depth 30 (M ops/s, higher is better)</figcaption>');
     expect(html).toContain(">12.83</span>");
     expect(html).not.toContain("ops/s</span>");
     expect(html).toContain("(M ops/s, higher is better)");
