@@ -2502,7 +2502,7 @@
         {
           "id": "p99-c10",
           "title": "p99 latency, 10 connections",
-          "description": "Median across passes of each pass's p99 response time at 10 connections. A server that completed no request in a pass is charged the whole 12 s pass.",
+          "description": "Median across passes of each pass's p99 response time at 10 connections. A pass in which a server completed no request is left out of its median; a server that completed no request in any pass is charged the whole 12 s pass.",
           "unit": "ms",
           "lowerIsBetter": true,
           "results": [
@@ -2610,7 +2610,7 @@
         {
           "id": "p99-c100",
           "title": "p99 latency, 100 connections",
-          "description": "Median across passes of each pass's p99 response time at 100 connections. A server that completed no request in a pass is charged the whole 12 s pass.",
+          "description": "Median across passes of each pass's p99 response time at 100 connections. A pass in which a server completed no request is left out of its median; a server that completed no request in any pass is charged the whole 12 s pass.",
           "unit": "ms",
           "lowerIsBetter": true,
           "results": [
@@ -3230,7 +3230,7 @@
         {
           "id": "walk-p99",
           "title": "p99 latency, 10 connections",
-          "description": "Median across passes of each pass's p99 response time on the random walk. A server that completed no request in a pass is charged the whole 12 s pass.",
+          "description": "Median across passes of each pass's p99 response time on the random walk. A pass in which a server completed no request is left out of its median; a server that completed no request in any pass is charged the whole 12 s pass.",
           "unit": "ms",
           "lowerIsBetter": true,
           "results": [

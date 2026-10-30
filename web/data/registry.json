@@ -9,7 +9,7 @@
     {
       "slug": "http-caching-proxies",
       "repo": "warefeats/http-caching-proxies",
-      "ref": "94e8e6f9d046d749fb9f2b9b772273dcd3b7e23d"
+      "ref": "5fccbc1c06ce6237c7e154010220d83bd12279e9"
     },
     {
       "slug": "js-bundlers",
@@ -24,7 +24,7 @@
     {
       "slug": "vector-tile-servers",
       "repo": "warefeats/vector-tile-servers",
-      "ref": "da89e1ffb7c505f492dfce12a65ba5c43e5816f5"
+      "ref": "af5aa623676b9e07011bb5ea8122c3d323b35f26"
     },
     {
       "slug": "web-map-renderers",
@@ -34,12 +34,12 @@
     {
       "slug": "archive-tile-servers",
       "repo": "warefeats/archive-tile-servers",
-      "ref": "abcdbc43dca0a215decd59eb6b3d8e7aa81a36d3"
+      "ref": "1f292cb0546fefe1d0b14b7808ead17eee45e3d5"
     },
     {
       "slug": "desktop-shells",
       "repo": "warefeats/desktop-shells",
-      "ref": "068a4c59bf31f3f443882be9dc9eec0ee2748b00"
+      "ref": "e15674fd358b4c90bc04b7ce00793226a9b685fa"
     }
   ]
 }

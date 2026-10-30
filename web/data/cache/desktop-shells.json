@@ -31,7 +31,7 @@
   "protocol": {
     "warmups": 5,
     "runs": 4,
-    "processModel": "Apps launched open -n -W (LaunchServices) so the app is its own responsible process, with --disable-backgrounding-occluded-windows --disable-renderer-backgrounding passed to both shells (Chromium honors them, WKWebView has no equivalent and keeps rendering when covered); candidates interleaved A B / B A pass by pass; 20 cold and 10 warm starts, 4 IPC passes of 50 samples per cell after 5 warmups with small payloads batched to cover the webview's timer resolution, 5 parity passes of 600 frames, 3 ten-minute soaks; a conformance gate with byte-identical digests on both hosts precedes every run",
+    "processModel": "Apps launched open -n -W (LaunchServices) so the app is its own responsible process, with --disable-backgrounding-occluded-windows --disable-renderer-backgrounding passed to both shells (Chromium honors them, WKWebView has no equivalent and keeps rendering when covered); candidates interleaved A B / B A pass by pass; 20 cold and 10 warm starts, 4 IPC passes (the protocol's runs) of 50 samples per cell, each cell after 5 warmup samples (the protocol's warmups count samples in a cell, not passes), with small payloads batched to cover the webview's timer resolution, 5 parity passes of 600 frames, 3 ten-minute soaks; a conformance gate with byte-identical digests on both hosts precedes every run",
     "cacheState": "OS file cache purged before every cold start; nothing purged before warm starts",
     "output": "FIRST_FRAME marker on the host's stdout timed against the launcher's wall clock; frontend performance.now() for round trips and frames; macOS: physical footprint (phys_footprint, as Activity Monitor's Memory column) summed over every process whose responsible process is the app, which includes WKWebView's WebContent, Networking and GPU helpers for the Tauri candidate and every Electron helper for the Electron candidate; read with /usr/bin/footprint."
   },
@@ -628,7 +628,7 @@
         {
           "id": "idiomatic-1024",
           "title": "Idiomatic 1 KB",
-          "description": "Median round trip of a 1 KB JSON payload of seeded rows, frontend to host and back, on the path each shell's docs recommend.",
+          "description": "Median round trip of a 1 KB JSON payload of seeded rows, frontend to host and back, on the path each shell's docs recommend. The value is the median pooled over every batch sample of every pass.",
           "unit": "ms",
           "lowerIsBetter": true,
           "results": [
@@ -658,7 +658,7 @@
         {
           "id": "idiomatic-65536",
           "title": "Idiomatic 64 KB",
-          "description": "Median round trip of a 64 KB JSON payload of seeded rows, frontend to host and back, on the path each shell's docs recommend.",
+          "description": "Median round trip of a 64 KB JSON payload of seeded rows, frontend to host and back, on the path each shell's docs recommend. The value is the median pooled over every batch sample of every pass.",
           "unit": "ms",
           "lowerIsBetter": true,
           "results": [
@@ -688,7 +688,7 @@
         {
           "id": "idiomatic-1048576",
           "title": "Idiomatic 1 MB",
-          "description": "Median round trip of a 1 MB JSON payload of seeded rows, frontend to host and back, on the path each shell's docs recommend.",
+          "description": "Median round trip of a 1 MB JSON payload of seeded rows, frontend to host and back, on the path each shell's docs recommend. The value is the median pooled over every batch sample of every pass.",
           "unit": "ms",
           "lowerIsBetter": true,
           "results": [
@@ -718,7 +718,7 @@
         {
           "id": "idiomatic-16777216",
           "title": "Idiomatic 16 MB",
-          "description": "Median round trip of a 16 MB JSON payload of seeded rows, frontend to host and back, on the path each shell's docs recommend.",
+          "description": "Median round trip of a 16 MB JSON payload of seeded rows, frontend to host and back, on the path each shell's docs recommend. The value is the median pooled over every batch sample of every pass.",
           "unit": "ms",
           "lowerIsBetter": true,
           "results": [
@@ -748,7 +748,7 @@
         {
           "id": "raw-1024",
           "title": "Raw 1 KB",
-          "description": "Median round trip of 1 KB of seeded bytes on the shell's bytes path: Tauri raw request and response, Electron Uint8Array over invoke.",
+          "description": "Median round trip of 1 KB of seeded bytes on the shell's bytes path: Tauri raw request and response, Electron Uint8Array over invoke. The value is the median pooled over every batch sample of every pass.",
           "unit": "ms",
           "lowerIsBetter": true,
           "results": [
@@ -778,7 +778,7 @@
         {
           "id": "raw-65536",
           "title": "Raw 64 KB",
-          "description": "Median round trip of 64 KB of seeded bytes on the shell's bytes path: Tauri raw request and response, Electron Uint8Array over invoke.",
+          "description": "Median round trip of 64 KB of seeded bytes on the shell's bytes path: Tauri raw request and response, Electron Uint8Array over invoke. The value is the median pooled over every batch sample of every pass.",
           "unit": "ms",
           "lowerIsBetter": true,
           "results": [
@@ -808,7 +808,7 @@
         {
           "id": "raw-1048576",
           "title": "Raw 1 MB",
-          "description": "Median round trip of 1 MB of seeded bytes on the shell's bytes path: Tauri raw request and response, Electron Uint8Array over invoke.",
+          "description": "Median round trip of 1 MB of seeded bytes on the shell's bytes path: Tauri raw request and response, Electron Uint8Array over invoke. The value is the median pooled over every batch sample of every pass.",
           "unit": "ms",
           "lowerIsBetter": true,
           "results": [
@@ -838,7 +838,7 @@
         {
           "id": "raw-16777216",
           "title": "Raw 16 MB",
-          "description": "Median round trip of 16 MB of seeded bytes on the shell's bytes path: Tauri raw request and response, Electron Uint8Array over invoke.",
+          "description": "Median round trip of 16 MB of seeded bytes on the shell's bytes path: Tauri raw request and response, Electron Uint8Array over invoke. The value is the median pooled over every batch sample of every pass.",
           "unit": "ms",
           "lowerIsBetter": true,
           "results": [
@@ -1110,7 +1110,7 @@
         {
           "id": "table-step-p50",
           "title": "Table step time",
-          "description": "Mean main-thread time inside the table test's per-frame step, which vsync cannot hide; a mean because WKWebView reports time in whole milliseconds.",
+          "description": "Main-thread time inside the table test's per-frame step, which vsync cannot hide: each pass's mean over its frames, then the mean over passes, a mean of means and not a p50 despite the id, because WKWebView reports time in whole milliseconds and a per-frame median collapses to 0 or 1.",
           "unit": "ms",
           "lowerIsBetter": true,
           "results": [
@@ -1174,7 +1174,7 @@
         {
           "id": "particles-step-p50",
           "title": "Particles step time",
-          "description": "Mean main-thread time inside the particles test's per-frame step, which vsync cannot hide; a mean because WKWebView reports time in whole milliseconds.",
+          "description": "Main-thread time inside the particles test's per-frame step, which vsync cannot hide: each pass's mean over its frames, then the mean over passes, a mean of means and not a p50 despite the id, because WKWebView reports time in whole milliseconds and a per-frame median collapses to 0 or 1.",
           "unit": "ms",
           "lowerIsBetter": true,
           "results": [
@@ -1238,7 +1238,7 @@
         {
           "id": "raster-step-p50",
           "title": "Raster step time",
-          "description": "Mean main-thread time inside the raster test's per-frame step, which vsync cannot hide; a mean because WKWebView reports time in whole milliseconds.",
+          "description": "Main-thread time inside the raster test's per-frame step, which vsync cannot hide: each pass's mean over its frames, then the mean over passes, a mean of means and not a p50 despite the id, because WKWebView reports time in whole milliseconds and a per-frame median collapses to 0 or 1.",
           "unit": "ms",
           "lowerIsBetter": true,
           "results": [
@@ -1726,7 +1726,7 @@
       "protocol": {
         "warmups": 5,
         "runs": 4,
-        "processModel": "Apps launched direct spawn in the interactive session with --disable-features=CalculateNativeWinOcclusion passed to both shells (argv for Electron, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS for WebView2); WebView2 and Electron helpers are children; candidates interleaved A B / B A pass by pass; 20 cold and 10 warm starts, 4 IPC passes of 50 samples per cell after 5 warmups with small payloads batched to cover the webview's timer resolution, 5 parity passes of 600 frames, 3 ten-minute soaks; a conformance gate with byte-identical digests on both hosts precedes every run",
+        "processModel": "Apps launched direct spawn in the interactive session with --disable-features=CalculateNativeWinOcclusion passed to both shells (argv for Electron, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS for WebView2); WebView2 and Electron helpers are children; candidates interleaved A B / B A pass by pass; 20 cold and 10 warm starts, 4 IPC passes (the protocol's runs) of 50 samples per cell, each cell after 5 warmup samples (the protocol's warmups count samples in a cell, not passes), with small payloads batched to cover the webview's timer resolution, 5 parity passes of 600 frames, 3 ten-minute soaks; a conformance gate with byte-identical digests on both hosts precedes every run",
         "cacheState": "No cache purge available on this rig; cold starts are launches after a settle, not cold",
         "output": "FIRST_FRAME marker on the host's stdout timed against the launcher's wall clock; frontend performance.now() for round trips and frames; Windows: private working set (Win32_PerfFormattedData_PerfProc_Process.WorkingSetPrivate) summed over the app process and every descendant by parent process id, which includes msedgewebview2.exe for the Tauri candidate and every Electron helper for the Electron candidate."
       },
@@ -2323,7 +2323,7 @@
             {
               "id": "idiomatic-1024",
               "title": "Idiomatic 1 KB",
-              "description": "Median round trip of a 1 KB JSON payload of seeded rows, frontend to host and back, on the path each shell's docs recommend.",
+              "description": "Median round trip of a 1 KB JSON payload of seeded rows, frontend to host and back, on the path each shell's docs recommend. The value is the median pooled over every batch sample of every pass.",
               "unit": "ms",
               "lowerIsBetter": true,
               "results": [
@@ -2353,7 +2353,7 @@
             {
               "id": "idiomatic-65536",
               "title": "Idiomatic 64 KB",
-              "description": "Median round trip of a 64 KB JSON payload of seeded rows, frontend to host and back, on the path each shell's docs recommend.",
+              "description": "Median round trip of a 64 KB JSON payload of seeded rows, frontend to host and back, on the path each shell's docs recommend. The value is the median pooled over every batch sample of every pass.",
               "unit": "ms",
               "lowerIsBetter": true,
               "results": [
@@ -2383,7 +2383,7 @@
             {
               "id": "idiomatic-1048576",
               "title": "Idiomatic 1 MB",
-              "description": "Median round trip of a 1 MB JSON payload of seeded rows, frontend to host and back, on the path each shell's docs recommend.",
+              "description": "Median round trip of a 1 MB JSON payload of seeded rows, frontend to host and back, on the path each shell's docs recommend. The value is the median pooled over every batch sample of every pass.",
               "unit": "ms",
               "lowerIsBetter": true,
               "results": [
@@ -2413,7 +2413,7 @@
             {
               "id": "idiomatic-16777216",
               "title": "Idiomatic 16 MB",
-              "description": "Median round trip of a 16 MB JSON payload of seeded rows, frontend to host and back, on the path each shell's docs recommend.",
+              "description": "Median round trip of a 16 MB JSON payload of seeded rows, frontend to host and back, on the path each shell's docs recommend. The value is the median pooled over every batch sample of every pass.",
               "unit": "ms",
               "lowerIsBetter": true,
               "results": [
@@ -2443,7 +2443,7 @@
             {
               "id": "raw-1024",
               "title": "Raw 1 KB",
-              "description": "Median round trip of 1 KB of seeded bytes on the shell's bytes path: Tauri raw request and response, Electron Uint8Array over invoke.",
+              "description": "Median round trip of 1 KB of seeded bytes on the shell's bytes path: Tauri raw request and response, Electron Uint8Array over invoke. The value is the median pooled over every batch sample of every pass.",
               "unit": "ms",
               "lowerIsBetter": true,
               "results": [
@@ -2473,7 +2473,7 @@
             {
               "id": "raw-65536",
               "title": "Raw 64 KB",
-              "description": "Median round trip of 64 KB of seeded bytes on the shell's bytes path: Tauri raw request and response, Electron Uint8Array over invoke.",
+              "description": "Median round trip of 64 KB of seeded bytes on the shell's bytes path: Tauri raw request and response, Electron Uint8Array over invoke. The value is the median pooled over every batch sample of every pass.",
               "unit": "ms",
               "lowerIsBetter": true,
               "results": [
@@ -2503,7 +2503,7 @@
             {
               "id": "raw-1048576",
               "title": "Raw 1 MB",
-              "description": "Median round trip of 1 MB of seeded bytes on the shell's bytes path: Tauri raw request and response, Electron Uint8Array over invoke.",
+              "description": "Median round trip of 1 MB of seeded bytes on the shell's bytes path: Tauri raw request and response, Electron Uint8Array over invoke. The value is the median pooled over every batch sample of every pass.",
               "unit": "ms",
               "lowerIsBetter": true,
               "results": [
@@ -2533,7 +2533,7 @@
             {
               "id": "raw-16777216",
               "title": "Raw 16 MB",
-              "description": "Median round trip of 16 MB of seeded bytes on the shell's bytes path: Tauri raw request and response, Electron Uint8Array over invoke.",
+              "description": "Median round trip of 16 MB of seeded bytes on the shell's bytes path: Tauri raw request and response, Electron Uint8Array over invoke. The value is the median pooled over every batch sample of every pass.",
               "unit": "ms",
               "lowerIsBetter": true,
               "results": [
@@ -2805,7 +2805,7 @@
             {
               "id": "table-step-p50",
               "title": "Table step time",
-              "description": "Mean main-thread time inside the table test's per-frame step, which vsync cannot hide; a mean because WKWebView reports time in whole milliseconds.",
+              "description": "Main-thread time inside the table test's per-frame step, which vsync cannot hide: each pass's mean over its frames, then the mean over passes, a mean of means and not a p50 despite the id, because WKWebView reports time in whole milliseconds and a per-frame median collapses to 0 or 1.",
               "unit": "ms",
               "lowerIsBetter": true,
               "results": [
@@ -2869,7 +2869,7 @@
             {
               "id": "particles-step-p50",
               "title": "Particles step time",
-              "description": "Mean main-thread time inside the particles test's per-frame step, which vsync cannot hide; a mean because WKWebView reports time in whole milliseconds.",
+              "description": "Main-thread time inside the particles test's per-frame step, which vsync cannot hide: each pass's mean over its frames, then the mean over passes, a mean of means and not a p50 despite the id, because WKWebView reports time in whole milliseconds and a per-frame median collapses to 0 or 1.",
               "unit": "ms",
               "lowerIsBetter": true,
               "results": [
@@ -2933,7 +2933,7 @@
             {
               "id": "raster-step-p50",
               "title": "Raster step time",
-              "description": "Mean main-thread time inside the raster test's per-frame step, which vsync cannot hide; a mean because WKWebView reports time in whole milliseconds.",
+              "description": "Main-thread time inside the raster test's per-frame step, which vsync cannot hide: each pass's mean over its frames, then the mean over passes, a mean of means and not a p50 despite the id, because WKWebView reports time in whole milliseconds and a per-frame median collapses to 0 or 1.",
               "unit": "ms",
               "lowerIsBetter": true,
               "results": [
