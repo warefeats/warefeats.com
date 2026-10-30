@@ -29,7 +29,7 @@
   "protocol": {
     "warmups": 3,
     "runs": 20,
-    "processModel": "Container per engine, shared origin",
+    "processModel": "Container per engine, shared origin; 3 warmup + 20 measured passes for hit path and segment serve, 20 cold bursts for the miss storm, 5 origin cycles of baseline, flap and recovery for origin flap",
     "cacheState": "Warm cache after three curl requests (W1/W2) or cold by construction (W3)",
     "output": "TTFB via oha 1.16.0 with --latency-correction"
   },
@@ -963,7 +963,7 @@
             "topology": "plaintext",
             "workload": "segment-serve",
             "targetRps": 500,
-            "concurrency": 50
+            "concurrency": 20
           },
           "metrics": {
             "p50_ttfb": {
@@ -1028,7 +1028,7 @@
             "topology": "tls-inprocess",
             "workload": "segment-serve",
             "targetRps": 500,
-            "concurrency": 50
+            "concurrency": 20
           },
           "metrics": {
             "p50_ttfb": {
@@ -1093,7 +1093,7 @@
             "topology": "proxyv2-haproxy",
             "workload": "segment-serve",
             "targetRps": 500,
-            "concurrency": 50
+            "concurrency": 20
           },
           "metrics": {
             "p50_ttfb": {
@@ -1158,7 +1158,7 @@
             "topology": "plaintext",
             "workload": "segment-serve",
             "targetRps": 500,
-            "concurrency": 50
+            "concurrency": 20
           },
           "metrics": {
             "p50_ttfb": {
@@ -1223,7 +1223,7 @@
             "topology": "proxyv2-haproxy",
             "workload": "segment-serve",
             "targetRps": 500,
-            "concurrency": 50
+            "concurrency": 20
           },
           "metrics": {
             "p50_ttfb": {
@@ -1288,7 +1288,7 @@
             "topology": "plaintext",
             "workload": "segment-serve",
             "targetRps": 500,
-            "concurrency": 50
+            "concurrency": 20
           },
           "metrics": {
             "p50_ttfb": {
@@ -1353,7 +1353,7 @@
             "topology": "tls-inprocess",
             "workload": "segment-serve",
             "targetRps": 500,
-            "concurrency": 50
+            "concurrency": 20
           },
           "metrics": {
             "p50_ttfb": {
@@ -1418,7 +1418,7 @@
             "topology": "proxyv2-haproxy",
             "workload": "segment-serve",
             "targetRps": 500,
-            "concurrency": 50
+            "concurrency": 20
           },
           "metrics": {
             "p50_ttfb": {
@@ -2206,7 +2206,7 @@
         {
           "id": "p50-ttfb",
           "title": "p50 TTFB",
-          "description": "50th-percentile TTFB per 200-client burst on a cold segment",
+          "description": "Median over the 20 bursts of each burst's p99 TTFB with 200 clients on a cold segment",
           "unit": "ms",
           "lowerIsBetter": true,
           "results": [
@@ -2294,7 +2294,7 @@
         {
           "id": "p99-ttfb",
           "title": "p99 TTFB",
-          "description": "99th-percentile TTFB per 200-client burst on a cold segment",
+          "description": "99th percentile over the 20 bursts of each burst's p99 TTFB with 200 clients on a cold segment",
           "unit": "ms",
           "lowerIsBetter": true,
           "results": [
@@ -2627,7 +2627,7 @@
         {
           "id": "p50-ttfb",
           "title": "p50 TTFB",
-          "description": "50th-percentile TTFB during origin failure cycles",
+          "description": "Median over five cycles' baseline, flap and recovery phases of each phase's p99 TTFB",
           "unit": "ms",
           "lowerIsBetter": true,
           "results": [
