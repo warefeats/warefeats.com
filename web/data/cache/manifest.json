@@ -21,7 +21,7 @@
   },
   "web-map-renderers": {
     "repo": "warefeats/web-map-renderers",
-    "ref": "ab3753b72e98abada55eb124db8dddfc727a817c"
+    "ref": "7e320d95dd8ae87012ceaeba65fd62f1604c8958"
   },
   "archive-tile-servers": {
     "repo": "warefeats/archive-tile-servers",
