@@ -1095,12 +1095,14 @@ describe("charts and versions", () => {
     expect(derived[0]!.description).not.toMatch(/\d/);
     expect(derived[0]!.results).toEqual(small.candidates.map((candidate) => ({ candidateId: candidate.id, value: candidate.statistics.meanMs, samples: candidate.samplesMs })));
 
-    // Two pipeline tests plus three derived charts, on the post, its later post and the matchup alike.
+    // Two pipeline tests plus three derived charts on the post and its 2026-10-29 later post. The 2026-11-05 run, which
+    // its later post draws and the matchup opens on, charts its memory section as four tests, so it has eight charts.
     const index = toCatalogIndex(catalog);
     const charts = (path: string) => render(path, index, kv).html.match(/<figure class="bar-chart"/g)?.length;
     expect(charts(postPath(kv.post))).toBe(5);
     expect(charts(postPath(kv.posts![0]!.slug))).toBe(5);
-    expect(charts(benchmarkPath(kv.slug))).toBe(5);
+    expect(charts(postPath(kv.posts![1]!.slug))).toBe(8);
+    expect(charts(benchmarkPath(kv.slug))).toBe(8);
 
     // Every chart draws the spread of its samples and says the method: the derived means, the pipeline medians, the one memory reading.
     const page = render(postPath(kv.post), index, kv).html;
@@ -1114,6 +1116,11 @@ describe("charts and versions", () => {
     const later = render(postPath(kv.posts![0]!.slug), index, kv).html.replaceAll("<!-- -->", "");
     expect(later.match(/is-best/g)).toHaveLength(3);
     expect(later.match(/the lead over KiviDB is inside the noise\.<\/p>/g)).toHaveLength(2);
+    // On the 2026-11-05 run Dragonfly's 100-byte p99 lead over KiviDB, 0.041 ms in the mean, clears the noise of 0.04098 ms,
+    // so every chart is marked and none says a lead is inside the noise; the post's prose says the same.
+    const latest = render(postPath(kv.posts![1]!.slug), index, kv).html.replaceAll("<!-- -->", "");
+    expect(latest.match(/is-best/g)).toHaveLength(8);
+    expect(latest).not.toContain("is inside the noise.</p>");
   });
 
   test("prefixes v only on release numbers", () => {
