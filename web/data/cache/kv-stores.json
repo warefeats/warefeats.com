@@ -2560,6 +2560,1210 @@
           ]
         }
       ]
+    },
+    {
+      "id": "2026-11-05-aws-graviton3",
+      "label": "AWS Graviton3 (cloud)",
+      "environment": {
+        "machine": "AWS c7g.metal (engine) + c7g.16xlarge (client)",
+        "chip": "AWS Graviton3",
+        "cores": "64 physical (engine)",
+        "memory": "128 GiB (engine), 128 GiB (client)",
+        "os": "Ubuntu 24.04 LTS arm64",
+        "arch": "arm64",
+        "runtime": "Docker (redis:8.10.3, valkey/valkey:9.1.3, dragonflydb/dragonfly:v2.1.0, kividb/kividb:v1.2.0) with Docker's default seccomp profile plus the io_uring syscalls and memlock unlimited; memtier_benchmark 2.5.1; RESP2, no TLS"
+      },
+      "protocol": {
+        "warmups": 2,
+        "runs": 10,
+        "processModel": "Container per engine, network_mode host, seccomp: Docker's default profile plus io_uring_setup, io_uring_enter and io_uring_register, memlock unlimited: Dragonfly 64 proactor threads and KiviDB 62 worker threads (its default, cores − 2), both on io_uring, on 64 physical cores; Redis and Valkey single-threaded I/O (default io-threads 1); 16 GiB maxmemory for all four",
+        "cacheState": "Preloaded keyspace, 100% hit ratio on GET workloads; working sets sized below 50% of maxmemory; eviction flags set for parity of intent, never triggered",
+        "output": "memtier_benchmark 2.5.1: ops/s, p50/p99/p99.9 latency, client CPU per 10 s pass; memory via INFO MEMORY: baseline-corrected used_memory and used_memory_rss (process RSS) deltas for the first and second million keys, the absolute RSS after the first million, and random-byte values on a second fresh engine",
+        "clientSizing": "memtier: 50 threads × 4 clients = 200 connections"
+      },
+      "publishedAt": "2026-11-05",
+      "sections": [
+        {
+          "id": "small-value-throughput",
+          "title": "Small value throughput",
+          "deck": "SET/GET mix (1:10 ratio) with 100-byte values, pipeline depth 1. RESP2, no TLS.",
+          "unit": "ms",
+          "lowerIsBetter": true,
+          "verdict": {
+            "winnerId": "dragonfly",
+            "headline": "Dragonfly 1.42M ops/s at the lowest p99 (0.41 ms); KiviDB 1.51M (0.45 ms), the most ops/s on every pass; Valkey 177K (2.10 ms); Redis 176K (2.11 ms)",
+            "summary": "SET/GET mix (1:10) at pipeline depth 1 with 100-byte values, 200 connections. The section ranks on p99, and Dragonfly's mean was 41 µs lower than KiviDB's, right at the noise threshold: twice the standard error of that difference is also 41 µs, with KiviDB's p99 swinging from 0.311 to 0.527 ms across passes and Dragonfly's from 0.383 to 0.439. KiviDB's throughput lead is well outside its noise: its slowest pass, 1.49M ops/s, beat Dragonfly's fastest, 1.43M. Valkey and Redis were within 1% of each other at about an eighth of that throughput, and client CPU stayed under 35% on every pass."
+          },
+          "candidates": [
+            {
+              "id": "redis",
+              "name": "Redis",
+              "version": "8.10.3",
+              "logo": "/logos/redis.svg",
+              "color": "#DC382D",
+              "homepage": "https://redis.io",
+              "statistics": {
+                "medianMs": 2.095,
+                "meanMs": 2.109,
+                "minMs": 2.079,
+                "maxMs": 2.159
+              },
+              "samplesMs": [
+                2.111,
+                2.159,
+                2.143,
+                2.127,
+                2.095,
+                2.095,
+                2.095,
+                2.079,
+                2.095,
+                2.095
+              ],
+              "metrics": {
+                "throughput": {
+                  "value": 176405.61,
+                  "unit": "ops/s",
+                  "label": "Throughput"
+                }
+              }
+            },
+            {
+              "id": "valkey",
+              "name": "Valkey",
+              "version": "9.1.3",
+              "color": "#5D6DBF",
+              "homepage": "https://valkey.io",
+              "statistics": {
+                "medianMs": 2.079,
+                "meanMs": 2.097,
+                "minMs": 2.063,
+                "maxMs": 2.191
+              },
+              "samplesMs": [
+                2.063,
+                2.191,
+                2.159,
+                2.079,
+                2.079,
+                2.079,
+                2.079,
+                2.079,
+                2.079,
+                2.079
+              ],
+              "metrics": {
+                "throughput": {
+                  "value": 177496.96999999997,
+                  "unit": "ops/s",
+                  "label": "Throughput"
+                }
+              }
+            },
+            {
+              "id": "dragonfly",
+              "name": "Dragonfly",
+              "version": "df-v2.1",
+              "color": "#00C7B7",
+              "homepage": "https://www.dragonflydb.io",
+              "statistics": {
+                "medianMs": 0.407,
+                "meanMs": 0.409,
+                "minMs": 0.383,
+                "maxMs": 0.439
+              },
+              "samplesMs": [
+                0.431,
+                0.391,
+                0.407,
+                0.415,
+                0.383,
+                0.407,
+                0.423,
+                0.399,
+                0.399,
+                0.439
+              ],
+              "metrics": {
+                "throughput": {
+                  "value": 1415437.4649999999,
+                  "unit": "ops/s",
+                  "label": "Throughput"
+                }
+              }
+            },
+            {
+              "id": "kividb",
+              "name": "KiviDB",
+              "version": "1.2.0",
+              "color": "#7CB342",
+              "homepage": "https://kividb.io",
+              "statistics": {
+                "medianMs": 0.455,
+                "meanMs": 0.45,
+                "minMs": 0.311,
+                "maxMs": 0.527
+              },
+              "samplesMs": [
+                0.471,
+                0.399,
+                0.519,
+                0.527,
+                0.431,
+                0.487,
+                0.463,
+                0.447,
+                0.447,
+                0.311
+              ],
+              "metrics": {
+                "throughput": {
+                  "value": 1510709.5550000002,
+                  "unit": "ops/s",
+                  "label": "Throughput"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "large-value-throughput",
+          "title": "Large value throughput",
+          "deck": "SET/GET mix (1:10 ratio) with 10 KB values, pipeline depth 1. RESP2, no TLS.",
+          "unit": "ms",
+          "lowerIsBetter": true,
+          "verdict": {
+            "winnerId": "dragonfly",
+            "headline": "Dragonfly 398K ops/s at the lowest p99 (0.83 ms); KiviDB 398K (0.99 ms), both at the network ceiling; Valkey 107K (3.53 ms); Redis 106K (3.56 ms)",
+            "summary": "SET/GET mix (1:10) at pipeline depth 1 with 10 KB values, 200 connections. Dragonfly and KiviDB delivered 397,518 and 397,525 ops/s, 29.6 Gbit/s of values into the client against the instances' 30 Gbit/s rating, so throughput can't separate them. Dragonfly's p99 was the steadier, 0.743 to 0.919 ms across passes against KiviDB's 0.751 to 1.311, and its 0.16 ms lead in the mean is outside the noise. Both ran 3.7 times the throughput of Redis and Valkey at about a quarter of their p99, and Redis and Valkey were within 1% of each other."
+          },
+          "candidates": [
+            {
+              "id": "redis",
+              "name": "Redis",
+              "version": "8.10.3",
+              "logo": "/logos/redis.svg",
+              "color": "#DC382D",
+              "homepage": "https://redis.io",
+              "statistics": {
+                "medianMs": 3.567,
+                "meanMs": 3.565,
+                "minMs": 3.551,
+                "maxMs": 3.583
+              },
+              "samplesMs": [
+                3.567,
+                3.551,
+                3.567,
+                3.567,
+                3.551,
+                3.567,
+                3.567,
+                3.583,
+                3.567,
+                3.567
+              ],
+              "metrics": {
+                "throughput": {
+                  "value": 105798.76999999999,
+                  "unit": "ops/s",
+                  "label": "Throughput"
+                }
+              }
+            },
+            {
+              "id": "valkey",
+              "name": "Valkey",
+              "version": "9.1.3",
+              "color": "#5D6DBF",
+              "homepage": "https://valkey.io",
+              "statistics": {
+                "medianMs": 3.535,
+                "meanMs": 3.529,
+                "minMs": 3.519,
+                "maxMs": 3.535
+              },
+              "samplesMs": [
+                3.519,
+                3.519,
+                3.535,
+                3.519,
+                3.535,
+                3.519,
+                3.535,
+                3.535,
+                3.535,
+                3.535
+              ],
+              "metrics": {
+                "throughput": {
+                  "value": 106677.965,
+                  "unit": "ops/s",
+                  "label": "Throughput"
+                }
+              }
+            },
+            {
+              "id": "dragonfly",
+              "name": "Dragonfly",
+              "version": "df-v2.1",
+              "color": "#00C7B7",
+              "homepage": "https://www.dragonflydb.io",
+              "statistics": {
+                "medianMs": 0.815,
+                "meanMs": 0.828,
+                "minMs": 0.743,
+                "maxMs": 0.919
+              },
+              "samplesMs": [
+                0.903,
+                0.831,
+                0.919,
+                0.791,
+                0.895,
+                0.823,
+                0.775,
+                0.807,
+                0.791,
+                0.743
+              ],
+              "metrics": {
+                "throughput": {
+                  "value": 397518.36,
+                  "unit": "ops/s",
+                  "label": "Throughput"
+                }
+              }
+            },
+            {
+              "id": "kividb",
+              "name": "KiviDB",
+              "version": "1.2.0",
+              "color": "#7CB342",
+              "homepage": "https://kividb.io",
+              "statistics": {
+                "medianMs": 1.003,
+                "meanMs": 0.987,
+                "minMs": 0.751,
+                "maxMs": 1.311
+              },
+              "samplesMs": [
+                0.823,
+                1.143,
+                0.815,
+                0.879,
+                1.311,
+                0.991,
+                1.119,
+                1.015,
+                0.751,
+                1.023
+              ],
+              "metrics": {
+                "throughput": {
+                  "value": 397525.185,
+                  "unit": "ops/s",
+                  "label": "Throughput"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "pipeline-effect",
+          "title": "Pipeline effect",
+          "deck": "SET/GET mix (1:10 ratio) with 100-byte values, comparing pipeline depth 1 vs 30. Candidate statistic: pipeline-30 throughput.",
+          "unit": "ops/s",
+          "lowerIsBetter": false,
+          "verdict": {
+            "winnerId": "kividb",
+            "headline": "KiviDB 22.4M ops/s at pipeline 30, a floor with the client at 72% CPU; Dragonfly 17.1M; Redis 1.48M; Valkey 1.37M",
+            "summary": "SET/GET mix (1:10) with 100-byte values at pipeline depth 30, 200 connections. KiviDB's slowest pass, 20.9M ops/s, beat Dragonfly's fastest, 17.3M, and its median led by 31%. That number is a floor: the client averaged 72% CPU in KiviDB's cell (70 to 73% per pass), where 50 memtier threads can keep at most 50 of its 64 vCPUs busy, and KiviDB's passes ran faster when the client got more CPU (r = 0.91 over ten passes). Dragonfly's cell ran the client at 34%. Pipelining raised throughput 14.9 times for KiviDB, 12.1 for Dragonfly, 8.4 for Redis and 7.7 for Valkey, and Redis led Valkey by 8%."
+          },
+          "candidates": [
+            {
+              "id": "redis",
+              "name": "Redis",
+              "version": "8.10.3",
+              "logo": "/logos/redis.svg",
+              "color": "#DC382D",
+              "homepage": "https://redis.io",
+              "statistics": {
+                "medianMs": 1480707.49,
+                "meanMs": 1480746.904,
+                "minMs": 1479616,
+                "maxMs": 1481574.84
+              },
+              "samplesMs": [
+                1481518.96,
+                1481135.64,
+                1480863,
+                1481551.81,
+                1481574.84,
+                1480551.98,
+                1479616,
+                1480461.77,
+                1480392.48,
+                1479802.56
+              ],
+              "metrics": {
+                "throughput": {
+                  "value": 1480707.49,
+                  "unit": "ops/s",
+                  "label": "Throughput"
+                },
+                "kbPerSec": {
+                  "value": 204383.22,
+                  "unit": "KB/s",
+                  "label": "Bandwidth"
+                },
+                "hitRatio": {
+                  "value": 100,
+                  "unit": "%",
+                  "label": "Hit ratio"
+                },
+                "clientCpu": {
+                  "value": 2.8,
+                  "unit": "%",
+                  "label": "Client CPU"
+                }
+              }
+            },
+            {
+              "id": "valkey",
+              "name": "Valkey",
+              "version": "9.1.3",
+              "color": "#5D6DBF",
+              "homepage": "https://valkey.io",
+              "statistics": {
+                "medianMs": 1369157.9,
+                "meanMs": 1368938.69,
+                "minMs": 1367496.76,
+                "maxMs": 1369973.28
+              },
+              "samplesMs": [
+                1369171.98,
+                1368801.25,
+                1369298.25,
+                1368170.11,
+                1369780.67,
+                1369143.82,
+                1369960.56,
+                1369973.28,
+                1367590.22,
+                1367496.76
+              ],
+              "metrics": {
+                "throughput": {
+                  "value": 1369157.9,
+                  "unit": "ops/s",
+                  "label": "Throughput"
+                },
+                "kbPerSec": {
+                  "value": 188985.96,
+                  "unit": "KB/s",
+                  "label": "Bandwidth"
+                },
+                "hitRatio": {
+                  "value": 100,
+                  "unit": "%",
+                  "label": "Hit ratio"
+                },
+                "clientCpu": {
+                  "value": 2.5,
+                  "unit": "%",
+                  "label": "Client CPU"
+                }
+              }
+            },
+            {
+              "id": "dragonfly",
+              "name": "Dragonfly",
+              "version": "df-v2.1",
+              "color": "#00C7B7",
+              "homepage": "https://www.dragonflydb.io",
+              "statistics": {
+                "medianMs": 17102856.905,
+                "meanMs": 17092452.484,
+                "minMs": 16867506.67,
+                "maxMs": 17301537.03
+              },
+              "samplesMs": [
+                17097008.12,
+                17013777.9,
+                17108705.69,
+                17178533.89,
+                16867506.67,
+                17060135.77,
+                16930875.02,
+                17301537.03,
+                17142162.27,
+                17224282.48
+              ],
+              "metrics": {
+                "throughput": {
+                  "value": 17102856.905,
+                  "unit": "ops/s",
+                  "label": "Throughput"
+                },
+                "kbPerSec": {
+                  "value": 2360719.635,
+                  "unit": "KB/s",
+                  "label": "Bandwidth"
+                },
+                "hitRatio": {
+                  "value": 100,
+                  "unit": "%",
+                  "label": "Hit ratio"
+                },
+                "clientCpu": {
+                  "value": 34,
+                  "unit": "%",
+                  "label": "Client CPU"
+                }
+              }
+            },
+            {
+              "id": "kividb",
+              "name": "KiviDB",
+              "version": "1.2.0",
+              "color": "#7CB342",
+              "homepage": "https://kividb.io",
+              "statistics": {
+                "medianMs": 22457378.125,
+                "meanMs": 22379659.178,
+                "minMs": 20901379.68,
+                "maxMs": 23477562.67
+              },
+              "samplesMs": [
+                22464890.85,
+                21544315.38,
+                20901379.68,
+                21664414.37,
+                22325394.91,
+                23379624.8,
+                23477562.67,
+                22625181.81,
+                22449865.4,
+                22963961.91
+              ],
+              "metrics": {
+                "throughput": {
+                  "value": 22457378.125,
+                  "unit": "ops/s",
+                  "label": "Throughput"
+                },
+                "kbPerSec": {
+                  "value": 3099807.975,
+                  "unit": "KB/s",
+                  "label": "Bandwidth"
+                },
+                "hitRatio": {
+                  "value": 100,
+                  "unit": "%",
+                  "label": "Hit ratio"
+                },
+                "clientCpu": {
+                  "value": 71.7,
+                  "unit": "%",
+                  "label": "Client CPU"
+                }
+              }
+            }
+          ],
+          "tests": [
+            {
+              "id": "pipeline-1",
+              "title": "Pipeline depth 1",
+              "description": "SET/GET mix at pipeline depth 1 (reuses small-value throughput data)",
+              "unit": "ops/s",
+              "lowerIsBetter": false,
+              "results": [
+                {
+                  "candidateId": "redis",
+                  "value": 176405.61,
+                  "samples": [
+                    176151.52,
+                    173198.22,
+                    173426.65,
+                    174942.56,
+                    176346.3,
+                    176464.92,
+                    176582.06,
+                    176991.28,
+                    176550.11,
+                    176717.76
+                  ]
+                },
+                {
+                  "candidateId": "valkey",
+                  "value": 177496.97,
+                  "samples": [
+                    178932.58,
+                    170517.34,
+                    172507.58,
+                    177366.53,
+                    177450.58,
+                    177883.87,
+                    178065.91,
+                    177612.69,
+                    177423.6,
+                    177543.36
+                  ]
+                },
+                {
+                  "candidateId": "dragonfly",
+                  "value": 1415437.465,
+                  "samples": [
+                    1410734.02,
+                    1425032.36,
+                    1412964.71,
+                    1411780.51,
+                    1428517.34,
+                    1417910.22,
+                    1403389.8,
+                    1421490.48,
+                    1429215.05,
+                    1404927.48
+                  ]
+                },
+                {
+                  "candidateId": "kividb",
+                  "value": 1510709.555,
+                  "samples": [
+                    1509580.49,
+                    1523313.27,
+                    1503694.52,
+                    1525917.7,
+                    1539831.15,
+                    1521928.08,
+                    1493190.13,
+                    1499688.4,
+                    1511838.62,
+                    1509341.31
+                  ]
+                }
+              ],
+              "statistic": "median"
+            },
+            {
+              "id": "pipeline-30",
+              "title": "Pipeline depth 30",
+              "description": "SET/GET mix at pipeline depth 30",
+              "unit": "ops/s",
+              "lowerIsBetter": false,
+              "results": [
+                {
+                  "candidateId": "redis",
+                  "value": 1480707.49,
+                  "samples": [
+                    1481518.96,
+                    1481135.64,
+                    1480863,
+                    1481551.81,
+                    1481574.84,
+                    1480551.98,
+                    1479616,
+                    1480461.77,
+                    1480392.48,
+                    1479802.56
+                  ]
+                },
+                {
+                  "candidateId": "valkey",
+                  "value": 1369157.9,
+                  "samples": [
+                    1369171.98,
+                    1368801.25,
+                    1369298.25,
+                    1368170.11,
+                    1369780.67,
+                    1369143.82,
+                    1369960.56,
+                    1369973.28,
+                    1367590.22,
+                    1367496.76
+                  ]
+                },
+                {
+                  "candidateId": "dragonfly",
+                  "value": 17102856.905,
+                  "samples": [
+                    17097008.12,
+                    17013777.9,
+                    17108705.69,
+                    17178533.89,
+                    16867506.67,
+                    17060135.77,
+                    16930875.02,
+                    17301537.03,
+                    17142162.27,
+                    17224282.48
+                  ]
+                },
+                {
+                  "candidateId": "kividb",
+                  "value": 22457378.125,
+                  "samples": [
+                    22464890.85,
+                    21544315.38,
+                    20901379.68,
+                    21664414.37,
+                    22325394.91,
+                    23379624.8,
+                    23477562.67,
+                    22625181.81,
+                    22449865.4,
+                    22963961.91
+                  ]
+                }
+              ],
+              "statistic": "median"
+            }
+          ]
+        },
+        {
+          "id": "memory-efficiency",
+          "title": "Memory efficiency",
+          "deck": "Baseline-corrected memory after loading 1M keys with 100-byte values into a fresh engine. RSS delta is the primary metric (allocator-neutral). Candidate statistic: memtier's default values, 100 ASCII bytes; a second load of random bytes shows what packing them is worth. Two more views of the ASCII cell: the next million keys' own RSS, which no startup allocation absorbs, and the absolute RSS after the first million.",
+          "unit": "MB",
+          "lowerIsBetter": true,
+          "verdict": {
+            "winnerId": "dragonfly",
+            "headline": "Dragonfly 135 MB RSS delta (142 B/key); KiviDB 142 MB (149 B/key); Redis 158 MB (166 B/key); Valkey 163 MB (171 B/key)",
+            "summary": "1,000,000 keys with 100-byte values loaded into a fresh engine; the ranked statistic is the used_memory_rss delta over the empty engine's baseline, on memtier's ASCII values. Dragonfly used 5% less than KiviDB, 15% less than Redis and 17% less than Valkey, and KiviDB used 10% less than Redis and 13% less than Valkey. The delta leaves out what an engine allocates before the first key: Dragonfly's idle RSS was 280 MB at 64 threads, against 12 to 24 MB for the other three, so after the first million its total RSS was 415 MB to KiviDB's 161, Valkey's 175 and Redis's 182. The next million cost Dragonfly 135 bytes per key of RSS and KiviDB 146, and by their own used_memory 147 each. With random bytes, which Dragonfly can't pack 7 bits a byte, its used_memory per key rose from 130 to 146, level with KiviDB's 147."
+          },
+          "candidates": [
+            {
+              "id": "redis",
+              "name": "Redis",
+              "version": "8.10.3",
+              "logo": "/logos/redis.svg",
+              "color": "#DC382D",
+              "homepage": "https://redis.io",
+              "statistics": {
+                "medianMs": 158,
+                "meanMs": 158,
+                "minMs": 158,
+                "maxMs": 158
+              },
+              "samplesMs": [
+                158
+              ],
+              "metrics": {
+                "usedMemoryDeltaMb": {
+                  "value": 157.67,
+                  "unit": "MB",
+                  "label": "Used memory (delta)"
+                },
+                "rssDeltaMb": {
+                  "value": 158,
+                  "unit": "MB",
+                  "label": "RSS (delta)"
+                },
+                "baselineUsedMb": {
+                  "value": 1.43,
+                  "unit": "MB",
+                  "label": "Baseline used memory"
+                },
+                "baselineRssMb": {
+                  "value": 24.11,
+                  "unit": "MB",
+                  "label": "Baseline RSS"
+                },
+                "keyCount": {
+                  "value": 1000000,
+                  "unit": "keys",
+                  "label": "Key count"
+                },
+                "bytesPerKeyRss": {
+                  "value": 165.7,
+                  "unit": "B/key",
+                  "label": "Memory per key (RSS)"
+                },
+                "bytesPerKeyUsed": {
+                  "value": 165.3,
+                  "unit": "B/key",
+                  "label": "Memory per key (used_memory)"
+                },
+                "absoluteRssMb": {
+                  "value": 182.11,
+                  "unit": "MB",
+                  "label": "RSS after the first load (absolute)"
+                },
+                "absoluteUsedMb": {
+                  "value": 159.11,
+                  "unit": "MB",
+                  "label": "Used memory after the first load (absolute)"
+                },
+                "rssDeltaSecondMb": {
+                  "value": 157.98,
+                  "unit": "MB",
+                  "label": "RSS (delta, second load)"
+                },
+                "usedMemoryDeltaSecondMb": {
+                  "value": 158.38,
+                  "unit": "MB",
+                  "label": "Used memory (delta, second load)"
+                },
+                "keyCountSecond": {
+                  "value": 1000000,
+                  "unit": "keys",
+                  "label": "Key count (second load)"
+                },
+                "bytesPerKeyRssSecond": {
+                  "value": 165.7,
+                  "unit": "B/key",
+                  "label": "Memory per key (RSS, second load)"
+                },
+                "bytesPerKeyUsedSecond": {
+                  "value": 166.1,
+                  "unit": "B/key",
+                  "label": "Memory per key (used_memory, second load)"
+                },
+                "clientCpu": {
+                  "value": 0.3,
+                  "unit": "%",
+                  "label": "Client CPU"
+                }
+              }
+            },
+            {
+              "id": "valkey",
+              "name": "Valkey",
+              "version": "9.1.3",
+              "color": "#5D6DBF",
+              "homepage": "https://valkey.io",
+              "statistics": {
+                "medianMs": 162.96,
+                "meanMs": 162.96,
+                "minMs": 162.96,
+                "maxMs": 162.96
+              },
+              "samplesMs": [
+                162.96
+              ],
+              "metrics": {
+                "usedMemoryDeltaMb": {
+                  "value": 159.39,
+                  "unit": "MB",
+                  "label": "Used memory (delta)"
+                },
+                "rssDeltaMb": {
+                  "value": 162.96,
+                  "unit": "MB",
+                  "label": "RSS (delta)"
+                },
+                "baselineUsedMb": {
+                  "value": 0.98,
+                  "unit": "MB",
+                  "label": "Baseline used memory"
+                },
+                "baselineRssMb": {
+                  "value": 11.71,
+                  "unit": "MB",
+                  "label": "Baseline RSS"
+                },
+                "keyCount": {
+                  "value": 1000000,
+                  "unit": "keys",
+                  "label": "Key count"
+                },
+                "bytesPerKeyRss": {
+                  "value": 170.9,
+                  "unit": "B/key",
+                  "label": "Memory per key (RSS)"
+                },
+                "bytesPerKeyUsed": {
+                  "value": 167.1,
+                  "unit": "B/key",
+                  "label": "Memory per key (used_memory)"
+                },
+                "absoluteRssMb": {
+                  "value": 174.68,
+                  "unit": "MB",
+                  "label": "RSS after the first load (absolute)"
+                },
+                "absoluteUsedMb": {
+                  "value": 160.38,
+                  "unit": "MB",
+                  "label": "Used memory after the first load (absolute)"
+                },
+                "rssDeltaSecondMb": {
+                  "value": 163.44,
+                  "unit": "MB",
+                  "label": "RSS (delta, second load)"
+                },
+                "usedMemoryDeltaSecondMb": {
+                  "value": 161.61,
+                  "unit": "MB",
+                  "label": "Used memory (delta, second load)"
+                },
+                "keyCountSecond": {
+                  "value": 1000000,
+                  "unit": "keys",
+                  "label": "Key count (second load)"
+                },
+                "bytesPerKeyRssSecond": {
+                  "value": 171.4,
+                  "unit": "B/key",
+                  "label": "Memory per key (RSS, second load)"
+                },
+                "bytesPerKeyUsedSecond": {
+                  "value": 169.5,
+                  "unit": "B/key",
+                  "label": "Memory per key (used_memory, second load)"
+                },
+                "clientCpu": {
+                  "value": 0.3,
+                  "unit": "%",
+                  "label": "Client CPU"
+                }
+              }
+            },
+            {
+              "id": "dragonfly",
+              "name": "Dragonfly",
+              "version": "df-v2.1",
+              "color": "#00C7B7",
+              "homepage": "https://www.dragonflydb.io",
+              "statistics": {
+                "medianMs": 135.02,
+                "meanMs": 135.02,
+                "minMs": 135.02,
+                "maxMs": 135.02
+              },
+              "samplesMs": [
+                135.02
+              ],
+              "metrics": {
+                "usedMemoryDeltaMb": {
+                  "value": 124.31,
+                  "unit": "MB",
+                  "label": "Used memory (delta)"
+                },
+                "rssDeltaMb": {
+                  "value": 135.02,
+                  "unit": "MB",
+                  "label": "RSS (delta)"
+                },
+                "baselineUsedMb": {
+                  "value": 17.25,
+                  "unit": "MB",
+                  "label": "Baseline used memory"
+                },
+                "baselineRssMb": {
+                  "value": 279.7,
+                  "unit": "MB",
+                  "label": "Baseline RSS"
+                },
+                "keyCount": {
+                  "value": 1000000,
+                  "unit": "keys",
+                  "label": "Key count"
+                },
+                "bytesPerKeyRss": {
+                  "value": 141.6,
+                  "unit": "B/key",
+                  "label": "Memory per key (RSS)"
+                },
+                "bytesPerKeyUsed": {
+                  "value": 130.3,
+                  "unit": "B/key",
+                  "label": "Memory per key (used_memory)"
+                },
+                "absoluteRssMb": {
+                  "value": 414.71,
+                  "unit": "MB",
+                  "label": "RSS after the first load (absolute)"
+                },
+                "absoluteUsedMb": {
+                  "value": 141.56,
+                  "unit": "MB",
+                  "label": "Used memory after the first load (absolute)"
+                },
+                "rssDeltaSecondMb": {
+                  "value": 128.96,
+                  "unit": "MB",
+                  "label": "RSS (delta, second load)"
+                },
+                "usedMemoryDeltaSecondMb": {
+                  "value": 140.31,
+                  "unit": "MB",
+                  "label": "Used memory (delta, second load)"
+                },
+                "keyCountSecond": {
+                  "value": 1000000,
+                  "unit": "keys",
+                  "label": "Key count (second load)"
+                },
+                "bytesPerKeyRssSecond": {
+                  "value": 135.2,
+                  "unit": "B/key",
+                  "label": "Memory per key (RSS, second load)"
+                },
+                "bytesPerKeyUsedSecond": {
+                  "value": 147.1,
+                  "unit": "B/key",
+                  "label": "Memory per key (used_memory, second load)"
+                },
+                "clientCpu": {
+                  "value": 0.3,
+                  "unit": "%",
+                  "label": "Client CPU"
+                }
+              }
+            },
+            {
+              "id": "kividb",
+              "name": "KiviDB",
+              "version": "1.2.0",
+              "color": "#7CB342",
+              "homepage": "https://kividb.io",
+              "statistics": {
+                "medianMs": 142.28,
+                "meanMs": 142.28,
+                "minMs": 142.28,
+                "maxMs": 142.28
+              },
+              "samplesMs": [
+                142.28
+              ],
+              "metrics": {
+                "usedMemoryDeltaMb": {
+                  "value": 140.08,
+                  "unit": "MB",
+                  "label": "Used memory (delta)"
+                },
+                "rssDeltaMb": {
+                  "value": 142.28,
+                  "unit": "MB",
+                  "label": "RSS (delta)"
+                },
+                "baselineUsedMb": {
+                  "value": 4.66,
+                  "unit": "MB",
+                  "label": "Baseline used memory"
+                },
+                "baselineRssMb": {
+                  "value": 18.39,
+                  "unit": "MB",
+                  "label": "Baseline RSS"
+                },
+                "keyCount": {
+                  "value": 1000000,
+                  "unit": "keys",
+                  "label": "Key count"
+                },
+                "bytesPerKeyRss": {
+                  "value": 149.2,
+                  "unit": "B/key",
+                  "label": "Memory per key (RSS)"
+                },
+                "bytesPerKeyUsed": {
+                  "value": 146.9,
+                  "unit": "B/key",
+                  "label": "Memory per key (used_memory)"
+                },
+                "absoluteRssMb": {
+                  "value": 160.67,
+                  "unit": "MB",
+                  "label": "RSS after the first load (absolute)"
+                },
+                "absoluteUsedMb": {
+                  "value": 144.73,
+                  "unit": "MB",
+                  "label": "Used memory after the first load (absolute)"
+                },
+                "rssDeltaSecondMb": {
+                  "value": 139.09,
+                  "unit": "MB",
+                  "label": "RSS (delta, second load)"
+                },
+                "usedMemoryDeltaSecondMb": {
+                  "value": 140.07,
+                  "unit": "MB",
+                  "label": "Used memory (delta, second load)"
+                },
+                "keyCountSecond": {
+                  "value": 1000000,
+                  "unit": "keys",
+                  "label": "Key count (second load)"
+                },
+                "bytesPerKeyRssSecond": {
+                  "value": 145.8,
+                  "unit": "B/key",
+                  "label": "Memory per key (RSS, second load)"
+                },
+                "bytesPerKeyUsedSecond": {
+                  "value": 146.9,
+                  "unit": "B/key",
+                  "label": "Memory per key (used_memory, second load)"
+                },
+                "clientCpu": {
+                  "value": 0.3,
+                  "unit": "%",
+                  "label": "Client CPU"
+                }
+              }
+            }
+          ],
+          "tests": [
+            {
+              "id": "ascii-values",
+              "title": "ASCII values",
+              "description": "1M keys with memtier's default 100-byte values, all ASCII, into a fresh engine",
+              "unit": "MB",
+              "lowerIsBetter": true,
+              "results": [
+                {
+                  "candidateId": "redis",
+                  "value": 158,
+                  "samples": [
+                    158
+                  ]
+                },
+                {
+                  "candidateId": "valkey",
+                  "value": 162.96,
+                  "samples": [
+                    162.96
+                  ]
+                },
+                {
+                  "candidateId": "dragonfly",
+                  "value": 135.02,
+                  "samples": [
+                    135.02
+                  ]
+                },
+                {
+                  "candidateId": "kividb",
+                  "value": 142.28,
+                  "samples": [
+                    142.28
+                  ]
+                }
+              ],
+              "statistic": "mean"
+            },
+            {
+              "id": "random-bytes",
+              "title": "Random bytes",
+              "description": "1M keys with 100-byte values of random bytes, which no engine packs, into a fresh engine",
+              "unit": "MB",
+              "lowerIsBetter": true,
+              "results": [
+                {
+                  "candidateId": "redis",
+                  "value": 158.5,
+                  "samples": [
+                    158.5
+                  ]
+                },
+                {
+                  "candidateId": "valkey",
+                  "value": 161.54,
+                  "samples": [
+                    161.54
+                  ]
+                },
+                {
+                  "candidateId": "dragonfly",
+                  "value": 131.36,
+                  "samples": [
+                    131.36
+                  ]
+                },
+                {
+                  "candidateId": "kividb",
+                  "value": 142.28,
+                  "samples": [
+                    142.28
+                  ]
+                }
+              ],
+              "statistic": "mean"
+            },
+            {
+              "id": "ascii-values-second-million",
+              "title": "ASCII values, next million",
+              "description": "The same load again on the next 1M keys: RSS over the first million's, which the segments and pages an engine allocates at startup can no longer absorb",
+              "unit": "MB",
+              "lowerIsBetter": true,
+              "results": [
+                {
+                  "candidateId": "redis",
+                  "value": 157.98,
+                  "samples": [
+                    157.98
+                  ]
+                },
+                {
+                  "candidateId": "valkey",
+                  "value": 163.44,
+                  "samples": [
+                    163.44
+                  ]
+                },
+                {
+                  "candidateId": "dragonfly",
+                  "value": 128.96,
+                  "samples": [
+                    128.96
+                  ]
+                },
+                {
+                  "candidateId": "kividb",
+                  "value": 139.09,
+                  "samples": [
+                    139.09
+                  ]
+                }
+              ],
+              "statistic": "mean"
+            },
+            {
+              "id": "ascii-values-absolute",
+              "title": "ASCII values, RSS after 1M keys",
+              "description": "The engine's whole RSS after the first million keys, idle overhead included: what a container limit sees",
+              "unit": "MB",
+              "lowerIsBetter": true,
+              "results": [
+                {
+                  "candidateId": "redis",
+                  "value": 182.11,
+                  "samples": [
+                    182.11
+                  ]
+                },
+                {
+                  "candidateId": "valkey",
+                  "value": 174.68,
+                  "samples": [
+                    174.68
+                  ]
+                },
+                {
+                  "candidateId": "dragonfly",
+                  "value": 414.71,
+                  "samples": [
+                    414.71
+                  ]
+                },
+                {
+                  "candidateId": "kividb",
+                  "value": 160.67,
+                  "samples": [
+                    160.67
+                  ]
+                }
+              ],
+              "statistic": "mean"
+            }
+          ]
+        }
+      ]
     }
   ],
   "posts": [
@@ -2600,6 +3804,45 @@
         "memtier's default value is 100 ASCII bytes, and Dragonfly packs an all-ASCII value into 7 bits per byte, so it stores each of these values in 88 bytes where the other three store 100; binary values wouldn't pack, so the next run adds a second memory cell loaded with random bytes. Dragonfly's RSS delta also leaves out its 112 MB idle RSS, which the keys partly fill: by its own used_memory it added 130 bytes per key.",
         "The rig was one c7g.metal engine host and one c7g.16xlarge client in a single cluster placement group in us-east-1, speaking RESP2 without TLS. maxmemory was 16 GiB for all four, and eviction never triggered: working sets stay at or below half of it.",
         "KiviDB checks GitHub for a newer release at startup, before it listens; that was left on, as shipped."
+      ]
+    },
+    {
+      "slug": "2026-11-05-kv-stores-redis-vs-valkey-vs-dragonfly-vs-kividb",
+      "publishedAt": "2026-11-05",
+      "run": "2026-11-05-aws-graviton3",
+      "candidates": [
+        "redis",
+        "valkey",
+        "dragonfly",
+        "kividb"
+      ],
+      "title": "Redis vs Valkey vs Dragonfly vs KiviDB",
+      "deck": "A week after the last run, the same 64-core Graviton3 with KiviDB 1.2.0, which reworked how it stores a key, and Dragonfly 2.1. Memory adds random-byte values, the next million keys and each engine's total RSS beside the ranked number.",
+      "verdict": {
+        "winnerId": "dragonfly",
+        "headline": "KiviDB 1.2.0 cut its memory per key by 44% and came within 8 bytes a key of Dragonfly 2.1, which kept the p99 and memory sections, while KiviDB kept pipelining by 31% and out-served Dragonfly on small values in every pass",
+        "summary": "KiviDB 1.2.0 keeps each key and its value in one block behind an 8-byte slot, and its RSS per key fell from 267 bytes to 149, under Redis's 166 and Valkey's 171. Dragonfly 2.1 measured 142 on the ranked number, the RSS a fresh engine adds for its first million keys, which leaves out what it allocates before the first: Dragonfly idled at 280 MB at 64 threads to KiviDB's 18, so after a million keys KiviDB's RSS was 161 MB in all and Dragonfly's 415. By their own used_memory, the two cost the same for random bytes and for the next million, about 147 bytes a key; Dragonfly's lower 130 on memtier's ASCII values comes from packing them 7 bits a byte. KiviDB's throughput stayed within about 3% of 1.1.2's. It served 7% more 100-byte requests than Dragonfly, its slowest pass above Dragonfly's fastest, and 31% more at pipeline depth 30, a floor with the client at 72% CPU, and Dragonfly's p99 led at both value sizes, at 100 bytes by 41 µs, right at the noise threshold. Medians of ten passes; the table shows means."
+      },
+      "sections": {
+        "small-value-throughput": "Dragonfly 1.42M ops/s at the lowest p99 (0.41 ms); KiviDB 1.51M (0.45 ms), the most ops/s on every pass; Valkey 177K (2.10 ms); Redis 176K (2.11 ms)",
+        "large-value-throughput": "Dragonfly 398K ops/s at the lowest p99 (0.83 ms); KiviDB 398K (0.99 ms), both at the network ceiling; Valkey 107K (3.53 ms); Redis 106K (3.56 ms)",
+        "pipeline-effect": "KiviDB 22.4M ops/s at pipeline 30, a floor with the client at 72% CPU; Dragonfly 17.1M; Redis 1.48M; Valkey 1.37M",
+        "memory-efficiency": "Dragonfly 135 MB RSS delta (142 B/key); KiviDB 142 MB (149 B/key); Redis 158 MB (166 B/key); Valkey 163 MB (171 B/key)"
+      },
+      "limitations": [
+        "KiviDB's pipeline-30 cell ran the client at 70 to 73% CPU, where 50 memtier threads can keep at most 50 of its 64 vCPUs busy, and its passes ran faster when the client got more CPU, so its 22.4M ops/s is a floor.",
+        "At 10 KB, Dragonfly and KiviDB both delivered 398K ops/s, 29.6 Gbit/s of values into the client against the instances' 30 Gbit/s rating, so that section's throughput measures the network.",
+        "Latency is closed-loop at 200 connections and measured at the client, so each engine's p99 comes at its own throughput. KiviDB's 100-byte p99 swung from 0.31 to 0.53 ms between passes, and Dragonfly's 41 µs lead in the mean sits right at the noise threshold, so the mark on that chart could go either way on another run.",
+        "The memory section ranks on the RSS a fresh engine adds for its first million keys, which leaves out what it allocates before the first. Dragonfly 2.1 idled at 280 MB at 64 threads, up from 112 MB in 2.0.2, and its first-million delta rose from 118 to 142 bytes per key while its used_memory stayed at 130. The section also charts the next million's delta, random bytes and the total RSS after a million keys.",
+        "memtier's default value is 100 ASCII bytes, which Dragonfly packs 7 bits a byte. By its used_memory, packing saves it 16 bytes a key, the gap between its ASCII and random-byte cells; KiviDB, Redis and Valkey store both the same.",
+        "Against the 2026-10-29 post: the same rig, AMI and client sizing on a different pair of instances. Redis and Valkey, which didn't change, served 0.2 to 2.8% fewer ops/s than then, and KiviDB's throughput stayed within about 3% between 1.1.2 and 1.2.0.",
+        "Docker's default seccomp profile blocks io_uring, so this run allowed io_uring_setup, io_uring_enter and io_uring_register on top of it, as the 2026-10-29 run did. That post's second run shows what the stock profile cost KiviDB 1.1.2; this run didn't repeat it for 1.2.0.",
+        "Dragonfly ran 64 proactor threads, its default on 64 cores, and KiviDB its default 62 worker threads (cores minus two), both on io_uring, read from their startup logs. Redis and Valkey ran their default single-threaded I/O (io-threads 1); turning on their I/O threads is a different benchmark.",
+        "Persistence was off for all four. For KiviDB that's its default: no AOF and no snapshot schedule.",
+        "KiviDB 1.2.0 turns active defrag on by default, and it was left on, as shipped. KiviDB also checks GitHub for a newer release at startup, before it listens; that was left on too.",
+        "The official Redis 8.10.3 image loads its bundled Search, JSON, TimeSeries and Bloom modules, and they were left on as shipped.",
+        "Dragonfly 2.1 is the first release under the Dragonfly Source-Available License, which needs a commercial license past 100 vCPUs of production use across all instances. A benchmark isn't production use, and the engine host has 64.",
+        "The rig was one c7g.metal engine host and one c7g.16xlarge client in a single cluster placement group in us-east-1, speaking RESP2 without TLS. maxmemory was 16 GiB for all four, and eviction never triggered: working sets stay at or below half of it."
       ]
     }
   ]
