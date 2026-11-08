@@ -43,8 +43,8 @@ function stepThroughRuns(event: KeyboardEvent<HTMLDivElement>): void {
 /**
  * One box plot of time per pass for every candidate on a shared axis: the box is the middle half
  * of the runs, the line is the median, the whiskers reach the fastest and slowest pass, and every
- * run is a dot. The fastest candidate is red, the rest ink. Each track is one tab stop; arrow keys
- * step through its runs.
+ * run is a dot. Each row takes its product's brand color, or ink, and the fastest candidate's row
+ * sits on the red wash. Each track is one tab stop; arrow keys step through its runs.
  */
 export function BoxPlot({ benchmark, index }: BoxPlotProps) {
   const id = useId();

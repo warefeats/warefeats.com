@@ -29,7 +29,8 @@
   --rule-strong: #a3a3a3;
   --fast: #cc0000;
   --fast-ink: #ffffff;
-  --fast-wash: rgb(204 0 0 / 0.12);
+  /* Opaque, so a knockout ring or box inside the winner's row can match the wash it sits on. */
+  --fast-wash: color-mix(in srgb, var(--fast) 12%, var(--bg));
   --focus: #cc0000;
   --shadow: 0 12px 32px -12px rgb(0 0 0 / 0.25);
 
@@ -59,7 +60,7 @@
   --rule-strong: #4d4d4d;
   --fast: #ff4d4d;
   --fast-ink: #0d0d0d;
-  --fast-wash: rgb(255 77 77 / 0.16);
+  --fast-wash: color-mix(in srgb, var(--fast) 16%, var(--bg));
   --focus: #ff4d4d;
   --shadow: 0 12px 32px -12px rgb(0 0 0 / 0.7);
 }
@@ -75,7 +76,7 @@
     --rule-strong: #4d4d4d;
     --fast: #ff4d4d;
     --fast-ink: #0d0d0d;
-    --fast-wash: rgb(255 77 77 / 0.16);
+    --fast-wash: color-mix(in srgb, var(--fast) 16%, var(--bg));
     --focus: #ff4d4d;
     --shadow: 0 12px 32px -12px rgb(0 0 0 / 0.7);
   }
@@ -831,6 +832,12 @@ code {
   font-size: var(--text-sm);
 }
 
+/* The winner's wash runs side to side and halfway into the 0.5rem row gaps, as on a bar chart. */
+.box-row.is-fastest {
+  margin: -0.25rem -0.75rem;
+  padding: 0.25rem 0.75rem;
+}
+
 .plot-track {
   position: relative;
   height: 3.5rem;
@@ -866,7 +873,7 @@ code {
   top: calc(50% - 0.7rem);
   height: 1.4rem;
   border: 1.5px solid var(--brand-ink);
-  background: var(--bg);
+  background: var(--ground);
   box-sizing: border-box;
 }
 
@@ -1431,18 +1438,21 @@ th.num {
   color: var(--fast);
 }
 
-/* Chart rows take the product's brand color; without one, ink, or red for the fastest. */
+/* Chart rows take the product's brand color; without one, ink, or red for the fastest. A brand color outranks the red, so the fastest row also sits on the red wash, which says who won without recoloring its bar (ADR 0009). --ground is what a row's knockouts are cut from: the page, or the wash. */
 
 .bar-row,
 .box-row {
   --brand: var(--fg);
   --brand-ink: color-mix(in srgb, var(--brand) 70%, #000000);
   --brand-wash: color-mix(in srgb, var(--brand) 26%, transparent);
+  --ground: var(--bg);
 }
 
 .bar-row.is-best,
 .box-row.is-fastest {
   --brand: var(--fast);
+  --ground: var(--fast-wash);
+  background: var(--ground);
 }
 
 :root[data-theme="dark"] .bar-row,
@@ -1530,10 +1540,11 @@ th.num {
   text-align: center;
 }
 
+/* The bottom padding matches the row gap, so a winner's wash on the last row stops as far from the axis as from the row above. */
 .bar-rows {
   display: grid;
   gap: 0.75rem;
-  padding: 1rem 0.75rem 0.5rem;
+  padding: 1rem 0.75rem 0.75rem;
 }
 
 .bar-row {
@@ -1542,6 +1553,12 @@ th.num {
   gap: 0.75rem;
   align-items: center;
   font-size: var(--text-sm);
+}
+
+/* The winner's wash runs from one side of the chart to the other and halfway into the row gaps, so it is never the height of its bar and never reads as a track; the padding gives back what the margins take, so nothing inside moves. */
+.bar-row.is-best {
+  margin: -0.375rem -0.75rem;
+  padding: 0.375rem 0.75rem;
 }
 
 .bar-label {
@@ -1585,13 +1602,13 @@ th.num {
   background: var(--brand-ink);
 }
 
-/* The spread of a bar's passes: a whisker from the fastest to the slowest pass with a cap at each end, knocked out of the bar by a page-colored ring (the Mark halo) so the part that crosses the bar stays visible. */
+/* The spread of a bar's passes: a whisker from the fastest to the slowest pass with a cap at each end, knocked out of the bar by a ring of the row's ground (the Mark halo) so the part that crosses the bar stays visible. */
 .bar-whisker {
   position: absolute;
   top: 50%;
   height: 1px;
   background: var(--brand-ink);
-  box-shadow: 0 0 0 1px var(--bg);
+  box-shadow: 0 0 0 1px var(--ground);
 }
 
 .bar-cap {
@@ -1600,7 +1617,7 @@ th.num {
   width: 1px;
   height: 0.9rem;
   background: var(--brand-ink);
-  box-shadow: 0 0 0 1px var(--bg);
+  box-shadow: 0 0 0 1px var(--ground);
 }
 
 .bar-value {
