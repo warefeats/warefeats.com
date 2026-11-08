@@ -195,14 +195,14 @@ export function fiveNumber(samples: number[]): FiveNumber {
 export interface TestVerdict {
   /** The candidate with the best value, or undefined when the test has no results. */
   leaderId?: string;
-  /** The candidates whose means sit inside the leader's noise, best first; when any, nothing is marked. */
+  /** The candidates whose means sit inside the leader's noise, best first; when any, the chart marks them with the leader as a tie. */
   tiedIds: string[];
 }
 
 /**
- * The chart's mark: the best value, unless each value is a mean of two or more passes and the leader's sits inside
- * another candidate's noise, when nothing is marked and the others are named (ADR 0008). `noise` is the page's gate: a
- * declared test's samples are per pass by contract, a derived chart's only where the benchmark says so.
+ * The chart's mark: the best value and, where each value is a mean of two or more passes, every candidate inside the
+ * leader's noise, which the method line names (ADR 0008, ADR 0010). `noise` is the page's gate: a declared test's
+ * samples are per pass by contract, a derived chart's only where the benchmark says so.
  */
 export function testVerdict(test: BenchmarkTest, noise = true): TestVerdict {
   const sorted = [...test.results].sort((a, b) => (test.lowerIsBetter ? a.value - b.value : b.value - a.value));
@@ -214,7 +214,7 @@ export function testVerdict(test: BenchmarkTest, noise = true): TestVerdict {
   return { leaderId: leader.candidateId, tiedIds };
 }
 
-/** The candidate a chart marks, or undefined when its lead sits inside another's noise. */
+/** The test's outright winner, or undefined when the leader's lead sits inside another candidate's noise. */
 export function testWinner(test: BenchmarkTest, noise = true): string | undefined {
   const verdict = testVerdict(test, noise);
   return verdict.tiedIds.length ? undefined : verdict.leaderId;

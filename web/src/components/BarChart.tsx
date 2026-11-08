@@ -29,8 +29,8 @@ const capital = (word: string) => word.charAt(0).toUpperCase() + word.slice(1);
 /**
  * One barefeats-style test: a boxed chart with the title in its header band, one horizontal bar per product from a zero
  * baseline, the value at the end of each bar, a whisker from the fastest to the slowest pass where the runner published
- * them, and ticks along the bottom. Each bar takes its product's brand color, or ink; the better row sits on the red wash
- * unless its lead sits inside another's noise.
+ * them, and ticks along the bottom. Each bar takes its product's brand color, or ink; the better row sits on the red wash,
+ * and in a tie so does every row inside its noise.
  */
 export function BarChart({ benchmark, test, index, noise = true }: BarChartProps) {
   const name = (id: string) => benchmark.candidates.find((candidate) => candidate.id === id)?.name ?? id;
@@ -68,7 +68,7 @@ export function BarChart({ benchmark, test, index, noise = true }: BarChartProps
             const width = pos(result.value);
             const spread = spreads[row];
             const end = spread ? Math.max(width, pos(spread.max)) : width;
-            const isWinner = verdict.tiedIds.length === 0 && result.candidateId === verdict.leaderId;
+            const isWinner = result.candidateId === verdict.leaderId || verdict.tiedIds.includes(result.candidateId);
             const candidate = benchmark.candidates.find((entry) => entry.id === result.candidateId);
             const color = candidate?.color;
 

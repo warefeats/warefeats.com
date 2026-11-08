@@ -1,6 +1,6 @@
 # A chart marks its winner from its own passes
 
-Amended by ADR 0009: the mark is a red wash behind the winner's row, since a brand-colored bar never turns red.
+Amended by ADR 0009: the mark is a red wash behind the winner's row, since a brand-colored bar never turns red. Amended by ADR 0010: a tie marks the leader's row and every row inside its noise.
 
 A test's results may carry one sample per measured pass and name the statistic its value summarizes them by, so a bar chart draws the spread of its passes as a whisker and, where the statistic is the mean and every candidate has two or more passes, tells a lead from noise the way the scorecard does: the best value is marked unless it sits inside twice the standard error of the difference from another candidate's, when no bar is red and the chart's method line says whose lead is inside the noise. The mark reads the value at the end of the bar and the published samples, so it always agrees with the number shown. A test without samples, an "other" statistic or a median keeps its mark by value alone. A section's derived chart follows the scorecard's gate, `sectionSamples: "repeats"`, so the two never disagree. This takes up what ADR 0003 deferred and ADR 0007 kept deferred, now that the contract carries per-test samples.
 
