@@ -29,7 +29,8 @@ const capital = (word: string) => word.charAt(0).toUpperCase() + word.slice(1);
 /**
  * One barefeats-style test: a boxed chart with the title in its header band, one horizontal bar per product from a zero
  * baseline, the value at the end of each bar, a whisker from the fastest to the slowest pass where the runner published
- * them, and ticks along the bottom. The better bar is red unless its lead sits inside another's noise; the rest are ink.
+ * them, and ticks along the bottom. Each bar takes its product's brand color, or ink; the better row sits on the red wash
+ * unless its lead sits inside another's noise.
  */
 export function BarChart({ benchmark, test, index, noise = true }: BarChartProps) {
   const name = (id: string) => benchmark.candidates.find((candidate) => candidate.id === id)?.name ?? id;
