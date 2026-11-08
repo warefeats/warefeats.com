@@ -1062,7 +1062,7 @@ describe("charts and versions", () => {
     expect(testMethod({ id: "t", title: "T", description: "t", unit: "ms", lowerIsBetter: true, results: [{ candidateId: "a", value: 1 }] })).toBeUndefined();
   });
 
-  test("a chart leaves its mark off when the lead sits inside another candidate's noise, and says so", () => {
+  test("a chart marks every candidate inside the leader's noise as a tie, and says so", () => {
     const benchmark = { candidates: [{ id: "a", name: "A" }, { id: "b", name: "B" }, { id: "c", name: "C" }] } as unknown as Benchmark;
     const sampled = (candidateId: string, samples: number[]) => ({ candidateId, value: Number((samples.reduce((sum, value) => sum + value, 0) / samples.length).toFixed(3)), samples });
     // The scorecard's own example: 3.16 against 3.14 with a spread of 0.16 sits inside twice the standard error of the difference.
@@ -1072,7 +1072,7 @@ describe("charts and versions", () => {
     expect(testWinner(close)).toBeUndefined();
     expect(testWinner(close, false)).toBe("b");
     const html = renderToStaticMarkup(createElement(BarChart, { benchmark, test: close, index: 0 }));
-    expect(html).not.toContain("is-best");
+    expect([...html.matchAll(/class="bar-row is-best"><span class="bar-label"><span>(\w+)<\/span>/g)].map((match) => match[1])).toEqual(["A", "B"]);
     expect(html).toContain("; the lead over A is inside the noise.</p>");
 
     const far: BenchmarkTest = { ...close, results: [sampled("a", [3.04, 3.05, 3.06]), sampled("b", [2.89, 2.9, 2.91])] };
@@ -1112,9 +1112,9 @@ describe("charts and versions", () => {
     expect(page.match(/<p class="test-method">One measurement per candidate\.<\/p>/g)).toHaveLength(1);
     // kv-stores declares repeats, so the derived charts apply the noise rule; on this run every lead clears it.
     expect(page.match(/is-best/g)).toHaveLength(5);
-    // On the 2026-10-29 run Dragonfly's lead over KiviDB on both latency sections sits inside the noise: no mark, and the line says so.
+    // On the 2026-10-29 run Dragonfly's lead over KiviDB on both latency sections sits inside the noise: both are marked as a tie, and the line says so.
     const later = render(postPath(kv.posts![0]!.slug), index, kv).html.replaceAll("<!-- -->", "");
-    expect(later.match(/is-best/g)).toHaveLength(3);
+    expect(later.match(/is-best/g)).toHaveLength(7);
     expect(later.match(/the lead over KiviDB is inside the noise\.<\/p>/g)).toHaveLength(2);
     // On the 2026-11-05 run Dragonfly's 100-byte p99 lead over KiviDB, 0.041 ms in the mean, clears the noise of 0.04098 ms,
     // so every chart is marked and none says a lead is inside the noise; the post's prose says the same.

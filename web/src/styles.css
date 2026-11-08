@@ -1438,7 +1438,7 @@ th.num {
   color: var(--fast);
 }
 
-/* Chart rows take the product's brand color; without one, ink, or red for the fastest. A brand color outranks the red, so the fastest row also sits on the red wash, which says who won without recoloring its bar (ADR 0009). --ground is what a row's knockouts are cut from: the page, or the wash. */
+/* Chart rows take the product's brand color; without one, ink, or red for the fastest. A brand color outranks the red, so each winning row also sits on the red wash, which says who won without recoloring its bar (ADR 0009, ADR 0010). --ground is what a row's knockouts are cut from: the page, or the wash. */
 
 .bar-row,
 .box-row {
