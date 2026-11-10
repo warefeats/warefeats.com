@@ -160,6 +160,8 @@ export interface BenchmarkSection {
   deck: string;
   unit: string;
   lowerIsBetter: boolean;
+  /** Its samples are the steps of a search, such as a capacity found by doubling the rate and then bisecting, so independent passes can land on the same value. */
+  stepped?: true;
   verdict: {
     winnerId: string;
     headline: string;

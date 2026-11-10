@@ -30,5 +30,9 @@
   "desktop-shells": {
     "repo": "warefeats/desktop-shells",
     "ref": "e15674fd358b4c90bc04b7ce00793226a9b685fa"
+  },
+  "http-servers": {
+    "repo": "warefeats/http-servers",
+    "ref": "23b93e6bcabb3515981eddec2089cafc7663a0ee"
   }
 }

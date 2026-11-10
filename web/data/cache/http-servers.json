@@ -1,0 +1,2535 @@
+{
+  "id": "http-servers-2026-11",
+  "slug": "http-servers",
+  "post": "2026-11-09-http-servers-actix-web-vs-axum-vs-spring-boot-vs-express-vs-bun-vs-apache-httpd-vs-nginx",
+  "category": "HTTP servers",
+  "title": "actix-web vs axum vs Spring Boot vs Express vs Bun vs Apache httpd vs nginx",
+  "deck": "Seven HTTP servers on 4 Graviton4 cores, each at its documented setup: the most responses a second each holds at p99 ≤ 50 ms, what 1,000 slow clients cost it in memory, and how fast it serves a 64 MiB file.",
+  "publishedAt": "2026-11-09",
+  "run": {
+    "id": "2026-11-09-aws-graviton4",
+    "label": "AWS Graviton4, c8gn.4xlarge server and client"
+  },
+  "unit": "ms",
+  "lowerIsBetter": false,
+  "sectionSamples": "repeats",
+  "verdict": {
+    "winnerId": "actix-web",
+    "headline": "actix-web 4.19.0 led all three JSON routes, at 1.5 times Bun and 1.9 times axum on small JSON. On the 323 KB bodies and the 64 MiB file, every server but Express reached the network's limit.",
+    "summary": "actix-web answered small JSON on 8.2 µs of CPU a response, against 12.5 for Bun and 14.7 for axum. With 1,000 slow clients on a shared 323 KB body, actix-web and nginx held 18 and 17 MB, axum 30, Apache httpd 49 and Bun 198, while Spring Boot reached 2.3 GB on the 323 KB JSON. On the 16 KB body actix-web, axum and nginx tied at 352,000 responses a second, about 46 Gbit/s. Serving the 64 MiB file, Bun, nginx and Apache httpd spent 2.5 to 3.6 ms of CPU a download, about a tenth of the 25 to 30 ms actix-web, axum and Spring Boot spent."
+  },
+  "environment": {
+    "machine": "AWS c8gn.4xlarge server, its processes pinned to 4 of 16 cores, and a c8gn.4xlarge client, one cluster placement group",
+    "chip": "AWS Graviton4",
+    "cores": "4 (server)",
+    "memory": "32 GiB each",
+    "os": "Ubuntu 24.04 LTS arm64, kernel 7.0.0-1014-aws",
+    "arch": "arm64",
+    "runtime": "Each server at its documented setup: Rust release builds with rustc 1.99.1, OpenJDK 25.0.5, Node.js 26.13.0, Bun 1.4.4, Apache httpd 2.4.58 and nginx 1.30.6; oha 1.16.0; plain HTTP/1.1 keep-alive, no TLS, 50 Gbps between the instances"
+  },
+  "protocol": {
+    "warmups": 3,
+    "runs": 3,
+    "processModel": "A fresh server process group per cell on the server's 4 cores, each server sizing its own workers; every server but Bun listens with actix-web's backlog of 1,024 from its own settings, since Bun.serve has none",
+    "cacheState": "JSON built on every request; byte bodies from one shared buffer, or a new one per request on /323k-fresh, while Apache httpd and nginx serve them as files; the 64 MiB file stays in the page cache",
+    "output": "Capacity: the highest open-loop rate held with p99 at most 50 ms, at most 0.1% errors and at least 95% delivered, doubling then bisecting three times; CPU per response from the server's user plus system time and peak memory growth from VmHWM, each summed over its processes",
+    "clientSizing": "8 oha processes, open loop with latency correction; 1,000 paced clients in the slow cells; 64 in the file cell"
+  },
+  "candidates": [],
+  "sections": [
+    {
+      "id": "json",
+      "title": "Small JSON",
+      "deck": "A 1 KB JSON document built and serialized on every request: the highest rate held at p99 ≤ 50 ms.",
+      "unit": "responses/s",
+      "lowerIsBetter": false,
+      "stepped": true,
+      "verdict": {
+        "winnerId": "actix-web",
+        "headline": "actix-web 480,000 responses/s, axum 251,000 responses/s, Spring Boot 128,000 responses/s, Express 107,000 responses/s, Bun 320,000 responses/s",
+        "summary": ""
+      },
+      "candidates": [
+        {
+          "id": "actix-web",
+          "name": "actix-web",
+          "homepage": "https://actix.rs",
+          "version": "4.19.0 (actix-http 3.21.0)",
+          "statistics": {
+            "medianMs": 480000,
+            "meanMs": 480000,
+            "minMs": 480000,
+            "maxMs": 480000
+          },
+          "samplesMs": [
+            480000,
+            480000,
+            480000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 8.2,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 23.96,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 39.5,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.00055,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "axum",
+          "name": "axum",
+          "homepage": "https://github.com/tokio-rs/axum",
+          "version": "0.8.9 (hyper 1.12.0)",
+          "statistics": {
+            "medianMs": 256000,
+            "meanMs": 250666.66666666666,
+            "minMs": 240000,
+            "maxMs": 256000
+          },
+          "samplesMs": [
+            240000,
+            256000,
+            256000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 14.7,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 13.21,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 79.7,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.001031,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "spring",
+          "name": "Spring Boot",
+          "homepage": "https://spring.io/projects/spring-boot",
+          "version": "4.1.2 (OpenJDK 25, Ubuntu's openjdk-25-jre-headless)",
+          "statistics": {
+            "medianMs": 120000,
+            "meanMs": 128000,
+            "minMs": 120000,
+            "maxMs": 144000
+          },
+          "samplesMs": [
+            120000,
+            120000,
+            144000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 28.6,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 7.44,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 549.3,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.002199,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "express",
+          "name": "Express",
+          "homepage": "https://expressjs.com",
+          "version": "5.3.0 (Node.js 26.13.0)",
+          "statistics": {
+            "medianMs": 104000,
+            "meanMs": 106666.66666666667,
+            "minMs": 104000,
+            "maxMs": 112000
+          },
+          "samplesMs": [
+            104000,
+            112000,
+            104000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 34.6,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 6.03,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 334.4,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.002537,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "bun",
+          "name": "Bun",
+          "homepage": "https://bun.sh",
+          "version": "1.4.4",
+          "statistics": {
+            "medianMs": 320000,
+            "meanMs": 320000,
+            "minMs": 320000,
+            "maxMs": 320000
+          },
+          "samplesMs": [
+            320000,
+            320000,
+            320000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 12.5,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 22.48,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 45.5,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.000825,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "16k",
+      "title": "16 KB body",
+      "deck": "16,384 bytes from one shared buffer, or a file for Apache httpd and nginx, under actix-web's 32 KiB write-buffer threshold.",
+      "unit": "responses/s",
+      "lowerIsBetter": false,
+      "stepped": true,
+      "verdict": {
+        "winnerId": "",
+        "headline": "actix-web 352,000 responses/s, axum 352,000 responses/s, Spring Boot 123,000 responses/s, Express 90,700 responses/s, Bun 267,000 responses/s, Apache httpd 49,300 responses/s, nginx 352,000 responses/s",
+        "summary": ""
+      },
+      "candidates": [
+        {
+          "id": "actix-web",
+          "name": "actix-web",
+          "homepage": "https://actix.rs",
+          "version": "4.19.0 (actix-http 3.21.0)",
+          "statistics": {
+            "medianMs": 352000,
+            "meanMs": 352000,
+            "minMs": 352000,
+            "maxMs": 352000
+          },
+          "samplesMs": [
+            352000,
+            352000,
+            352000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 9.2,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 19.04,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 55.2,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.00075,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "axum",
+          "name": "axum",
+          "homepage": "https://github.com/tokio-rs/axum",
+          "version": "0.8.9 (hyper 1.12.0)",
+          "statistics": {
+            "medianMs": 352000,
+            "meanMs": 352000,
+            "minMs": 352000,
+            "maxMs": 352000
+          },
+          "samplesMs": [
+            352000,
+            352000,
+            352000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 9.9,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 23.26,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 79.2,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.00075,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "spring",
+          "name": "Spring Boot",
+          "homepage": "https://spring.io/projects/spring-boot",
+          "version": "4.1.2 (OpenJDK 25, Ubuntu's openjdk-25-jre-headless)",
+          "statistics": {
+            "medianMs": 120000,
+            "meanMs": 122666.66666666667,
+            "minMs": 120000,
+            "maxMs": 128000
+          },
+          "samplesMs": [
+            120000,
+            128000,
+            120000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 30.4,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 16.39,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 530,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.002199,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "express",
+          "name": "Express",
+          "homepage": "https://expressjs.com",
+          "version": "5.3.0 (Node.js 26.13.0)",
+          "statistics": {
+            "medianMs": 88000,
+            "meanMs": 90666.66666666667,
+            "minMs": 88000,
+            "maxMs": 96000
+          },
+          "samplesMs": [
+            96000,
+            88000,
+            88000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 41.9,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 10.65,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 196.3,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.002999,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "bun",
+          "name": "Bun",
+          "homepage": "https://bun.sh",
+          "version": "1.4.4",
+          "statistics": {
+            "medianMs": 256000,
+            "meanMs": 266666.6666666667,
+            "minMs": 256000,
+            "maxMs": 288000
+          },
+          "samplesMs": [
+            256000,
+            256000,
+            288000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 14.4,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 19.08,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 3.1,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.001031,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "apache",
+          "name": "Apache httpd",
+          "homepage": "https://httpd.apache.org",
+          "version": "2.4.58 (Ubuntu 24.04's apache2, event MPM)",
+          "statistics": {
+            "medianMs": 48000,
+            "meanMs": 49333.333333333336,
+            "minMs": 44000,
+            "maxMs": 56000
+          },
+          "samplesMs": [
+            56000,
+            44000,
+            48000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 49.6,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 0.85,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 38.3,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.005498,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "nginx",
+          "name": "nginx",
+          "homepage": "https://nginx.org",
+          "version": "1.30.6 (nginx.org's stable package for Ubuntu 24.04)",
+          "statistics": {
+            "medianMs": 352000,
+            "meanMs": 352000,
+            "minMs": 352000,
+            "maxMs": 352000
+          },
+          "samplesMs": [
+            352000,
+            352000,
+            352000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 11.3,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 30.59,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 7.3,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.00075,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "323k",
+      "title": "323 KB shared body",
+      "deck": "323,000 bytes cloned from one shared buffer, as a server answers from a cache, or a file for Apache httpd and nginx.",
+      "unit": "responses/s",
+      "lowerIsBetter": false,
+      "stepped": true,
+      "verdict": {
+        "winnerId": "",
+        "headline": "actix-web 18,000 responses/s, axum 18,000 responses/s, Spring Boot 18,000 responses/s, Express 13,300 responses/s, Bun 18,000 responses/s, Apache httpd 18,000 responses/s, nginx 18,000 responses/s",
+        "summary": ""
+      },
+      "candidates": [
+        {
+          "id": "actix-web",
+          "name": "actix-web",
+          "homepage": "https://actix.rs",
+          "version": "4.19.0 (actix-http 3.21.0)",
+          "statistics": {
+            "medianMs": 18000,
+            "meanMs": 18000,
+            "minMs": 18000,
+            "maxMs": 18000
+          },
+          "samplesMs": [
+            18000,
+            18000,
+            18000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 50.2,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 0.69,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 5.7,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.01466,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "axum",
+          "name": "axum",
+          "homepage": "https://github.com/tokio-rs/axum",
+          "version": "0.8.9 (hyper 1.12.0)",
+          "statistics": {
+            "medianMs": 18000,
+            "meanMs": 18000,
+            "minMs": 18000,
+            "maxMs": 18000
+          },
+          "samplesMs": [
+            18000,
+            18000,
+            18000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 55.2,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 0.7,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 10.5,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.01466,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "spring",
+          "name": "Spring Boot",
+          "homepage": "https://spring.io/projects/spring-boot",
+          "version": "4.1.2 (OpenJDK 25, Ubuntu's openjdk-25-jre-headless)",
+          "statistics": {
+            "medianMs": 18000,
+            "meanMs": 18000,
+            "minMs": 18000,
+            "maxMs": 18000
+          },
+          "samplesMs": [
+            18000,
+            18000,
+            18000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 140.2,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 1.23,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 55.4,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.01466,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "express",
+          "name": "Express",
+          "homepage": "https://expressjs.com",
+          "version": "5.3.0 (Node.js 26.13.0)",
+          "statistics": {
+            "medianMs": 13000,
+            "meanMs": 13333.333333333334,
+            "minMs": 13000,
+            "maxMs": 14000
+          },
+          "samplesMs": [
+            13000,
+            14000,
+            13000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 291.3,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 9.68,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 51,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.020299,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "bun",
+          "name": "Bun",
+          "homepage": "https://bun.sh",
+          "version": "1.4.4",
+          "statistics": {
+            "medianMs": 18000,
+            "meanMs": 18000,
+            "minMs": 18000,
+            "maxMs": 18000
+          },
+          "samplesMs": [
+            18000,
+            18000,
+            18000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 100.2,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 1.09,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 3.6,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.01466,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "apache",
+          "name": "Apache httpd",
+          "homepage": "https://httpd.apache.org",
+          "version": "2.4.58 (Ubuntu 24.04's apache2, event MPM)",
+          "statistics": {
+            "medianMs": 18000,
+            "meanMs": 18000,
+            "minMs": 18000,
+            "maxMs": 18000
+          },
+          "samplesMs": [
+            18000,
+            18000,
+            18000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 94.8,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 0.81,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 19,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.01466,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "nginx",
+          "name": "nginx",
+          "homepage": "https://nginx.org",
+          "version": "1.30.6 (nginx.org's stable package for Ubuntu 24.04)",
+          "statistics": {
+            "medianMs": 18000,
+            "meanMs": 18000,
+            "minMs": 18000,
+            "maxMs": 18000
+          },
+          "samplesMs": [
+            18000,
+            18000,
+            18000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 62.5,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 0.69,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 5.9,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.01466,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "323k-fresh",
+      "title": "323 KB body built per request",
+      "deck": "The same 323,000 bytes copied into a new buffer on every request.",
+      "unit": "responses/s",
+      "lowerIsBetter": false,
+      "stepped": true,
+      "verdict": {
+        "winnerId": "",
+        "headline": "actix-web 18,000 responses/s, axum 18,000 responses/s, Spring Boot 18,000 responses/s, Express 10,000 responses/s, Bun 18,000 responses/s",
+        "summary": ""
+      },
+      "candidates": [
+        {
+          "id": "actix-web",
+          "name": "actix-web",
+          "homepage": "https://actix.rs",
+          "version": "4.19.0 (actix-http 3.21.0)",
+          "statistics": {
+            "medianMs": 18000,
+            "meanMs": 18000,
+            "minMs": 18000,
+            "maxMs": 18000
+          },
+          "samplesMs": [
+            18000,
+            18000,
+            18000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 57.8,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 0.7,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 7.7,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.01466,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "axum",
+          "name": "axum",
+          "homepage": "https://github.com/tokio-rs/axum",
+          "version": "0.8.9 (hyper 1.12.0)",
+          "statistics": {
+            "medianMs": 18000,
+            "meanMs": 18000,
+            "minMs": 18000,
+            "maxMs": 18000
+          },
+          "samplesMs": [
+            18000,
+            18000,
+            18000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 61.9,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 0.71,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 12.5,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.01466,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "spring",
+          "name": "Spring Boot",
+          "homepage": "https://spring.io/projects/spring-boot",
+          "version": "4.1.2 (OpenJDK 25, Ubuntu's openjdk-25-jre-headless)",
+          "statistics": {
+            "medianMs": 18000,
+            "meanMs": 18000,
+            "minMs": 18000,
+            "maxMs": 18000
+          },
+          "samplesMs": [
+            18000,
+            18000,
+            18000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 161.8,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 1.81,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 775.1,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.01466,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "express",
+          "name": "Express",
+          "homepage": "https://expressjs.com",
+          "version": "5.3.0 (Node.js 26.13.0)",
+          "statistics": {
+            "medianMs": 10000,
+            "meanMs": 10000,
+            "minMs": 10000,
+            "maxMs": 10000
+          },
+          "samplesMs": [
+            10000,
+            10000,
+            10000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 361.9,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 12.81,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 450.9,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.026389,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "bun",
+          "name": "Bun",
+          "homepage": "https://bun.sh",
+          "version": "1.4.4",
+          "statistics": {
+            "medianMs": 18000,
+            "meanMs": 18000,
+            "minMs": 18000,
+            "maxMs": 18000
+          },
+          "samplesMs": [
+            18000,
+            18000,
+            18000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 132.7,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 1.55,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 68.3,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.01466,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "json-40k",
+      "title": "40 KB JSON",
+      "deck": "A 263-item JSON document, 40,039 bytes, built and serialized on every request.",
+      "unit": "responses/s",
+      "lowerIsBetter": false,
+      "stepped": true,
+      "verdict": {
+        "winnerId": "actix-web",
+        "headline": "actix-web 36,000 responses/s, axum 26,700 responses/s, Spring Boot 21,300 responses/s, Express 20,000 responses/s, Bun 32,000 responses/s",
+        "summary": ""
+      },
+      "candidates": [
+        {
+          "id": "actix-web",
+          "name": "actix-web",
+          "homepage": "https://actix.rs",
+          "version": "4.19.0 (actix-http 3.21.0)",
+          "statistics": {
+            "medianMs": 36000,
+            "meanMs": 36000,
+            "minMs": 36000,
+            "maxMs": 36000
+          },
+          "samplesMs": [
+            36000,
+            36000,
+            36000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 102.5,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 1.29,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 32.9,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.00733,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "axum",
+          "name": "axum",
+          "homepage": "https://github.com/tokio-rs/axum",
+          "version": "0.8.9 (hyper 1.12.0)",
+          "statistics": {
+            "medianMs": 26000,
+            "meanMs": 26666.666666666668,
+            "minMs": 26000,
+            "maxMs": 28000
+          },
+          "samplesMs": [
+            26000,
+            28000,
+            26000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 145,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 3.01,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 11.7,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.01015,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "spring",
+          "name": "Spring Boot",
+          "homepage": "https://spring.io/projects/spring-boot",
+          "version": "4.1.2 (OpenJDK 25, Ubuntu's openjdk-25-jre-headless)",
+          "statistics": {
+            "medianMs": 22000,
+            "meanMs": 21333.333333333332,
+            "minMs": 20000,
+            "maxMs": 22000
+          },
+          "samplesMs": [
+            20000,
+            22000,
+            22000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 180.8,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 28.71,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 994,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.011995,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "express",
+          "name": "Express",
+          "homepage": "https://expressjs.com",
+          "version": "5.3.0 (Node.js 26.13.0)",
+          "statistics": {
+            "medianMs": 20000,
+            "meanMs": 20000,
+            "minMs": 20000,
+            "maxMs": 20000
+          },
+          "samplesMs": [
+            20000,
+            20000,
+            20000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 193.4,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 16.26,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 361.8,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.013194,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "bun",
+          "name": "Bun",
+          "homepage": "https://bun.sh",
+          "version": "1.4.4",
+          "statistics": {
+            "medianMs": 32000,
+            "meanMs": 32000,
+            "minMs": 32000,
+            "maxMs": 32000
+          },
+          "samplesMs": [
+            32000,
+            32000,
+            32000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 109.9,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 3.95,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 71.7,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.008247,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "json-323k",
+      "title": "323 KB JSON",
+      "deck": "A 2,100-item JSON document, 323,142 bytes, built and serialized on every request.",
+      "unit": "responses/s",
+      "lowerIsBetter": false,
+      "stepped": true,
+      "verdict": {
+        "winnerId": "actix-web",
+        "headline": "actix-web 5,000 responses/s, axum 3,250 responses/s, Spring Boot 3,250 responses/s, Express 3,000 responses/s, Bun 4,000 responses/s",
+        "summary": ""
+      },
+      "candidates": [
+        {
+          "id": "actix-web",
+          "name": "actix-web",
+          "homepage": "https://actix.rs",
+          "version": "4.19.0 (actix-http 3.21.0)",
+          "statistics": {
+            "medianMs": 5000,
+            "meanMs": 5000,
+            "minMs": 5000,
+            "maxMs": 5000
+          },
+          "samplesMs": [
+            5000,
+            5000,
+            5000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 759.2,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 2.98,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 6.6,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.052778,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "axum",
+          "name": "axum",
+          "homepage": "https://github.com/tokio-rs/axum",
+          "version": "0.8.9 (hyper 1.12.0)",
+          "statistics": {
+            "medianMs": 3250,
+            "meanMs": 3250,
+            "minMs": 3250,
+            "maxMs": 3250
+          },
+          "samplesMs": [
+            3250,
+            3250,
+            3250
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 1151.4,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 3.52,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 8.5,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.081197,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "spring",
+          "name": "Spring Boot",
+          "homepage": "https://spring.io/projects/spring-boot",
+          "version": "4.1.2 (OpenJDK 25, Ubuntu's openjdk-25-jre-headless)",
+          "statistics": {
+            "medianMs": 3250,
+            "meanMs": 3250,
+            "minMs": 3250,
+            "maxMs": 3250
+          },
+          "samplesMs": [
+            3250,
+            3250,
+            3250
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 1162.1,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 15.44,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 1536.3,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.081197,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "express",
+          "name": "Express",
+          "homepage": "https://expressjs.com",
+          "version": "5.3.0 (Node.js 26.13.0)",
+          "statistics": {
+            "medianMs": 3000,
+            "meanMs": 3000,
+            "minMs": 3000,
+            "maxMs": 3000
+          },
+          "samplesMs": [
+            3000,
+            3000,
+            3000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 1301.6,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 13.97,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 447.7,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.087963,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        },
+        {
+          "id": "bun",
+          "name": "Bun",
+          "homepage": "https://bun.sh",
+          "version": "1.4.4",
+          "statistics": {
+            "medianMs": 4000,
+            "meanMs": 4000,
+            "minMs": 4000,
+            "maxMs": 4000
+          },
+          "samplesMs": [
+            4000,
+            4000,
+            4000
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 954.8,
+              "unit": "µs/response",
+              "label": "Server CPU at its highest held rate"
+            },
+            "p99": {
+              "value": 10.13,
+              "unit": "ms",
+              "label": "p99 at its highest held rate"
+            },
+            "memory": {
+              "value": 136.4,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "price": {
+              "value": 0.065972,
+              "unit": "$/million responses",
+              "label": "Server instance cost at capacity"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "slow-323k",
+      "title": "Slow clients, 323 KB shared body",
+      "deck": "Peak memory growth with 1,000 keep-alive clients, each paced at 10 Mbit/s with 40 ms added round trip.",
+      "unit": "MB",
+      "lowerIsBetter": true,
+      "verdict": {
+        "winnerId": "",
+        "headline": "actix-web 17.7 MB, axum 29.5 MB, Spring Boot 113 MB, Express 90.1 MB, Bun 198 MB, Apache httpd 49.1 MB, nginx 17.2 MB",
+        "summary": ""
+      },
+      "candidates": [
+        {
+          "id": "actix-web",
+          "name": "actix-web",
+          "homepage": "https://actix.rs",
+          "version": "4.19.0 (actix-http 3.21.0)",
+          "statistics": {
+            "medianMs": 17.62,
+            "meanMs": 17.71666666666667,
+            "minMs": 17.51,
+            "maxMs": 18.02
+          },
+          "samplesMs": [
+            17.51,
+            17.62,
+            18.02
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 38.7,
+              "unit": "µs/response",
+              "label": "Server CPU"
+            },
+            "p99": {
+              "value": 294.2,
+              "unit": "ms",
+              "label": "p99 the slow clients saw"
+            },
+            "rate": {
+              "value": 3399,
+              "unit": "responses/s",
+              "label": "Responses served"
+            }
+          }
+        },
+        {
+          "id": "axum",
+          "name": "axum",
+          "homepage": "https://github.com/tokio-rs/axum",
+          "version": "0.8.9 (hyper 1.12.0)",
+          "statistics": {
+            "medianMs": 29.53,
+            "meanMs": 29.456666666666667,
+            "minMs": 29.02,
+            "maxMs": 29.82
+          },
+          "samplesMs": [
+            29.53,
+            29.82,
+            29.02
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 39.9,
+              "unit": "µs/response",
+              "label": "Server CPU"
+            },
+            "p99": {
+              "value": 295.3,
+              "unit": "ms",
+              "label": "p99 the slow clients saw"
+            },
+            "rate": {
+              "value": 3399,
+              "unit": "responses/s",
+              "label": "Responses served"
+            }
+          }
+        },
+        {
+          "id": "spring",
+          "name": "Spring Boot",
+          "homepage": "https://spring.io/projects/spring-boot",
+          "version": "4.1.2 (OpenJDK 25, Ubuntu's openjdk-25-jre-headless)",
+          "statistics": {
+            "medianMs": 109.72,
+            "meanMs": 113.30666666666666,
+            "minMs": 107.01,
+            "maxMs": 123.19
+          },
+          "samplesMs": [
+            107.01,
+            123.19,
+            109.72
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 143.7,
+              "unit": "µs/response",
+              "label": "Server CPU"
+            },
+            "p99": {
+              "value": 333.5,
+              "unit": "ms",
+              "label": "p99 the slow clients saw"
+            },
+            "rate": {
+              "value": 3432,
+              "unit": "responses/s",
+              "label": "Responses served"
+            }
+          }
+        },
+        {
+          "id": "express",
+          "name": "Express",
+          "homepage": "https://expressjs.com",
+          "version": "5.3.0 (Node.js 26.13.0)",
+          "statistics": {
+            "medianMs": 89.84,
+            "meanMs": 90.06333333333333,
+            "minMs": 86.97,
+            "maxMs": 93.38
+          },
+          "samplesMs": [
+            89.84,
+            86.97,
+            93.38
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 304.3,
+              "unit": "µs/response",
+              "label": "Server CPU"
+            },
+            "p99": {
+              "value": 302.7,
+              "unit": "ms",
+              "label": "p99 the slow clients saw"
+            },
+            "rate": {
+              "value": 3387,
+              "unit": "responses/s",
+              "label": "Responses served"
+            }
+          }
+        },
+        {
+          "id": "bun",
+          "name": "Bun",
+          "homepage": "https://bun.sh",
+          "version": "1.4.4",
+          "statistics": {
+            "medianMs": 192.34,
+            "meanMs": 198.37666666666667,
+            "minMs": 181.97,
+            "maxMs": 220.82
+          },
+          "samplesMs": [
+            192.34,
+            220.82,
+            181.97
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 84.8,
+              "unit": "µs/response",
+              "label": "Server CPU"
+            },
+            "p99": {
+              "value": 296.2,
+              "unit": "ms",
+              "label": "p99 the slow clients saw"
+            },
+            "rate": {
+              "value": 3399,
+              "unit": "responses/s",
+              "label": "Responses served"
+            }
+          }
+        },
+        {
+          "id": "apache",
+          "name": "Apache httpd",
+          "homepage": "https://httpd.apache.org",
+          "version": "2.4.58 (Ubuntu 24.04's apache2, event MPM)",
+          "statistics": {
+            "medianMs": 49.26,
+            "meanMs": 49.086666666666666,
+            "minMs": 48.61,
+            "maxMs": 49.39
+          },
+          "samplesMs": [
+            48.61,
+            49.26,
+            49.39
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 73.6,
+              "unit": "µs/response",
+              "label": "Server CPU"
+            },
+            "p99": {
+              "value": 29564,
+              "unit": "ms",
+              "label": "p99 the slow clients saw"
+            },
+            "rate": {
+              "value": 1521,
+              "unit": "responses/s",
+              "label": "Responses served"
+            }
+          }
+        },
+        {
+          "id": "nginx",
+          "name": "nginx",
+          "homepage": "https://nginx.org",
+          "version": "1.30.6 (nginx.org's stable package for Ubuntu 24.04)",
+          "statistics": {
+            "medianMs": 17.36,
+            "meanMs": 17.163333333333334,
+            "minMs": 16.56,
+            "maxMs": 17.57
+          },
+          "samplesMs": [
+            16.56,
+            17.36,
+            17.57
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 37.1,
+              "unit": "µs/response",
+              "label": "Server CPU"
+            },
+            "p99": {
+              "value": 330.7,
+              "unit": "ms",
+              "label": "p99 the slow clients saw"
+            },
+            "rate": {
+              "value": 3299,
+              "unit": "responses/s",
+              "label": "Responses served"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "slow-323k-fresh",
+      "title": "Slow clients, 323 KB body built per request",
+      "deck": "Peak memory growth with 1,000 slow keep-alive clients on the per-request body.",
+      "unit": "MB",
+      "lowerIsBetter": true,
+      "verdict": {
+        "winnerId": "",
+        "headline": "actix-web 270 MB, axum 288 MB, Spring Boot 424 MB, Express 356 MB, Bun 227 MB",
+        "summary": ""
+      },
+      "candidates": [
+        {
+          "id": "actix-web",
+          "name": "actix-web",
+          "homepage": "https://actix.rs",
+          "version": "4.19.0 (actix-http 3.21.0)",
+          "statistics": {
+            "medianMs": 264.49,
+            "meanMs": 270.3233333333333,
+            "minMs": 259.18,
+            "maxMs": 287.3
+          },
+          "samplesMs": [
+            264.49,
+            287.3,
+            259.18
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 53.3,
+              "unit": "µs/response",
+              "label": "Server CPU"
+            },
+            "p99": {
+              "value": 294.8,
+              "unit": "ms",
+              "label": "p99 the slow clients saw"
+            },
+            "rate": {
+              "value": 3399,
+              "unit": "responses/s",
+              "label": "Responses served"
+            }
+          }
+        },
+        {
+          "id": "axum",
+          "name": "axum",
+          "homepage": "https://github.com/tokio-rs/axum",
+          "version": "0.8.9 (hyper 1.12.0)",
+          "statistics": {
+            "medianMs": 283.79,
+            "meanMs": 287.93,
+            "minMs": 273.77,
+            "maxMs": 306.23
+          },
+          "samplesMs": [
+            273.77,
+            306.23,
+            283.79
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 48.2,
+              "unit": "µs/response",
+              "label": "Server CPU"
+            },
+            "p99": {
+              "value": 295.3,
+              "unit": "ms",
+              "label": "p99 the slow clients saw"
+            },
+            "rate": {
+              "value": 3399,
+              "unit": "responses/s",
+              "label": "Responses served"
+            }
+          }
+        },
+        {
+          "id": "spring",
+          "name": "Spring Boot",
+          "homepage": "https://spring.io/projects/spring-boot",
+          "version": "4.1.2 (OpenJDK 25, Ubuntu's openjdk-25-jre-headless)",
+          "statistics": {
+            "medianMs": 430.26,
+            "meanMs": 423.6566666666667,
+            "minMs": 409.11,
+            "maxMs": 431.6
+          },
+          "samplesMs": [
+            409.11,
+            431.6,
+            430.26
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 172.3,
+              "unit": "µs/response",
+              "label": "Server CPU"
+            },
+            "p99": {
+              "value": 333.6,
+              "unit": "ms",
+              "label": "p99 the slow clients saw"
+            },
+            "rate": {
+              "value": 3432,
+              "unit": "responses/s",
+              "label": "Responses served"
+            }
+          }
+        },
+        {
+          "id": "express",
+          "name": "Express",
+          "homepage": "https://expressjs.com",
+          "version": "5.3.0 (Node.js 26.13.0)",
+          "statistics": {
+            "medianMs": 351.94,
+            "meanMs": 355.9766666666667,
+            "minMs": 351.81,
+            "maxMs": 364.18
+          },
+          "samplesMs": [
+            351.81,
+            364.18,
+            351.94
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 466.3,
+              "unit": "µs/response",
+              "label": "Server CPU"
+            },
+            "p99": {
+              "value": 309.7,
+              "unit": "ms",
+              "label": "p99 the slow clients saw"
+            },
+            "rate": {
+              "value": 3375,
+              "unit": "responses/s",
+              "label": "Responses served"
+            }
+          }
+        },
+        {
+          "id": "bun",
+          "name": "Bun",
+          "homepage": "https://bun.sh",
+          "version": "1.4.4",
+          "statistics": {
+            "medianMs": 213.93,
+            "meanMs": 226.60666666666665,
+            "minMs": 205.21,
+            "maxMs": 260.68
+          },
+          "samplesMs": [
+            205.21,
+            260.68,
+            213.93
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 118.2,
+              "unit": "µs/response",
+              "label": "Server CPU"
+            },
+            "p99": {
+              "value": 296,
+              "unit": "ms",
+              "label": "p99 the slow clients saw"
+            },
+            "rate": {
+              "value": 3399,
+              "unit": "responses/s",
+              "label": "Responses served"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "slow-json-40k",
+      "title": "Slow clients, 40 KB JSON",
+      "deck": "Peak memory growth with 1,000 slow keep-alive clients on the 40 KB JSON document.",
+      "unit": "MB",
+      "lowerIsBetter": true,
+      "verdict": {
+        "winnerId": "",
+        "headline": "actix-web 50.5 MB, axum 33.7 MB, Spring Boot 792 MB, Express 323 MB, Bun 79.8 MB",
+        "summary": ""
+      },
+      "candidates": [
+        {
+          "id": "actix-web",
+          "name": "actix-web",
+          "homepage": "https://actix.rs",
+          "version": "4.19.0 (actix-http 3.21.0)",
+          "statistics": {
+            "medianMs": 50.47,
+            "meanMs": 50.48333333333333,
+            "minMs": 50.41,
+            "maxMs": 50.57
+          },
+          "samplesMs": [
+            50.41,
+            50.57,
+            50.47
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 106.9,
+              "unit": "µs/response",
+              "label": "Server CPU"
+            },
+            "p99": {
+              "value": 62.3,
+              "unit": "ms",
+              "label": "p99 the slow clients saw"
+            },
+            "rate": {
+              "value": 16094,
+              "unit": "responses/s",
+              "label": "Responses served"
+            }
+          }
+        },
+        {
+          "id": "axum",
+          "name": "axum",
+          "homepage": "https://github.com/tokio-rs/axum",
+          "version": "0.8.9 (hyper 1.12.0)",
+          "statistics": {
+            "medianMs": 33.99,
+            "meanMs": 33.660000000000004,
+            "minMs": 32.95,
+            "maxMs": 34.04
+          },
+          "samplesMs": [
+            33.99,
+            34.04,
+            32.95
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 172.1,
+              "unit": "µs/response",
+              "label": "Server CPU"
+            },
+            "p99": {
+              "value": 62.4,
+              "unit": "ms",
+              "label": "p99 the slow clients saw"
+            },
+            "rate": {
+              "value": 16068,
+              "unit": "responses/s",
+              "label": "Responses served"
+            }
+          }
+        },
+        {
+          "id": "spring",
+          "name": "Spring Boot",
+          "homepage": "https://spring.io/projects/spring-boot",
+          "version": "4.1.2 (OpenJDK 25, Ubuntu's openjdk-25-jre-headless)",
+          "statistics": {
+            "medianMs": 803.15,
+            "meanMs": 792.3233333333334,
+            "minMs": 754.57,
+            "maxMs": 819.25
+          },
+          "samplesMs": [
+            803.15,
+            754.57,
+            819.25
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 199.6,
+              "unit": "µs/response",
+              "label": "Server CPU"
+            },
+            "p99": {
+              "value": 100.1,
+              "unit": "ms",
+              "label": "p99 the slow clients saw"
+            },
+            "rate": {
+              "value": 15949,
+              "unit": "responses/s",
+              "label": "Responses served"
+            }
+          }
+        },
+        {
+          "id": "express",
+          "name": "Express",
+          "homepage": "https://expressjs.com",
+          "version": "5.3.0 (Node.js 26.13.0)",
+          "statistics": {
+            "medianMs": 322.59,
+            "meanMs": 322.6333333333333,
+            "minMs": 320.99,
+            "maxMs": 324.32
+          },
+          "samplesMs": [
+            324.32,
+            322.59,
+            320.99
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 213.5,
+              "unit": "µs/response",
+              "label": "Server CPU"
+            },
+            "p99": {
+              "value": 69,
+              "unit": "ms",
+              "label": "p99 the slow clients saw"
+            },
+            "rate": {
+              "value": 15917,
+              "unit": "responses/s",
+              "label": "Responses served"
+            }
+          }
+        },
+        {
+          "id": "bun",
+          "name": "Bun",
+          "homepage": "https://bun.sh",
+          "version": "1.4.4",
+          "statistics": {
+            "medianMs": 81.96,
+            "meanMs": 79.81,
+            "minMs": 75.36,
+            "maxMs": 82.11
+          },
+          "samplesMs": [
+            75.36,
+            81.96,
+            82.11
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 128.4,
+              "unit": "µs/response",
+              "label": "Server CPU"
+            },
+            "p99": {
+              "value": 63.3,
+              "unit": "ms",
+              "label": "p99 the slow clients saw"
+            },
+            "rate": {
+              "value": 16074,
+              "unit": "responses/s",
+              "label": "Responses served"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "slow-json-323k",
+      "title": "Slow clients, 323 KB JSON",
+      "deck": "Peak memory growth with 1,000 slow keep-alive clients on the 323 KB JSON document.",
+      "unit": "MB",
+      "lowerIsBetter": true,
+      "verdict": {
+        "winnerId": "",
+        "headline": "actix-web 227 MB, axum 248 MB, Spring Boot 2,260 MB, Express 492 MB, Bun 279 MB",
+        "summary": ""
+      },
+      "candidates": [
+        {
+          "id": "actix-web",
+          "name": "actix-web",
+          "homepage": "https://actix.rs",
+          "version": "4.19.0 (actix-http 3.21.0)",
+          "statistics": {
+            "medianMs": 224.83,
+            "meanMs": 226.91,
+            "minMs": 203.84,
+            "maxMs": 252.06
+          },
+          "samplesMs": [
+            203.84,
+            252.06,
+            224.83
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 780.6,
+              "unit": "µs/response",
+              "label": "Server CPU"
+            },
+            "p99": {
+              "value": 300.7,
+              "unit": "ms",
+              "label": "p99 the slow clients saw"
+            },
+            "rate": {
+              "value": 3372,
+              "unit": "responses/s",
+              "label": "Responses served"
+            }
+          }
+        },
+        {
+          "id": "axum",
+          "name": "axum",
+          "homepage": "https://github.com/tokio-rs/axum",
+          "version": "0.8.9 (hyper 1.12.0)",
+          "statistics": {
+            "medianMs": 251.92,
+            "meanMs": 247.6833333333333,
+            "minMs": 234.25,
+            "maxMs": 256.88
+          },
+          "samplesMs": [
+            234.25,
+            256.88,
+            251.92
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 1162.4,
+              "unit": "µs/response",
+              "label": "Server CPU"
+            },
+            "p99": {
+              "value": 317.7,
+              "unit": "ms",
+              "label": "p99 the slow clients saw"
+            },
+            "rate": {
+              "value": 3360,
+              "unit": "responses/s",
+              "label": "Responses served"
+            }
+          }
+        },
+        {
+          "id": "spring",
+          "name": "Spring Boot",
+          "homepage": "https://spring.io/projects/spring-boot",
+          "version": "4.1.2 (OpenJDK 25, Ubuntu's openjdk-25-jre-headless)",
+          "statistics": {
+            "medianMs": 2246.98,
+            "meanMs": 2260.806666666667,
+            "minMs": 2076.16,
+            "maxMs": 2459.28
+          },
+          "samplesMs": [
+            2459.28,
+            2246.98,
+            2076.16
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 1256,
+              "unit": "µs/response",
+              "label": "Server CPU"
+            },
+            "p99": {
+              "value": 508.3,
+              "unit": "ms",
+              "label": "p99 the slow clients saw"
+            },
+            "rate": {
+              "value": 3165,
+              "unit": "responses/s",
+              "label": "Responses served"
+            }
+          }
+        },
+        {
+          "id": "express",
+          "name": "Express",
+          "homepage": "https://expressjs.com",
+          "version": "5.3.0 (Node.js 26.13.0)",
+          "statistics": {
+            "medianMs": 506.73,
+            "meanMs": 491.98,
+            "minMs": 444.52,
+            "maxMs": 524.69
+          },
+          "samplesMs": [
+            506.73,
+            524.69,
+            444.52
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 1360.9,
+              "unit": "µs/response",
+              "label": "Server CPU"
+            },
+            "p99": {
+              "value": 435.6,
+              "unit": "ms",
+              "label": "p99 the slow clients saw"
+            },
+            "rate": {
+              "value": 2943,
+              "unit": "responses/s",
+              "label": "Responses served"
+            }
+          }
+        },
+        {
+          "id": "bun",
+          "name": "Bun",
+          "homepage": "https://bun.sh",
+          "version": "1.4.4",
+          "statistics": {
+            "medianMs": 274.46,
+            "meanMs": 278.60999999999996,
+            "minMs": 259.58,
+            "maxMs": 301.79
+          },
+          "samplesMs": [
+            259.58,
+            301.79,
+            274.46
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 974.4,
+              "unit": "µs/response",
+              "label": "Server CPU"
+            },
+            "p99": {
+              "value": 317.7,
+              "unit": "ms",
+              "label": "p99 the slow clients saw"
+            },
+            "rate": {
+              "value": 3358,
+              "unit": "responses/s",
+              "label": "Responses served"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "file",
+      "title": "64 MiB file",
+      "deck": "64 keep-alive clients downloading a 64 MiB file through each server's own file serving, nothing shaped.",
+      "unit": "Gbit/s",
+      "lowerIsBetter": false,
+      "verdict": {
+        "winnerId": "",
+        "headline": "actix-web 49.2 Gbit/s, axum 49.2 Gbit/s, Spring Boot 48.9 Gbit/s, Express 38.4 Gbit/s, Bun 49.2 Gbit/s, Apache httpd 49.2 Gbit/s, nginx 49.1 Gbit/s",
+        "summary": ""
+      },
+      "candidates": [
+        {
+          "id": "actix-web",
+          "name": "actix-web",
+          "homepage": "https://actix.rs",
+          "version": "4.19.0 (actix-http 3.21.0)",
+          "statistics": {
+            "medianMs": 49.14,
+            "meanMs": 49.18000000000001,
+            "minMs": 49.1,
+            "maxMs": 49.3
+          },
+          "samplesMs": [
+            49.1,
+            49.14,
+            49.3
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 24.66,
+              "unit": "ms/response",
+              "label": "Server CPU per download"
+            },
+            "memory": {
+              "value": 21,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "p99": {
+              "value": 1429,
+              "unit": "ms",
+              "label": "p99 download time"
+            }
+          }
+        },
+        {
+          "id": "axum",
+          "name": "axum",
+          "homepage": "https://github.com/tokio-rs/axum",
+          "version": "0.8.9 (hyper 1.12.0)",
+          "statistics": {
+            "medianMs": 49.19,
+            "meanMs": 49.18333333333333,
+            "minMs": 49.1,
+            "maxMs": 49.26
+          },
+          "samplesMs": [
+            49.19,
+            49.1,
+            49.26
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 29.82,
+              "unit": "ms/response",
+              "label": "Server CPU per download"
+            },
+            "memory": {
+              "value": 56.6,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "p99": {
+              "value": 2571,
+              "unit": "ms",
+              "label": "p99 download time"
+            }
+          }
+        },
+        {
+          "id": "spring",
+          "name": "Spring Boot",
+          "homepage": "https://spring.io/projects/spring-boot",
+          "version": "4.1.2 (OpenJDK 25, Ubuntu's openjdk-25-jre-headless)",
+          "statistics": {
+            "medianMs": 48.92,
+            "meanMs": 48.943333333333335,
+            "minMs": 48.88,
+            "maxMs": 49.03
+          },
+          "samplesMs": [
+            48.88,
+            48.92,
+            49.03
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 27.66,
+              "unit": "ms/response",
+              "label": "Server CPU per download"
+            },
+            "memory": {
+              "value": 46.3,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "p99": {
+              "value": 1951,
+              "unit": "ms",
+              "label": "p99 download time"
+            }
+          }
+        },
+        {
+          "id": "express",
+          "name": "Express",
+          "homepage": "https://expressjs.com",
+          "version": "5.3.0 (Node.js 26.13.0)",
+          "statistics": {
+            "medianMs": 38.49,
+            "meanMs": 38.376666666666665,
+            "minMs": 37.9,
+            "maxMs": 38.74
+          },
+          "samplesMs": [
+            38.74,
+            38.49,
+            37.9
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 47.02,
+              "unit": "ms/response",
+              "label": "Server CPU per download"
+            },
+            "memory": {
+              "value": 351.7,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "p99": {
+              "value": 1203,
+              "unit": "ms",
+              "label": "p99 download time"
+            }
+          }
+        },
+        {
+          "id": "bun",
+          "name": "Bun",
+          "homepage": "https://bun.sh",
+          "version": "1.4.4",
+          "statistics": {
+            "medianMs": 49.21,
+            "meanMs": 49.17666666666667,
+            "minMs": 49.08,
+            "maxMs": 49.24
+          },
+          "samplesMs": [
+            49.21,
+            49.24,
+            49.08
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 2.48,
+              "unit": "ms/response",
+              "label": "Server CPU per download"
+            },
+            "memory": {
+              "value": 4.3,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "p99": {
+              "value": 1878,
+              "unit": "ms",
+              "label": "p99 download time"
+            }
+          }
+        },
+        {
+          "id": "apache",
+          "name": "Apache httpd",
+          "homepage": "https://httpd.apache.org",
+          "version": "2.4.58 (Ubuntu 24.04's apache2, event MPM)",
+          "statistics": {
+            "medianMs": 49.26,
+            "meanMs": 49.24,
+            "minMs": 49.15,
+            "maxMs": 49.31
+          },
+          "samplesMs": [
+            49.31,
+            49.26,
+            49.15
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 3.64,
+              "unit": "ms/response",
+              "label": "Server CPU per download"
+            },
+            "memory": {
+              "value": 2.3,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "p99": {
+              "value": 1276,
+              "unit": "ms",
+              "label": "p99 download time"
+            }
+          }
+        },
+        {
+          "id": "nginx",
+          "name": "nginx",
+          "homepage": "https://nginx.org",
+          "version": "1.30.6 (nginx.org's stable package for Ubuntu 24.04)",
+          "statistics": {
+            "medianMs": 49.13,
+            "meanMs": 49.13333333333333,
+            "minMs": 49.1,
+            "maxMs": 49.17
+          },
+          "samplesMs": [
+            49.17,
+            49.1,
+            49.13
+          ],
+          "metrics": {
+            "cpu": {
+              "value": 2.58,
+              "unit": "ms/response",
+              "label": "Server CPU per download"
+            },
+            "memory": {
+              "value": 6.5,
+              "unit": "MB",
+              "label": "Peak memory growth"
+            },
+            "p99": {
+              "value": 1652,
+              "unit": "ms",
+              "label": "p99 download time"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "The server ran on 4 of a c8gn.4xlarge's 16 Graviton4 cores, with its client on a second c8gn.4xlarge in the same placement group: one instance size, one architecture, plain HTTP/1.1 and no TLS.",
+    "Every server ran its documented setup without tuning, Spring Boot with no JVM flags. Every server but Bun takes actix-web's listen backlog of 1,024 from its own settings; Bun.serve has no such setting.",
+    "Apache httpd and nginx serve files, not code, so they sit out the JSON routes and the body built per request.",
+    "The fastest servers reached the 50 Gbps link on the 16 KB and 323 KB bodies and on the file (46 to 49 Gbit/s), so those routes have no winner; they show who falls short of it.",
+    "Capacity is found by doubling the offered rate and then bisecting three times, so two servers within an eighth of each other can land on the same step.",
+    "Apache httpd, at the 150 workers Ubuntu's packaged configuration allows, served the 1,000 slow clients at 1,521 responses a second against about 3,400 for the rest, with a 30-second p99.",
+    "Three passes, each on a fresh pair of instances. A route has a winner only when the passes' 95% intervals don't overlap.",
+    "Peak memory growth is VmHWM summed over a server's processes, so Express, Bun, Apache httpd and nginx, which run several, count each one's peak.",
+    "I wrote actix-web #4302 and #4404, the changes in actix-http 3.21.0 that stop copying large response bodies into the write buffer."
+  ],
+  "trademarks": [
+    "actix-web is a project of the actix organization.",
+    "axum is a project of the tokio-rs organization.",
+    "Spring is a trademark of Broadcom Inc. and/or its subsidiaries.",
+    "Express and Node.js are projects of the OpenJS Foundation.",
+    "Bun is part of Anthropic.",
+    "Apache and Apache HTTP Server are trademarks of The Apache Software Foundation.",
+    "NGINX is a trademark of F5, Inc.",
+    "Java and OpenJDK are trademarks or registered trademarks of Oracle and/or its affiliates."
+  ],
+  "runnerUrl": "https://github.com/warefeats/http-servers"
+}
