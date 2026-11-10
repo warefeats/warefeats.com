@@ -451,6 +451,44 @@ describe("catalog validation", () => {
     })).toThrow("samples look replicated");
   });
 
+  test("accepts identical samples in a stepped section, where passes land on the same step of a search", () => {
+    const catalog = parseCatalog({
+      schemaVersion: 1,
+      generatedAt: "2026-11-09T00:00:00Z",
+      queue: [],
+      benchmarks: [{
+        id: "stepped-section",
+        slug: "stepped-section",
+        post: "2026-11-09-stepped-section-a-vs-b",
+        category: "Test",
+        title: "Stepped Section",
+        deck: "Test",
+        publishedAt: "2026-11-09",
+        unit: "ms",
+        lowerIsBetter: false,
+        verdict: { winnerId: "a", headline: "A", summary: "A" },
+        environment: { machine: "T", chip: "T", cores: "1", memory: "1 GB", os: "T", arch: "arm64", runtime: "T" },
+        protocol: { warmups: 3, runs: 3, processModel: "process", cacheState: "warm", output: "Capacity" },
+        candidates: [],
+        sections: [{
+          id: "capacity",
+          title: "Capacity",
+          deck: "Capacity",
+          unit: "responses/s",
+          lowerIsBetter: false,
+          stepped: true,
+          verdict: { winnerId: "a", headline: "A", summary: "A" },
+          candidates: [
+            { id: "a", name: "A", version: "1.0", statistics: { medianMs: 480000, meanMs: 480000, minMs: 480000, maxMs: 480000 }, samplesMs: [480000, 480000, 480000] },
+            { id: "b", name: "B", version: "1.0", statistics: { medianMs: 320000, meanMs: 320000, minMs: 320000, maxMs: 320000 }, samplesMs: [320000, 320000, 320000] },
+          ],
+        }],
+        limitations: [],
+      }],
+    });
+    expect(catalog.benchmarks[0]?.sections?.[0]?.stepped).toBe(true);
+  });
+
   test("accepts replicated samples when protocol.runs is 1", () => {
     const catalog = parseCatalog({
       schemaVersion: 1,
@@ -697,7 +735,7 @@ describe("routes", () => {
       expect(pageBenchmark(postPath(entry.post), catalog)).toBe(entry);
       expect(pageBenchmark(benchmarkPath(entry.slug), catalog)).toBe(entry);
     }
-    expect(catalog.benchmarks.map((entry) => entry.slug).sort()).toEqual(["archive-tile-servers", "desktop-shells", "http-caching-proxies", "js-bundlers", "js-linter-tools", "kv-stores", "vector-tile-servers", "web-map-renderers"]);
+    expect(catalog.benchmarks.map((entry) => entry.slug).sort()).toEqual(["archive-tile-servers", "desktop-shells", "http-caching-proxies", "http-servers", "js-bundlers", "js-linter-tools", "kv-stores", "vector-tile-servers", "web-map-renderers"]);
     expect(pageBenchmark("/posts/nope/", catalog)).toBeUndefined();
   });
 
@@ -762,7 +800,7 @@ describe("routes", () => {
 });
 
 describe("matchups", () => {
-  const SLUGS = ["http-caching-proxies", "js-bundlers", "kv-stores", "vector-tile-servers", "web-map-renderers", "archive-tile-servers"];
+  const SLUGS = ["http-caching-proxies", "http-servers", "js-bundlers", "kv-stores", "vector-tile-servers", "web-map-renderers", "archive-tile-servers"];
 
   test("go to benchmarks with three or more candidates in a run", async () => {
     const catalog = await loadCatalog();
@@ -1203,8 +1241,9 @@ describe("URLs", () => {
       expect(pages.has(from)).toBe(false);
       expect(moved[to]).toBeUndefined();
     }
-    // Every post that used to sit at /benchmarks/<old slug>/ moves, except desktop-shells, whose old address is now its benchmark page.
-    expect(Object.keys(moved).filter((from) => /^\/benchmarks\/[^/]+\/$/.test(from))).toHaveLength(index.benchmarks.length - 1);
+    // Every post that sat at /benchmarks/<old slug>/ before the move of 2026-10-13 moves, except desktop-shells, whose old address is now its benchmark page.
+    const before = index.benchmarks.filter((entry) => entry.post.slice(0, 10) < "2026-10-13");
+    expect(Object.keys(moved).filter((from) => /^\/benchmarks\/[^/]+\/$/.test(from))).toHaveLength(before.length - 1);
   });
 
   test("every internal link on every page points at a page the build writes", async () => {

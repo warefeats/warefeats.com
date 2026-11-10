@@ -40,6 +40,11 @@
       "slug": "desktop-shells",
       "repo": "warefeats/desktop-shells",
       "ref": "e15674fd358b4c90bc04b7ce00793226a9b685fa"
+    },
+    {
+      "slug": "http-servers",
+      "repo": "warefeats/http-servers",
+      "ref": "2d5442f5290a3e9b449d49326692482cceb34f1b"
     }
   ]
 }

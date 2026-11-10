@@ -109,7 +109,7 @@ export function parseBenchmark(benchmark: unknown): Benchmark {
         if (!isRecord(candidate) || typeof candidate.id !== "string" || !isRecord(candidate.statistics) || !Array.isArray(candidate.samplesMs)) {
           throw new Error(`Section ${section.id} in ${benchmark.id} contains an invalid candidate.`);
         }
-        if (runs > 1 && (candidate.samplesMs as number[]).length > 1 && new Set(candidate.samplesMs as number[]).size < 2) {
+        if (section.stepped !== true && runs > 1 && (candidate.samplesMs as number[]).length > 1 && new Set(candidate.samplesMs as number[]).size < 2) {
           throw new Error(`Candidate ${candidate.id} in section ${section.id} of ${benchmark.id} has ${(candidate.samplesMs as number[]).length} samples but only 1 distinct value — samples look replicated, not independently measured.`);
         }
       }
