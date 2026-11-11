@@ -184,6 +184,201 @@
   "runnerUrl": "https://github.com/warefeats/js-bundlers",
   "runs": [
     {
+      "id": "2026-11-11-radeon-680m-win11-2",
+      "label": "Ryzen 7 6800H / Windows 11, 2026-11-11",
+      "fleet": true,
+      "environment": {
+        "machine": "BOSGAME EffiZen ARB19B mini PC",
+        "chip": "AMD Ryzen 7 6800H with Radeon Graphics",
+        "cores": "8 cores / 16 threads",
+        "memory": "24 GB at 4800 MT/s",
+        "os": "Microsoft Windows 11 Pro 26H2 (build 26300)",
+        "arch": "x64",
+        "runtime": "Node 24.22.2 (Vite, tsup); esbuild native binary; Bun 1.4.0 harness",
+        "node": "24.22.2"
+      },
+      "protocol": {
+        "warmups": 3,
+        "runs": 20,
+        "processModel": "A new CLI process for every measured pass, output directory cleared between passes, candidates interleaved and rotated each pass",
+        "cacheState": "Warm filesystem cache after 3 unmeasured passes per candidate",
+        "output": "Bundled output emitted to a dedicated directory per tool"
+      },
+      "publishedAt": "2026-11-11",
+      "candidates": [
+        {
+          "id": "esbuild",
+          "name": "esbuild",
+          "version": "0.28.2",
+          "statistics": {
+            "medianMs": 53.9,
+            "meanMs": 54,
+            "minMs": 51.8,
+            "maxMs": 56.8
+          },
+          "samplesMs": [
+            54.5,
+            51.8,
+            55.9,
+            52.5,
+            53.9,
+            53.3,
+            52.5,
+            53,
+            53.2,
+            54.2,
+            55.6,
+            52.7,
+            54.2,
+            56.8,
+            53.3,
+            52.2,
+            53.9,
+            54.6,
+            54.9,
+            56.5
+          ],
+          "logo": "/logos/esbuild.svg",
+          "homepage": "https://esbuild.github.io",
+          "color": "#FFCF00",
+          "metrics": {
+            "outputBytes": {
+              "value": 436156,
+              "unit": "bytes",
+              "label": "Output size"
+            }
+          }
+        },
+        {
+          "id": "vite",
+          "name": "Vite",
+          "version": "8.2.2",
+          "statistics": {
+            "medianMs": 366.4,
+            "meanMs": 368.1,
+            "minMs": 354.9,
+            "maxMs": 386.2
+          },
+          "samplesMs": [
+            375.4,
+            356.6,
+            364.3,
+            386.2,
+            374,
+            366.2,
+            369,
+            365.5,
+            361.4,
+            375.5,
+            356.6,
+            354.9,
+            369.3,
+            371.7,
+            362.1,
+            366.6,
+            381.3,
+            364.1,
+            365.1,
+            376.6
+          ],
+          "logo": "/logos/vite.svg",
+          "homepage": "https://vite.dev",
+          "color": "#646CFF",
+          "metrics": {
+            "outputBytes": {
+              "value": 493218,
+              "unit": "bytes",
+              "label": "Output size"
+            }
+          }
+        },
+        {
+          "id": "tsup",
+          "name": "tsup 8",
+          "version": "8.5.1",
+          "statistics": {
+            "medianMs": 508.6,
+            "meanMs": 511,
+            "minMs": 494.9,
+            "maxMs": 535.3
+          },
+          "samplesMs": [
+            502.5,
+            519.9,
+            507.7,
+            514.9,
+            509.7,
+            520.3,
+            535.3,
+            506.7,
+            509.4,
+            494.9,
+            503.7,
+            520.7,
+            517,
+            505.9,
+            504.2,
+            518.4,
+            505.9,
+            521.8,
+            506.8,
+            495.3
+          ],
+          "homepage": "https://tsup.egoist.dev",
+          "color": "#EE6A00",
+          "metrics": {
+            "outputBytes": {
+              "value": 436156,
+              "unit": "bytes",
+              "label": "Output size"
+            }
+          }
+        },
+        {
+          "id": "tsup-9",
+          "name": "tsup 9",
+          "version": "9.0.0",
+          "statistics": {
+            "medianMs": 507.8,
+            "meanMs": 509.7,
+            "minMs": 496.8,
+            "maxMs": 533.3
+          },
+          "samplesMs": [
+            510.4,
+            511.1,
+            497.5,
+            501.9,
+            518,
+            507.5,
+            501.5,
+            506.7,
+            496.8,
+            520.5,
+            533.3,
+            525.2,
+            507.3,
+            518.8,
+            515.7,
+            508,
+            515.5,
+            503.1,
+            498.2,
+            497.8
+          ],
+          "homepage": "https://tsup.egoist.dev",
+          "color": "#F7A440",
+          "metrics": {
+            "outputBytes": {
+              "value": 436156,
+              "unit": "bytes",
+              "label": "Output size"
+            }
+          }
+        }
+      ]
+    },
+    {
       "id": "2026-11-11-radeon-680m-win11",
       "label": "Ryzen 7 6800H / Windows 11, 2026-11-11",
       "fleet": true,
