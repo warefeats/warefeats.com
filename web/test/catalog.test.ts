@@ -800,13 +800,15 @@ describe("routes", () => {
 });
 
 describe("matchups", () => {
+  // Benchmarks with three or more candidates in a run. A fleet run that adds a release line brings a matchup with it in a
+  // pin bump no test change rides with, so these are the floor, not the whole list.
   const SLUGS = ["http-caching-proxies", "http-servers", "js-bundlers", "kv-stores", "vector-tile-servers", "web-map-renderers", "archive-tile-servers"];
 
   test("go to benchmarks with three or more candidates in a run", async () => {
     const catalog = await loadCatalog();
     const withMatchup = catalog.benchmarks.filter((benchmark) => matchupField(benchmark) !== undefined).map((benchmark) => benchmark.slug);
 
-    expect(withMatchup.sort()).toEqual([...SLUGS].sort());
+    expect(withMatchup).toEqual(expect.arrayContaining(SLUGS));
     expect(toCatalogIndex(catalog).benchmarks.find((entry) => entry.slug === "vector-tile-servers")!.matchup).toEqual({ candidates: 7 });
     expect(toCatalogIndex(catalog).benchmarks.find((entry) => entry.slug === "desktop-shells")!.matchup).toBeUndefined();
   });
@@ -910,7 +912,7 @@ describe("matchups", () => {
     expect(routeMeta("/benchmarks/js-linter-tools/", index).status).toBe(200);
     expect(prerenderPaths(index).filter(isBenchmarkPath).sort()).toEqual(index.benchmarks.map((entry) => benchmarkPath(entry.slug)).sort());
     expect(sitemapPaths(index).some(isBenchmarkPath)).toBe(false);
-    expect(index.benchmarks.filter((entry) => entry.matchup).map((entry) => entry.slug).sort()).toEqual([...SLUGS].sort());
+    expect(index.benchmarks.filter((entry) => entry.matchup).map((entry) => entry.slug)).toEqual(expect.arrayContaining(SLUGS));
   });
 });
 
