@@ -1047,7 +1047,8 @@ describe("runs", () => {
   test("gives a benchmark with one run a single view", async () => {
     const catalog = await loadCatalog();
     const lint = catalog.benchmarks.find((benchmark) => benchmark.slug === "js-linter-tools")!;
-    const views = runViews(lint);
+    // Its primary run alone: the catalog's own benchmarks gain runs as they're re-measured and as the fleet lands runs.
+    const views = runViews({ ...lint, runs: [] });
 
     expect(views).toHaveLength(1);
     expect(views[0]!.candidates).toBe(lint.candidates);
