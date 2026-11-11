@@ -12,6 +12,7 @@
   },
   "unit": "ms",
   "lowerIsBetter": true,
+  "sectionSamples": "repeats",
   "verdict": {
     "winnerId": "esbuild",
     "headline": "esbuild finished in 16 ms; Vite took 170 ms, tsup 204 ms",
@@ -180,5 +181,160 @@
     "Times are fresh-process wall clock, including runtime startup and CLI module loading. Measured floors on this rig: `node -e 0` ~24 ms, `vite --version` ~77 ms, `tsup --version` ~35 ms, `esbuild --version` ~6 ms (native binary). The tools' self-reported build timers exclude startup cost.",
     "tsup is no longer actively maintained. Its README recommends tsdown as a successor. Results are included because tsup remains widely installed."
   ],
-  "runnerUrl": "https://github.com/warefeats/js-bundlers"
+  "runnerUrl": "https://github.com/warefeats/js-bundlers",
+  "runs": [
+    {
+      "id": "2026-11-11-radeon-680m-win11",
+      "label": "Ryzen 7 6800H / Windows 11, 2026-11-11",
+      "fleet": true,
+      "environment": {
+        "machine": "BOSGAME EffiZen ARB19B mini PC",
+        "chip": "AMD Ryzen 7 6800H with Radeon Graphics",
+        "cores": "8 cores / 16 threads",
+        "memory": "24 GB at 4800 MT/s",
+        "os": "Microsoft Windows 11 Pro 26H2 (build 26300)",
+        "arch": "x64",
+        "runtime": "Node 24.22.2 (Vite, tsup); esbuild native binary; Bun 1.4.0 harness",
+        "node": "24.22.2"
+      },
+      "protocol": {
+        "warmups": 3,
+        "runs": 20,
+        "processModel": "A new CLI process for every measured pass, output directory cleared between passes, candidates interleaved and rotated each pass",
+        "cacheState": "Warm filesystem cache after 3 unmeasured passes per candidate",
+        "output": "Bundled output emitted to a dedicated directory per tool"
+      },
+      "publishedAt": "2026-11-11",
+      "candidates": [
+        {
+          "id": "esbuild",
+          "name": "esbuild",
+          "version": "0.28.2",
+          "statistics": {
+            "medianMs": 54.5,
+            "meanMs": 54.3,
+            "minMs": 52.1,
+            "maxMs": 57.2
+          },
+          "samplesMs": [
+            54.9,
+            55.4,
+            55.4,
+            55.2,
+            52.1,
+            52.3,
+            53.8,
+            52.6,
+            55.7,
+            52.6,
+            55.8,
+            55.2,
+            55.7,
+            52.5,
+            52.3,
+            53.8,
+            57.2,
+            54,
+            55.9,
+            53.1
+          ],
+          "logo": "/logos/esbuild.svg",
+          "homepage": "https://esbuild.github.io",
+          "color": "#FFCF00",
+          "metrics": {
+            "outputBytes": {
+              "value": 436156,
+              "unit": "bytes",
+              "label": "Output size"
+            }
+          }
+        },
+        {
+          "id": "vite",
+          "name": "Vite",
+          "version": "8.2.2",
+          "statistics": {
+            "medianMs": 371.7,
+            "meanMs": 368.5,
+            "minMs": 351.5,
+            "maxMs": 382.6
+          },
+          "samplesMs": [
+            365.3,
+            373.6,
+            363.1,
+            373.5,
+            372.9,
+            361.4,
+            371.7,
+            362.8,
+            375.6,
+            351.5,
+            360,
+            373.5,
+            382.6,
+            376.7,
+            371.2,
+            359.6,
+            372.3,
+            358.7,
+            371.6,
+            372.7
+          ],
+          "logo": "/logos/vite.svg",
+          "homepage": "https://vite.dev",
+          "color": "#646CFF",
+          "metrics": {
+            "outputBytes": {
+              "value": 493218,
+              "unit": "bytes",
+              "label": "Output size"
+            }
+          }
+        },
+        {
+          "id": "tsup",
+          "name": "tsup",
+          "version": "8.5.1",
+          "statistics": {
+            "medianMs": 510.6,
+            "meanMs": 511.4,
+            "minMs": 499.5,
+            "maxMs": 526.2
+          },
+          "samplesMs": [
+            520.9,
+            499.8,
+            520.1,
+            503.4,
+            499.8,
+            513.9,
+            513.3,
+            507.6,
+            511.3,
+            523.7,
+            512.9,
+            509.2,
+            517,
+            526.2,
+            522.6,
+            509.8,
+            499.5,
+            508.3,
+            507.3,
+            501.9
+          ],
+          "homepage": "https://tsup.egoist.dev",
+          "color": "#EE6A00",
+          "metrics": {
+            "outputBytes": {
+              "value": 436156,
+              "unit": "bytes",
+              "label": "Output size"
+            }
+          }
+        }
+      ]
+    }
+  ]
 }
