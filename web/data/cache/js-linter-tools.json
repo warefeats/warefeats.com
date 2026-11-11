@@ -241,6 +241,139 @@
       ]
     },
     {
+      "id": "2026-11-11-radeon-680m-win11-3",
+      "label": "Ryzen 7 6800H / Windows 11, 2026-11-11",
+      "fleet": true,
+      "environment": {
+        "machine": "BOSGAME EffiZen ARB19B mini PC",
+        "chip": "AMD Ryzen 7 6800H with Radeon Graphics",
+        "cores": "8 cores / 16 threads",
+        "memory": "24 GB at 4800 MT/s",
+        "os": "Microsoft Windows 11 Pro 26H2 (build 26300)",
+        "arch": "x64",
+        "runtime": "Node 24.22.2 (ESLint, and Biome's launcher); Biome native binary; Bun 1.4.0 harness",
+        "node": "24.22.2"
+      },
+      "protocol": {
+        "warmups": 3,
+        "runs": 20,
+        "processModel": "A new CLI process for every measured pass, started in the corpus folder; candidates interleaved and rotated each pass",
+        "cacheState": "Warm filesystem cache after 3 unmeasured passes",
+        "output": "Diagnostics produced and redirected away from the terminal"
+      },
+      "publishedAt": "2026-11-11",
+      "candidates": [
+        {
+          "id": "eslint",
+          "name": "ESLint 9",
+          "version": "9.34.0",
+          "statistics": {
+            "medianMs": 1430,
+            "meanMs": 1433.4,
+            "minMs": 1394.5,
+            "maxMs": 1511.1
+          },
+          "samplesMs": [
+            1449,
+            1432.7,
+            1511.1,
+            1428.2,
+            1502.1,
+            1464.2,
+            1442.1,
+            1459.6,
+            1440.5,
+            1431.8,
+            1416,
+            1402.7,
+            1433.7,
+            1394.5,
+            1398.9,
+            1402.2,
+            1419.5,
+            1424.1,
+            1397.1,
+            1417
+          ],
+          "logo": "/logos/eslint.svg",
+          "homepage": "https://eslint.org",
+          "color": "#4B32C3"
+        },
+        {
+          "id": "eslint-10",
+          "name": "ESLint 10",
+          "version": "10.14.0",
+          "statistics": {
+            "medianMs": 1411.7,
+            "meanMs": 1415.4,
+            "minMs": 1367.5,
+            "maxMs": 1481.7
+          },
+          "samplesMs": [
+            1439.1,
+            1425.3,
+            1422.9,
+            1465.2,
+            1455,
+            1426.2,
+            1408,
+            1419.8,
+            1430.8,
+            1404.6,
+            1384.3,
+            1481.7,
+            1367.5,
+            1405.4,
+            1392.3,
+            1415.3,
+            1389.8,
+            1368.7,
+            1400.7,
+            1405.6
+          ],
+          "logo": "/logos/eslint.svg",
+          "homepage": "https://eslint.org",
+          "color": "#8080F2"
+        },
+        {
+          "id": "biome",
+          "name": "Biome",
+          "version": "2.2.2",
+          "statistics": {
+            "medianMs": 202.8,
+            "meanMs": 203.9,
+            "minMs": 198.3,
+            "maxMs": 213.2
+          },
+          "samplesMs": [
+            207.7,
+            205.9,
+            208.5,
+            209.4,
+            207.1,
+            213.2,
+            201.4,
+            202.7,
+            201.9,
+            199.4,
+            201.5,
+            201.7,
+            198.5,
+            205,
+            202.9,
+            205.5,
+            198.3,
+            201.5,
+            202.1,
+            204
+          ],
+          "logo": "/logos/biome.svg",
+          "homepage": "https://biomejs.dev",
+          "color": "#60A5FA"
+        }
+      ]
+    },
+    {
       "id": "2026-11-11-radeon-680m-win11-2",
       "label": "Ryzen 7 6800H / Windows 11, 2026-11-11",
       "fleet": true,

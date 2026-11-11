@@ -1,7 +1,7 @@
 {
   "js-linter-tools": {
     "repo": "warefeats/js-linter-tools",
-    "ref": "11a84bb8eeb9c48a8164339278a66e9170880065"
+    "ref": "a6f87b020e3411efe972397eb046b06e96f6cab4"
   },
   "http-caching-proxies": {
     "repo": "warefeats/http-caching-proxies",
