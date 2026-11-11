@@ -239,6 +239,103 @@
           "color": "#60A5FA"
         }
       ]
+    },
+    {
+      "id": "2026-11-11-radeon-680m-win11-2",
+      "label": "Ryzen 7 6800H / Windows 11, 2026-11-11",
+      "fleet": true,
+      "environment": {
+        "machine": "BOSGAME EffiZen ARB19B mini PC",
+        "chip": "AMD Ryzen 7 6800H with Radeon Graphics",
+        "cores": "8 cores / 16 threads",
+        "memory": "24 GB at 4800 MT/s",
+        "os": "Microsoft Windows 11 Pro 26H2 (build 26300)",
+        "arch": "x64",
+        "runtime": "Node 24.22.2 (ESLint, and Biome's launcher); Biome native binary; Bun 1.4.0 harness",
+        "node": "24.22.2"
+      },
+      "protocol": {
+        "warmups": 3,
+        "runs": 20,
+        "processModel": "A new CLI process for every measured pass, started in the corpus folder; candidates interleaved and rotated each pass",
+        "cacheState": "Warm filesystem cache after 3 unmeasured passes",
+        "output": "Diagnostics produced and redirected away from the terminal"
+      },
+      "publishedAt": "2026-11-11",
+      "candidates": [
+        {
+          "id": "eslint",
+          "name": "ESLint",
+          "version": "9.34.0",
+          "statistics": {
+            "medianMs": 1456.5,
+            "meanMs": 1475,
+            "minMs": 1381.8,
+            "maxMs": 1654
+          },
+          "samplesMs": [
+            1538.5,
+            1642.5,
+            1654,
+            1554.7,
+            1536.6,
+            1452.5,
+            1547.4,
+            1514.3,
+            1510.7,
+            1474.4,
+            1393.1,
+            1420.2,
+            1405.2,
+            1408.4,
+            1391,
+            1381.8,
+            1441.4,
+            1383.3,
+            1388.7,
+            1460.4
+          ],
+          "logo": "/logos/eslint.svg",
+          "homepage": "https://eslint.org",
+          "color": "#4B32C3"
+        },
+        {
+          "id": "biome",
+          "name": "Biome",
+          "version": "2.2.2",
+          "statistics": {
+            "medianMs": 207.6,
+            "meanMs": 209.1,
+            "minMs": 198.6,
+            "maxMs": 232.1
+          },
+          "samplesMs": [
+            212.8,
+            232.1,
+            226.4,
+            216.6,
+            209.6,
+            212.5,
+            217.1,
+            216.7,
+            209.3,
+            200.2,
+            200,
+            203.6,
+            198.6,
+            206.9,
+            204,
+            199.5,
+            201.7,
+            205,
+            208.3,
+            201.1
+          ],
+          "logo": "/logos/biome.svg",
+          "homepage": "https://biomejs.dev",
+          "color": "#60A5FA"
+        }
+      ]
     }
   ],
   "posts": [
