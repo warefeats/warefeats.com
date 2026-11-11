@@ -12,10 +12,11 @@
   },
   "unit": "ms",
   "lowerIsBetter": true,
+  "sectionSamples": "repeats",
   "verdict": {
     "winnerId": "biome",
-    "headline": "Biome finished 1.4x faster",
-    "summary": "Biome took 75.2 ms at the median. ESLint took 105.6 ms on the same warmed corpus."
+    "headline": "Correction: this run timed ESLint skipping every file",
+    "summary": "Corrected November 11, 2026. The harness started ESLint outside the folder it was linting, so ESLint reported all 391 files as outside its base path and linted none of them: its 105.6 ms is start-up time. Biome's 75.2 ms was a full lint. Measured again with the fix on a Ryzen 7 6800H, Biome took 203 ms and ESLint 1,436 ms, so Biome is about 7x faster. The new post has that run."
   },
   "corpus": {
     "name": "ESLint 9.34.0 library source",
@@ -141,5 +142,129 @@
     "The paired rules express the same intent, but their implementations and exact diagnostics are not identical.",
     "The corpus is ESLint's own JavaScript source and may not represent a typical application repository."
   ],
-  "runnerUrl": "https://github.com/warefeats/js-linter-tools"
+  "runnerUrl": "https://github.com/warefeats/js-linter-tools",
+  "runs": [
+    {
+      "id": "2026-11-11-radeon-680m-win11",
+      "label": "Ryzen 7 6800H / Windows 11 (local)",
+      "environment": {
+        "machine": "BOSGAME EffiZen ARB19B mini PC",
+        "chip": "AMD Ryzen 7 6800H with Radeon Graphics",
+        "cores": "8 cores / 16 threads",
+        "memory": "24 GB at 4800 MT/s",
+        "os": "Microsoft Windows 11 Pro 26H2 (build 26300)",
+        "arch": "x64",
+        "runtime": "Node 24.22.2 (ESLint, and Biome's launcher); Biome native binary; Bun 1.4.4 harness",
+        "node": "24.22.2"
+      },
+      "protocol": {
+        "warmups": 3,
+        "runs": 20,
+        "processModel": "A new CLI process for every measured pass, started in the corpus folder; candidates interleaved and rotated each pass",
+        "cacheState": "Warm filesystem cache after 3 unmeasured passes",
+        "output": "Diagnostics produced and redirected away from the terminal"
+      },
+      "publishedAt": "2026-11-11",
+      "candidates": [
+        {
+          "id": "eslint",
+          "name": "ESLint",
+          "version": "9.34.0",
+          "statistics": {
+            "medianMs": 1440.2,
+            "meanMs": 1436.3,
+            "minMs": 1405.3,
+            "maxMs": 1467.9
+          },
+          "samplesMs": [
+            1443.1,
+            1458.4,
+            1414.4,
+            1467.9,
+            1422.5,
+            1467.1,
+            1423.1,
+            1405.3,
+            1438.9,
+            1443.6,
+            1451.5,
+            1408.6,
+            1441.5,
+            1424.4,
+            1420.1,
+            1441.6,
+            1448.1,
+            1455.3,
+            1421.5,
+            1428.8
+          ],
+          "logo": "/logos/eslint.svg",
+          "homepage": "https://eslint.org",
+          "color": "#4B32C3"
+        },
+        {
+          "id": "biome",
+          "name": "Biome",
+          "version": "2.2.2",
+          "statistics": {
+            "medianMs": 203.1,
+            "meanMs": 203,
+            "minMs": 197.9,
+            "maxMs": 209.3
+          },
+          "samplesMs": [
+            204.5,
+            197.9,
+            203.4,
+            205.8,
+            203.7,
+            202.1,
+            203.9,
+            201,
+            204.6,
+            202.8,
+            200.6,
+            209.3,
+            201.8,
+            201.7,
+            202.5,
+            199.4,
+            205.8,
+            202.6,
+            203.6,
+            203.7
+          ],
+          "logo": "/logos/biome.svg",
+          "homepage": "https://biomejs.dev",
+          "color": "#60A5FA"
+        }
+      ]
+    }
+  ],
+  "posts": [
+    {
+      "slug": "2026-11-11-js-linter-tools-eslint-vs-biome",
+      "publishedAt": "2026-11-11",
+      "run": "2026-11-11-radeon-680m-win11",
+      "candidates": [
+        "eslint",
+        "biome"
+      ],
+      "title": "ESLint vs Biome",
+      "deck": "Four equivalent rule classes over nearly 100,000 lines of JavaScript, measured again after the first run timed ESLint skipping every file.",
+      "verdict": {
+        "winnerId": "biome",
+        "headline": "Biome finished 7.1x faster",
+        "summary": "Biome took 203 ms on average to lint ESLint 9.34.0's own lib/, 391 files. ESLint took 1,436 ms on the same files and found 23 problems. Each linter started fresh every pass on a Ryzen 7 6800H under Windows 11 and Node 24.22.2, and they took turns going first. The first post's ESLint time was 105.6 ms because ESLint never linted a file, so this run checks that both linters cover all 391 before it times anything."
+      },
+      "sections": {},
+      "limitations": [
+        "This isolates lint throughput. It does not score rule coverage, editor integrations, migration cost, or ecosystem compatibility.",
+        "The paired rules express the same intent, but their implementations and exact diagnostics are not identical.",
+        "The corpus is ESLint's own JavaScript source and may not represent a typical application repository.",
+        "Biome's time includes the Node launcher npm installs in front of its native binary.",
+        "One machine, a Ryzen 7 6800H mini PC on Windows 11. The first post ran on an M2 Max, so the two posts' times don't compare."
+      ]
+    }
+  ]
 }
