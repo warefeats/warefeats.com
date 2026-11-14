@@ -33,6 +33,6 @@
   },
   "http-servers": {
     "repo": "warefeats/http-servers",
-    "ref": "e61d214e7f58b5d53501fa3d8a74a8c5243f6333"
+    "ref": "97da6dd7a95a192301eb9300e177564045fbb5f7"
   }
 }
